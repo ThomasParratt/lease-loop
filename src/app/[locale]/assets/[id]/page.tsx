@@ -6,6 +6,7 @@ import { connection } from 'next/server';
 import { QuoteBreakdownList } from '@/components/quote-breakdown';
 import { ItemArt } from '@/components/item-art';
 import { QuoteCalculator } from '@/components/quote-calculator';
+import { VersionPicker } from '@/components/version-picker';
 import {
   Badge,
   Card,
@@ -16,11 +17,19 @@ import {
   Notice,
   PriceTag,
 } from '@/components/ui';
-import { termsOf, type QuoteStatus } from '@/domain/pricing';
+import { modelVersions } from '@/domain/catalogue/catalogue';
+import { formatEuro } from '@/domain/money';
+import {
+  financeOffer,
+  MAX_QUANTITY,
+  termsOf,
+  type FinanceOffer,
+  type QuoteStatus,
+} from '@/domain/pricing';
 import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
-import { isLocale, type Locale } from '@/i18n/locales';
+import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -33,7 +42,6 @@ import {
 } from '@/server/quotes';
 
 const DEFAULT_TERM = 36;
-const MAX_QUANTITY = 20;
 
 /** A whole number from a search param, kept within [min, max]; `fallback` if absent or broken. */
 function clampInt(raw: string | string[] | undefined, min: number, max: number, fallback: number) {
@@ -63,15 +71,44 @@ export default async function PricePage({
 
   const price = listPriceOn(data.priceLists, asset.id, today);
   const terms = termsOf(data.table);
-  // The catalogue links an item it can only finance with more units or a down payment as
-  // ?quantity=2 or ?down=1000000, so the sliders open on the card's offer. Out-of-range values
-  // are clamped; a missing or broken one falls back to the default.
-  const quantity = clampInt(query.quantity, 1, MAX_QUANTITY, 1);
+  const termMonths = terms.includes(DEFAULT_TERM) ? DEFAULT_TERM : terms[0]!;
+  // How the item can be financed at the default term: an item leased only several together
+  // or with a down payment opens set up that way, with a notice saying why (D41).
+  const offer = financeOffer(data, { assetId: asset.id, termMonths, isoDate: today });
+  // ?quantity= and ?down= override the preset; out-of-range values are clamped, a missing or
+  // broken one falls back to the offer's.
+  const quantity = clampInt(
+    query.quantity,
+    1,
+    MAX_QUANTITY,
+    offer.kind === 'needs_quantity' ? offer.quantity : 1
+  );
   const initial = {
-    termMonths: terms.includes(DEFAULT_TERM) ? DEFAULT_TERM : terms[0]!,
-    downPaymentCents: price.ok ? clampInt(query.down, 0, price.priceCents * quantity - 1, 0) : 0,
+    termMonths,
+    downPaymentCents: price.ok
+      ? clampInt(
+          query.down,
+          0,
+          price.priceCents * quantity - 1,
+          offer.kind === 'needs_down_payment' && quantity === 1 ? offer.downPaymentCents : 0
+        )
+      : 0,
     quantity,
   };
+  // The model's other versions (new and used), priced like the catalogue's cards.
+  const versions = modelVersions(
+    assets.map((a) => {
+      const o = financeOffer(data, { assetId: a.id, termMonths, isoDate: today });
+      return {
+        asset: a,
+        monthlyCents:
+          o.kind === 'standard' || o.kind === 'needs_down_payment'
+            ? o.quote.monthlyGrossCents
+            : null,
+      };
+    }),
+    asset.id
+  );
 
   const facts = [
     { label: t('condition.label'), value: t(`condition.${asset.condition}`) },
@@ -113,6 +150,10 @@ export default async function PricePage({
         <Badge status={asset.status} srPrefix={t('status.label')} className="mt-4">
           {t(`status.${asset.status}`)}
         </Badge>
+      ) : null}
+      <OfferNotice offer={offer} locale={locale} t={t} />
+      {versions.length > 1 ? (
+        <VersionPicker versions={versions} currentId={asset.id} locale={locale} t={t} />
       ) : null}
 
       <div className="mt-8 rounded-xl bg-muted px-8 pt-10 pb-4">
@@ -181,6 +222,44 @@ export default async function PricePage({
       </div>
     </div>
   );
+}
+
+/** Why the price below is set up for several units or a down payment (D41). */
+function OfferNotice({ offer, locale, t }: { offer: FinanceOffer; locale: Locale; t: Translate }) {
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  if (offer.kind === 'needs_quantity') {
+    const { financedCents, minimumCents } = offer.reason.params;
+    return (
+      <Notice
+        tone="info"
+        className="mt-6"
+        title={t('asset.offer.quantityTitle', { count: offer.quantity })}
+      >
+        {t('asset.offer.quantityBody', {
+          count: offer.quantity,
+          priceCents: euro(financedCents),
+          minimumCents: euro(minimumCents),
+        })}
+      </Notice>
+    );
+  }
+  if (offer.kind === 'needs_down_payment') {
+    const { downPaymentCents, quote } = offer;
+    return (
+      <Notice
+        tone="info"
+        className="mt-6"
+        title={t('asset.offer.downTitle', { downPaymentCents: euro(downPaymentCents) })}
+      >
+        {t('asset.offer.downBody', {
+          priceCents: euro(quote.listPriceCents),
+          // The offer leaves exactly the largest amount to finance.
+          maximumCents: euro(quote.financedCents),
+        })}
+      </Notice>
+    );
+  }
+  return null;
 }
 
 function StoredQuoteSection({

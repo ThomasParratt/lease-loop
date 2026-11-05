@@ -22,12 +22,41 @@ describe('financeOffer', () => {
     expect(offer.kind === 'standard' && offer.quote.monthlyGrossCents).toBe(13_466);
   });
 
-  it('refuses the kids bike at 289 € on price list 1, under the 300 € minimum (the "too cheap" trap)', () => {
+  it('offers the kids bike at 289 € on price list 1 as two together, over the 300 € minimum (D41)', () => {
     const offer = financeOffer(data, { assetId: 'ebike-010', termMonths: 36, isoDate: THURSDAY });
-    expect(offer).toEqual({
-      kind: 'none',
+    expect(offer).toMatchObject({
+      kind: 'needs_quantity',
+      quantity: 2,
       reason: { code: 'below_minimum', params: { financedCents: 28_900, minimumCents: 30_000 } },
     });
+    expect(offer.kind === 'needs_quantity' && offer.quote.financedCents).toBe(57_800);
+    expect(offer.kind === 'needs_quantity' && offer.quote.quantity).toBe(2);
+  });
+
+  it('takes the smallest quantity that reaches the minimum, an exact multiple included', () => {
+    // 300 € a unit at 100 € (a third of the minimum): exactly three reach it, the limit inclusive.
+    const cheap: PricingData = {
+      ...data,
+      priceLists: data.priceLists.map((list) => ({
+        ...list,
+        prices: { ...list.prices, 'ebike-010': 10_000 },
+      })),
+    };
+    const offer = financeOffer(cheap, { assetId: 'ebike-010', termMonths: 36, isoDate: THURSDAY });
+    expect(offer).toMatchObject({ kind: 'needs_quantity', quantity: 3 });
+    expect(offer.kind === 'needs_quantity' && offer.quote.financedCents).toBe(30_000);
+  });
+
+  it('stays refused when more than the largest quantity would be needed', () => {
+    const tiny: PricingData = {
+      ...data,
+      priceLists: data.priceLists.map((list) => ({
+        ...list,
+        prices: { ...list.prices, 'ebike-010': 100 },
+      })),
+    };
+    const offer = financeOffer(tiny, { assetId: 'ebike-010', termMonths: 36, isoDate: THURSDAY });
+    expect(offer).toMatchObject({ kind: 'none', reason: { code: 'below_minimum' } });
   });
 
   it('gives the kids bike the plain offer on Friday, when price list 2 puts it at 303 €', () => {

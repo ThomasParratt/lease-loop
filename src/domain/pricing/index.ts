@@ -1,6 +1,6 @@
 // Pricing: the price breakdown, the term comparison, quote validity and the stored quote's status.
 export { compareTerms, type TermComparison, type TermRow } from './compare';
-export { financeOffer, type FinanceOffer } from './financeable';
+export { financeOffer, MAX_QUANTITY, type FinanceOffer } from './financeable';
 export { addDays } from '../civil-days';
 export {
   breakdownFromFrozen,

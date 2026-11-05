@@ -9,6 +9,7 @@ import { HowItWorks } from '@/components/how-it-works';
 import { ImpactStrip } from '@/components/impact-strip';
 import { ItemArt } from '@/components/item-art';
 import { assetCategorySchema } from '@/data/schemas';
+import { isListed } from '@/domain/catalogue/catalogue';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { listAssets } from '@/server/assets';
@@ -52,7 +53,7 @@ export default async function HomePage({ params }: PageProps<'/[locale]'>) {
                     </span>
                     <span className="text-sm text-ink-muted">
                       {t('catalogue.itemCount', {
-                        count: assets.filter((a) => a.category === category).length,
+                        count: assets.filter((a) => a.category === category && isListed(a)).length,
                       })}
                     </span>
                   </span>

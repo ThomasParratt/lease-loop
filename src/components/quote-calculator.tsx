@@ -7,7 +7,12 @@
 // application, so the lock is part of applying rather than a step of its own.
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
-import type { QuoteBreakdown, QuoteRefusal, TermComparison } from '@/domain/pricing';
+import {
+  MAX_QUANTITY,
+  type QuoteBreakdown,
+  type QuoteRefusal,
+  type TermComparison,
+} from '@/domain/pricing';
 import { getT } from '@/i18n/get-t';
 import { formatEuro } from '@/domain/money';
 import { parseEurosToCents } from '@/domain/question-flow/answers';
@@ -37,7 +42,6 @@ type QuoteCalculatorProps = {
 };
 
 const DEBOUNCE_MS = 200;
-const MAX_QUANTITY = 20;
 
 /**
  * The down payment moves in steps of 1 % of the price, rounded to whole euros. When the page
