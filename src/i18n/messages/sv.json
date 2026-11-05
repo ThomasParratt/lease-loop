@@ -23,6 +23,8 @@
   "status.available": "Tillgänglig",
   "status.reserved": "Reserverad",
   "status.returned": "Returnerad",
+  "status.leased": "Uthyrd",
+  "status.sold": "Såld",
   "asset.modelYear": "Årsmodell",
   "asset.usage": "Användning",
   "asset.previousLives": "Tidigare leasingperioder",

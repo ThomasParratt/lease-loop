@@ -918,7 +918,7 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": ["available", "reserved", "returned"]
+                            "enum": ["available", "reserved", "returned", "leased", "sold"]
                           }
                         },
                         "required": [
@@ -1087,7 +1087,7 @@
                             },
                             "status": {
                               "type": "string",
-                              "enum": ["available", "reserved", "returned"]
+                              "enum": ["available", "reserved", "returned", "leased", "sold"]
                             }
                           },
                           "required": [
@@ -1372,7 +1372,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": ["available", "reserved", "returned"]
+                    "enum": ["available", "reserved", "returned", "leased", "sold"]
                   },
                   "actor": {
                     "type": "string",
@@ -1453,7 +1453,7 @@
                         },
                         "status": {
                           "type": "string",
-                          "enum": ["available", "reserved", "returned"]
+                          "enum": ["available", "reserved", "returned", "leased", "sold"]
                         }
                       },
                       "required": [

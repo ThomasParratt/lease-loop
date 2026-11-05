@@ -23,6 +23,8 @@
   "status.available": "Saatavilla",
   "status.reserved": "Varattu",
   "status.returned": "Palautettu",
+  "status.leased": "Vuokrattu",
+  "status.sold": "Myyty",
   "asset.modelYear": "Vuosimalli",
   "asset.usage": "Käyttö",
   "asset.previousLives": "Aiemmat vuokrakaudet",

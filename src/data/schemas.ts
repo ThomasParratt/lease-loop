@@ -28,7 +28,16 @@ export type AssetCategory = z.infer<typeof assetCategorySchema>;
 export const assetConditionSchema = z.enum(['new', 'like_new', 'good', 'fair', 'poor']);
 export type AssetCondition = z.infer<typeof assetConditionSchema>;
 
-export const assetStatusSchema = z.enum(['available', 'reserved', 'returned']);
+/**
+ * Where an item is in the loop (docs/decisions.md D22). The data pack uses the first three;
+ * the app adds the other two:
+ * - `available`: can be quoted and leased;
+ * - `reserved`: held, cannot be leased (the data pack's meaning; no contract sets it);
+ * - `returned`: back from a lease, waiting for assessment and refurbishment;
+ * - `leased`: out on an active contract (set on `CONTRACT_SIGNED`);
+ * - `sold`: bought out at the end of a lease or on an early exit; it leaves the loop.
+ */
+export const assetStatusSchema = z.enum(['available', 'reserved', 'returned', 'leased', 'sold']);
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 
 /** What the usage counter measures: km for e-bikes, battery cycles for laptops, engine hours for farm machines. */

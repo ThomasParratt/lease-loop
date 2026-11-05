@@ -1,8 +1,9 @@
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
-// SQLite has no enums here, so allowed values (category, condition, status) are
-// checked with Zod before anything is written: src/data/schemas.ts for the data pack's
-// values, src/domain/statuses.ts for decisions, contract and invoice statuses, event kinds.
+// SQLite has no enums here, so allowed values (category, condition, status) are Zod enums:
+// src/data/schemas.ts for the asset values, src/domain/statuses.ts for decisions, contract
+// and invoice statuses, event kinds. The server function that writes a value parses it with
+// its schema itself, before the write; a route's body check alone is not enough.
 // Money is integer euro cents (`_cents`), rent factors integer millionths, VAT rates basis
 // points (`_bp`, 2550 = 25.5 %). Business dates are ISO day strings (`YYYY-MM-DD`); DateTime
 // is only for a row's own timestamps. Who owns which model: docs/kickoff-brief.md section 6.
@@ -29,7 +30,7 @@ model Asset {
   usage_unit     String // km | battery_cycles | engine_hours
   usage_value    Int
   previous_lives Int
-  status         String // available | reserved | returned
+  status         String // available | reserved | returned | leased | sold (D22)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 

@@ -1,7 +1,13 @@
 // Reading and changing assets in the database. Rows are converted to the same `Asset`
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
-import { assetSchema, type Asset, type AssetCategory, type AssetStatus } from '@/data/schemas';
+import {
+  assetSchema,
+  assetStatusSchema,
+  type Asset,
+  type AssetCategory,
+  type AssetStatus,
+} from '@/data/schemas';
 import { withAudit } from './audit';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
@@ -51,11 +57,16 @@ export async function listAssets(
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
 
-/** Sets an asset's status and writes `asset.status_changed` to the audit log, atomically. */
+/**
+ * Sets an asset's status and writes `asset.status_changed` to the audit log, atomically.
+ * Checks the status against the list itself, before any write, so a caller that skips the
+ * route's body check cannot store a bad value; a bad one throws a ZodError (400 in a route).
+ */
 export async function changeAssetStatus(
   db: PrismaClient,
   input: { id: string; status: AssetStatus; actor: string }
 ): Promise<ChangeAssetStatusResult> {
+  const status = assetStatusSchema.parse(input.status);
   const existing = await db.asset.findUnique({ where: { id: input.id } });
   if (!existing) return { ok: false, reason: 'not_found' };
 
@@ -66,9 +77,9 @@ export async function changeAssetStatus(
       action: 'asset.status_changed',
       entityType: 'asset',
       entityId: input.id,
-      details: { from: existing.status, to: input.status },
+      details: { from: existing.status, to: status },
     },
-    (tx) => tx.asset.update({ where: { id: input.id }, data: { status: input.status } })
+    (tx) => tx.asset.update({ where: { id: input.id }, data: { status } })
   );
   return { ok: true, asset: toAsset(updated) };
 }

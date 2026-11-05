@@ -23,6 +23,8 @@
   "status.available": "Saadaval",
   "status.reserved": "Broneeritud",
   "status.returned": "Tagastatud",
+  "status.leased": "Renditud",
+  "status.sold": "Müüdud",
   "asset.modelYear": "Mudeliaasta",
   "asset.usage": "Kasutus",
   "asset.previousLives": "Varasemad liisinguperioodid",

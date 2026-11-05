@@ -12,6 +12,7 @@ export const statusTone = {
   reserved: 'info',
   returned: 'neutral',
   leased: 'neutral',
+  sold: 'neutral',
   refurbishing: 'warning',
   // applications
   draft: 'neutral',
