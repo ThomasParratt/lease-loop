@@ -60,13 +60,20 @@ const domainModules = () =>
   listFiles('src/domain', /\.ts$/).filter((file) => !isTest(file) && !file.endsWith('.d.ts'));
 
 // `from '…'`, `import('…')` or `import '…'` of a module that does I/O or needs a framework.
+// node:crypto is the one node: module allowed: its createHash is deterministic and does no
+// I/O, and the audit chain hashes rows in src/domain/audit (docs/features/audit-chain.md).
 const FORBIDDEN_DOMAIN_IMPORT = new RegExp(
   String.raw`(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"]` +
-    String.raw`(node:[^'"]*|fs(/[^'"]*)?|path|next(/[^'"]*)?|react(-dom)?(/[^'"]*)?` +
+    String.raw`(node:(?!crypto['"])[^'"]*|fs(/[^'"]*)?|path|next(/[^'"]*)?|react(-dom)?(/[^'"]*)?` +
     String.raw`|@prisma/[^'"]*|@/server/[^'"]*|@/data/load|@/generated/[^'"]*)['"]`
 );
 
+// The only import from node:crypto the domain may have: createHash, which is deterministic.
+const IMPURE_CRYPTO_IMPORT =
+  /^(?!import\s*\{\s*createHash\s*\}\s*from\s*['"]node:crypto['"]).*['"]node:crypto['"]/;
+
 const DOMAIN_IMPURITIES: readonly Check[] = [
+  { pattern: IMPURE_CRYPTO_IMPORT, problem: 'takes more than createHash from node:crypto' },
   { pattern: /\bnew Date\(\s*\)/, problem: 'new Date() reads the clock' },
   { pattern: /\bDate\.now\b/, problem: 'Date.now reads the clock' },
   { pattern: /\bMath\.random\b/, problem: 'Math.random is not deterministic' },
@@ -122,6 +129,13 @@ const UNAUDITED_WRITES: readonly Check[] = [
   { pattern: /\$transaction\(/, problem: 'opens its own $transaction instead of withAudit()' },
 ];
 
+const AUDIT_ROW_MUTATIONS: readonly Check[] = [
+  {
+    pattern: /\bauditLog\.(update|updateMany|updateManyAndReturn|upsert|delete|deleteMany)\(/,
+    problem: 'changes or deletes an audit row; the audit log is append-only',
+  },
+];
+
 // ---------- the rules ----------
 
 describe('meta rules', () => {
@@ -174,6 +188,16 @@ describe('meta rules', () => {
     const findings = files.flatMap((file) =>
       scanLines(file, UNAUDITED_WRITES, isInsideSeedFunction)
     );
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // RULES.md §7 and docs/features/audit-chain.md: the audit log is append-only; the hash chain
+  // would show an edit, and the app never makes one. Tests may clear their own database.
+  it('no app code updates or deletes audit rows', () => {
+    const files = listFiles('src', /\.tsx?$/).filter(
+      (file) => !isTest(file) && !file.startsWith('src/generated/')
+    );
+    const findings = files.flatMap((file) => scanLines(file, AUDIT_ROW_MUTATIONS));
     expect(findings, formatFindings(findings)).toEqual([]);
   });
 

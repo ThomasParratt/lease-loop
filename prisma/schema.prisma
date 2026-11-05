@@ -233,6 +233,10 @@ model AuditLog {
   entity_type  String // e.g. asset
   entity_id    String
   details_json String? // JSON text, e.g. {"from":"available","to":"reserved"}
+  // The tamper-evident chain (docs/features/audit-chain.md): hash = SHA-256 of prev_hash + the
+  // canonical row. A unique prev_hash means two rows can never chain to the same row (a fork).
+  prev_hash    String?  @unique
+  hash         String?  @unique
 
   @@index([entity_type, entity_id])
   @@index([created_at])

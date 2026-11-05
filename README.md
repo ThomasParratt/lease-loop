@@ -103,6 +103,7 @@ One page per feature slice under `docs/features/` (template: [docs/features/READ
 - [Contracts: signing and the contract page](docs/features/contracts.md) (wave 2): signing an approved application from its stored quote, the last-unit race, the price lock explained (cards 1, 2) and the invoices under the contract (card 3)
 - [Row schemas](docs/features/row-schemas.md): the Zod rules every stored row is parsed with before the write, held to `prisma/schema.prisma` by a test (D27)
 - [Exits: buy out, return, pass on and the early exit](docs/features/exits.md) (wave 2): the D14 early exit line by line, the market value by the residual curve, the refurbishment plan, the contract page section (card 8; the exits cards 9 and 10 start from)
+- [The tamper-evident audit chain](docs/features/audit-chain.md) (wave 2): every audit row hash-chained to the one before it in the same transaction, the verifier, the chain badge with the head hash and the `demo:tamper` script
 
 ## Team notes
 

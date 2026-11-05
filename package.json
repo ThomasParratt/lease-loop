@@ -29,6 +29,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "openapi": "tsx scripts/openapi.mjs && prettier --write docs/openapi.json",
+    "demo:tamper": "tsx scripts/tamper-audit.mjs",
     "postinstall": "prisma generate",
     "prepare": "node .husky/install.mjs"
   },
