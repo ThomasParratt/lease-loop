@@ -21,6 +21,7 @@ import { listAssets } from './assets';
 import { withAudit } from './audit';
 import { getCustomer } from './customers';
 import type { PrismaClient } from './prisma-client';
+import { getQuote } from './quotes';
 
 /** A reason as stored: the eligibility codes plus the two decision codes of D10. */
 export type StoredReason = { code: string; params: Record<string, string | number> };
@@ -54,8 +55,8 @@ export function toApplicationView(row: ApplicationRow): ApplicationView {
 export type FlowSetup = { context: FlowContext; quoteValidUntil: string; customerIsPep: boolean };
 
 /**
- * The deal a quote and a customer make for the question flow. Reads the quote row directly
- * until the pricing slice's `getQuote` lands (the upkeep agent swaps it).
+ * The deal a quote and a customer make for the question flow. The quote is read through the
+ * pricing slice's `getQuote`, never from its table (one owner per table, team rule 3).
  */
 export async function flowSetupFor(
   db: PrismaClient,
@@ -65,11 +66,12 @@ export async function flowSetupFor(
   | { ok: true; setup: FlowSetup; quote: { monthlyNetCents: number; vatRateBp: number } }
   | { ok: false; reason: 'quote_not_found' | 'customer_not_found' }
 > {
-  const quote = await db.quote.findUnique({ where: { id: quoteId } });
+  const quote = await getQuote(db, quoteId);
   if (!quote) return { ok: false, reason: 'quote_not_found' };
   const customer = await getCustomer(db, customerId);
   if (!customer) return { ok: false, reason: 'customer_not_found' };
-  const asset = (await listAssets(db)).find((a) => a.id === quote.asset_id);
+  const deal = quote.breakdown;
+  const asset = (await listAssets(db)).find((a) => a.id === deal.assetId);
   if (!asset) return { ok: false, reason: 'quote_not_found' };
   return {
     ok: true,
@@ -77,13 +79,13 @@ export async function flowSetupFor(
       context: {
         customerType: customer.type,
         category: asset.category,
-        financedCents: quote.financed_cents,
-        termMonths: quote.term_months,
+        financedCents: deal.financedCents,
+        termMonths: deal.termMonths,
       },
-      quoteValidUntil: quote.valid_until,
+      quoteValidUntil: quote.validUntil,
       customerIsPep: customer.is_pep,
     },
-    quote: { monthlyNetCents: quote.monthly_net_cents, vatRateBp: quote.vat_rate_bp_at_quote },
+    quote: { monthlyNetCents: deal.monthlyNetCents, vatRateBp: deal.vatRateBasisPoints },
   };
 }
 

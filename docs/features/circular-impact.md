@@ -4,7 +4,7 @@
 
 Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided, per item on the passport page and for the whole fleet in the catalogue's impact strip (smart problem 7, problem 3's passport bonus, scenario card 10).
 
-## The method, worked through card 10
+## The rule: the method, worked through card 10
 
 A later life avoids the manufacturing of a new item, minus what refurbishing cost, spread over the months the item is built to last and counted for the months that life used:
 
@@ -40,11 +40,7 @@ On the signing day the third life has 0 months and the passport shows 29 kg; the
 
 **Money saved is not shown**: `co2-factors.json` has no money factor, and the page says so. The e-bike's avoided car km factor is not used either: the data pack's usage is a lifetime total, not per life.
 
-## Decision and defence
-
-Implements **D15** (`docs/decisions.md`, status: implemented as proposed). To the challenge's question, "is the saving the same when the item was almost worn out?": no. A later life is credited with the share of a new item's life it replaces, so an almost worn-out item earns almost nothing and no footprint is counted twice. Crediting a whole footprint per reuse, as the data file's hint suggests, would credit a 2-month second life the same as a 10-year one.
-
-## How lives come from the event log
+### How lives come from the event log
 
 `AssetEvent` rows are read in id order (the order they were written), never re-sorted by date, so two events on one day keep their order.
 
@@ -56,7 +52,11 @@ Implements **D15** (`docs/decisions.md`, status: implemented as proposed). To th
 
 The rows are written by the handlers in `src/server/passport-handlers.ts`: `CONTRACT_SIGNED` → `leased` (on `startDate`), `UNIT_RETURNED` → `returned`, `CONTRACT_BOUGHT_OUT` → `bought`, `UNIT_PASSED_ON` → `passed_on`, inside the emitter's `withAudit` transaction.
 
-## Signatures
+## Decisions
+
+Implements **D15** (`docs/decisions.md`, status: implemented as proposed). To the challenge's question, "is the saving the same when the item was almost worn out?": no. A later life is credited with the share of a new item's life it replaces, so an almost worn-out item earns almost nothing and no footprint is counted twice. Crediting a whole footprint per reuse, as the data file's hint suggests, would credit a 2-month second life the same as a 10-year one.
+
+## Pure functions
 
 `src/domain/second-life/co2.ts` (pure):
 

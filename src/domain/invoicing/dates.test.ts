@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addDays,
   addMonthsClamped,
   compareIso,
   daysInMonth,
@@ -36,19 +35,6 @@ describe('addMonthsClamped (card 4, D3)', () => {
   it('throws on a fraction of a month or an impossible day', () => {
     expect(() => addMonthsClamped('2026-01-15', 1.5)).toThrow(RangeError);
     expect(() => addMonthsClamped('2026-02-30', 1)).toThrow(RangeError);
-  });
-});
-
-describe('addDays', () => {
-  it('crosses month, year and the leap day', () => {
-    expect(addDays('2026-01-31', 1)).toBe('2026-02-01');
-    expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
-    expect(addDays('2028-02-28', 1)).toBe('2028-02-29');
-    expect(addDays('2028-03-01', -1)).toBe('2028-02-29');
-    expect(addDays('2027-03-01', -1)).toBe('2027-02-28');
-  });
-  it('throws on a fraction of a day', () => {
-    expect(() => addDays('2026-01-01', 0.5)).toThrow(RangeError);
   });
 });
 

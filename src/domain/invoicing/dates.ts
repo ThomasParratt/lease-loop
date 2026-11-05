@@ -1,9 +1,13 @@
 // Calendar arithmetic on ISO days (`YYYY-MM-DD`), on year / month / day integers. No clock:
 // every date comes in as an argument. Ported from the practice repo's `addMonthsUtc`, rewritten
-// without `Date` objects for the month step so a time zone can never shift a day.
+// without `Date` objects, so a time zone can never shift a day; `addDays` is the shared one.
+
+import { addDays } from '../civil-days';
+
+/** The domain's one Date-free `addDays` (`src/domain/civil-days.ts`), re-exported for invoicing. */
+export { addDays };
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DAY_MS = 86_400_000;
 
 export type YearMonthDay = { year: number; month: number; day: number };
 
@@ -64,13 +68,6 @@ export function addMonthsClamped(isoDate: string, months: number): string {
     month: targetMonth,
     day: Math.min(day, daysInMonth(targetYear, targetMonth)),
   });
-}
-
-/** `isoDate` plus `days` days (negative for earlier). UTC milliseconds have no DST. */
-export function addDays(isoDate: string, days: number): string {
-  if (!Number.isSafeInteger(days)) throw new RangeError(`days must be an integer, got ${days}`);
-  const { year, month, day } = parseIsoDate(isoDate);
-  return new Date(Date.UTC(year, month - 1, day) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
 /** −1, 0 or 1. Valid ISO days sort as strings; both are checked first. */

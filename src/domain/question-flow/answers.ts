@@ -1,5 +1,6 @@
 // From the applicant's answers to the eligibility input, and the small conversions around it.
 import type { Customer, Question } from '@/data/schemas';
+import { splitVat } from '@/domain/money-math';
 import type { Answer, Answers, FlowContext } from './engine';
 import type { EligibilityInput } from './eligibility';
 
@@ -60,12 +61,11 @@ function cents(answer: Answer | undefined): number | undefined {
 }
 
 /**
- * Gross = net + VAT, the VAT rounded half up to the cent once:
- * VAT = (net × rate in basis points + 5 000) div 10 000. 10 730 at 2 550 bp → 2 736.
- * A local copy until the pricing slice's VAT helper lands.
+ * Gross = net + VAT, through the one money rounding (`splitVat`, D1): the VAT is rounded half
+ * up to the cent once from the net. 10 730 at 2 550 bp → VAT 2 736, gross 13 466.
  */
 export function grossFromNetCents(netCents: number, vatRateBp: number): number {
-  return netCents + Math.floor((netCents * vatRateBp + 5_000) / 10_000);
+  return splitVat(netCents, vatRateBp).grossCents;
 }
 
 export type InputFromAnswers = {

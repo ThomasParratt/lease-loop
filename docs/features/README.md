@@ -6,3 +6,4 @@ One page per feature slice, shipped in the same pull request as its code (AGENTS
 - [circular-impact.md](circular-impact.md): the asset passport across lives and the CO2 saved (wave 1).
 - [pricing.md](pricing.md): the price breakdown, the term comparison, the fleet quantity and the stored quote (wave 1).
 - [question-flow.md](question-flow.md): the question flow, eligibility and the application decision (wave 1).
+- [invoicing.md](invoicing.md): the monthly schedule billed in advance, VAT by invoice date, paying an invoice and the outstanding balance (wave 1).

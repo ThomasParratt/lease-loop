@@ -78,7 +78,7 @@ compareTerms(data: PricingData, input: Omit<QuoteInput, 'termMonths'>): TermComp
 quoteStatusOn(quote: QuoteForStatus, today: string, priceLists): QuoteStatus
 termsOf(table): number[]
 splitEvenly(totalCents: number, parts: number): UnitSplit
-addDays(isoDay: string, days: number): string
+addDays(isoDay: string, days: number): string   // re-exported from src/domain/civil-days.ts, shared with invoicing
 QUOTE_VALID_DAYS = 14
 ```
 
@@ -91,7 +91,7 @@ Server (`src/server/quotes.ts`): `loadPricingData()`, `createQuote(db, { assetId
 | `src/domain/pricing/quote.ts`           | `priceQuote`, `breakdownFromFrozen`, `splitEvenly`          |
 | `src/domain/pricing/compare.ts`         | `compareTerms`                                              |
 | `src/domain/pricing/quote-status.ts`    | `quoteStatusOn`                                             |
-| `src/domain/pricing/days.ts`            | `addDays` (civil-day arithmetic, no clock)                  |
+| `src/domain/civil-days.ts`              | `addDays`, no clock, shared with invoicing                  |
 | `src/domain/pricing/index.ts`           | the public exports and `QUOTE_VALID_DAYS`                   |
 | `src/server/quotes.ts`                  | the stored quote, the preview                               |
 | `src/server/quote-schemas.ts`           | the Zod schemas of the three routes (rows in `routes.ts`)   |

@@ -15,7 +15,7 @@ A customer (or admin) can list a contract's invoices and pay one. Paying writes 
 
 For an early exit, the outstanding balance after any number of rents comes month by month: the financed amount amortised at the band's interest rate.
 
-## The rules, with the worked examples
+## The rule, with the worked examples
 
 **The schedule (D3, D4).** Rent invoice _n_ (1 … term) covers the full month from `start + (n − 1) months` to the day before `start + n months`. When the start day doesn't exist in a month, it moves to that month's last day. The clamp always counts from the original start day, so it never accumulates. Each invoice is billed in advance: issued and due on the first day of its period. There is no proration.
 
@@ -71,12 +71,12 @@ Choices made in this wave, beyond the brief:
 - The pay route takes no body. The day is `todayForRequest()` and the actor is the cookie. Only the contract's customer or admin may list or pay; anyone else gets 403.
 - Paying early is allowed (it is an advance payment). Paying twice answers 409 `INVOICE_ALREADY_PAID`; a lost race rolls back without an audit row.
 
-## Signatures
+## Pure functions
 
 ```ts
 // src/domain/invoicing (index.ts)
 addMonthsClamped(isoDate: string, months: number): string
-addDays(isoDate: string, days: number): string
+addDays(isoDate: string, days: number): string   // re-exported from src/domain/civil-days.ts, shared with pricing
 daysInMonth(year: number, month: number): number
 compareIso(a: string, b: string): -1 | 0 | 1
 termEndDate(startDate: string, termMonths: number): string   // the CONTRACT_SIGNED endDate

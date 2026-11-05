@@ -1,6 +1,7 @@
 // Calendar-day arithmetic on ISO day strings, with no clock and no time zone: the day is turned
 // into a count of days since 1970-01-01, moved, and turned back (Howard Hinnant's civil-day
-// algorithm, exact for every Gregorian date).
+// algorithm, exact for every Gregorian date). The one `addDays` of the domain: pricing (the
+// quote's validity, D7) and invoicing (the periods, D3/D4) both import it; no `Date` anywhere.
 
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 

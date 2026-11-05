@@ -4,7 +4,7 @@ import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { createApplication, decideApplication, getApplication } from './applications';
+import { createApplication, decideApplication, flowSetupFor, getApplication } from './applications';
 import { seedAssets } from './assets';
 import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
@@ -33,7 +33,8 @@ const answersOf = (id: string) => answersFromCustomer(customers.find((c) => c.id
 
 type QuoteRow = { asset: string; quantity?: number; financed: number; term: number; net: number };
 
-/** The quote rows the pricing slice would write; the numbers are the pinned card numbers. */
+/** The quote rows the pricing slice would write; the numbers are the pinned card numbers.
+ * The fixture writes the row; the code under test reads it only through pricing's `getQuote`. */
 async function insertQuote({ asset, quantity = 1, financed, term, net }: QuoteRow) {
   const row = await db.quote.create({
     data: {
@@ -66,6 +67,20 @@ const card7 = () =>
 async function apply(quoteId: string, customerId: string, answers = answersOf(customerId)) {
   return createApplication(db, { quoteId, customerId, answers, today: TODAY, actor: customerId });
 }
+
+describe('flowSetupFor', () => {
+  it('reads the frozen quote numbers through the pricing slice (one owner per table)', async () => {
+    const found = await flowSetupFor(db, await card6(), 'cust-norvi');
+    expect(found).toMatchObject({
+      ok: true,
+      setup: {
+        context: { category: 'e_bike', financedCents: 2_196_000, termMonths: 36 },
+        quoteValidUntil: '2026-12-05',
+      },
+      quote: { monthlyNetCents: 58_993, vatRateBp: 2_550 },
+    });
+  });
+});
 
 describe('createApplication', () => {
   it('card 1: Aino is approved, and the audit row is written with it', async () => {
