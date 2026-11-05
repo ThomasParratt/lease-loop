@@ -8,6 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   globalIgnores([
+    '.claude/**', // agent worktrees: full checkouts, linted in their own folder
     '.next/**',
     'out/**',
     'coverage/**',
