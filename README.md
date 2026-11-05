@@ -88,6 +88,7 @@ One page per feature slice under `docs/features/` (template: [docs/features/READ
 
 - [Catalogue, demo clock, actor and audit trail](docs/features/catalogue.md) (wave 0)
 - [Circular impact and the passport](docs/features/circular-impact.md) (wave 1)
+- [Pricing and quotes](docs/features/pricing.md) (wave 1): the price page with live sliders, the line-by-line breakdown, the term comparison and the stored quote locked at its date and list version (cards 1, 2, 6, 7; smart problem 6)
 - [The question flow and the application](docs/features/question-flow.md) (wave 1)
 
 ## Team notes
@@ -145,6 +146,10 @@ Every lease, return, buyout and pass-on writes a row to the asset event log (`As
 ### Demo clock
 
 The demo page moves the app to any day, so a scenario card dated September 2026 or February 2028 runs on its own date. `POST /api/demo/clock` with `{ "asOf": "2026-09-15" }` sets the `lease-loop-as-of` cookie and `{ "asOf": null }` clears it. Pages and routes call `todayForRequest()` from `src/server/demo-clock.ts` once and pass the day down; it is `todayIso()` unless the cookie holds a real calendar day (an invalid one is ignored). The catalogue's "prices on" follows it. It is the only date the server takes from the browser.
+
+### Pricing and quotes
+
+`/[locale]/assets/[id]` (linked from every catalogue card) has two sliders (term 12/24/36/48 and the down payment, 0 to the price in 1 % steps) and a quantity field. Each change asks `GET /api/quotes/preview`, which prices on the request's day and returns the breakdown (list price, × quantity, down payment, financed amount, band and factor, net rent, VAT and gross, per-unit split, buyout, total if you return it and if you buy it) and every term side by side; the browser never computes a price. "Get a quote" posts to `POST /api/quotes`, which stores a `Quote` row through `withAudit` (`quote.created`), valid 14 days, and opens `?quote=<id>` on the same page: the locked quote with its date, list version and validity, a notice when a cheaper list is live today (card 2) and the link to `/[locale]/apply/[quoteId]`. `GET /api/quotes/[id]` rebuilds the breakdown from the stored numbers and never re-prices. The pure functions are in `src/domain/pricing/` (`priceQuote`, `compareTerms`, `quoteStatusOn`, `breakdownFromFrozen`, `addDays`); refusals (`below_minimum`, `above_maximum`, `down_payment_too_high`, …) are codes with params written from `pricing.refusal.*`. Full description, the worked examples and the decisions: [docs/features/pricing.md](docs/features/pricing.md).
 
 ---
 

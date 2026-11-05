@@ -54,6 +54,12 @@ export async function listAssets(
   return rows.map(toAsset);
 }
 
+/** One asset by id, or null. The read other slices use for a single asset (team rule 3). */
+export async function getAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
+}
+
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
 

@@ -18,6 +18,13 @@ import {
   invoiceKindSchema,
   invoiceStatusSchema,
 } from '@/domain/statuses';
+import {
+  createQuoteBodySchema,
+  previewQuoteQuerySchema,
+  previewQuoteResponseSchema,
+  quoteIdParamsSchema,
+  storedQuoteResponseSchema,
+} from './quote-schemas';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -256,6 +263,31 @@ export const ROUTES: readonly RouteDefinition[] = [
     tag: 'invoices',
     params: invoiceIdParamsSchema,
     response: invoiceViewSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/quotes',
+    summary: "Price on today's date and store the quote, valid 14 days (D7), with its audit row",
+    tag: 'pricing',
+    body: createQuoteBodySchema,
+    response: storedQuoteResponseSchema,
+    status: 201,
+  },
+  {
+    method: 'GET',
+    path: '/api/quotes/preview',
+    summary: 'Price on today without storing: the breakdown and the term comparison (the sliders)',
+    tag: 'pricing',
+    query: previewQuoteQuerySchema,
+    response: previewQuoteResponseSchema,
+  },
+  {
+    method: 'GET',
+    path: '/api/quotes/[id]',
+    summary: 'A stored quote from its frozen numbers (never re-priced) and its status today',
+    tag: 'pricing',
+    params: quoteIdParamsSchema,
+    response: storedQuoteResponseSchema,
   },
   {
     method: 'POST',
