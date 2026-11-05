@@ -8,7 +8,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Field, Notice, inputClasses } from '@/components/ui';
 import type { Question } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import { parseEurosToCents, validateAnswer } from '@/domain/question-flow/answers';
+import {
+  answerProblem,
+  birthDateRange,
+  parseEurosToCents,
+  type AnswerProblem,
+} from '@/domain/question-flow/answers';
 import {
   nextQuestion,
   pruneAnswers,
@@ -31,6 +36,9 @@ export type QuestionFlowLabels = {
   error: string;
   required: string;
   invalid: string;
+  /** Raw, with {earliest} and {latest}. */
+  birthDateRange: string;
+  signatoryIsApplicant: string;
   pruned: string;
   moneyHint: string;
   listHint: string;
@@ -41,6 +49,8 @@ type QuestionFlowProps = {
   locale: Locale;
   quoteId: string;
   customerId: string;
+  /** The request's day (demo clock), for the birth-date range (D37). */
+  today: string;
   bank: Question[];
   context: FlowContext;
   /** Question id → its text and "why we ask" in the page's language. */
@@ -167,6 +177,9 @@ export function QuestionFlow(props: QuestionFlowProps) {
           text={texts[question.id]}
           options={props.options}
           initial={answers[question.id]}
+          answers={answers}
+          today={props.today}
+          locale={props.locale}
           labels={labels}
           headingRef={headingRef}
           canGoBack={position > 1}
@@ -215,6 +228,20 @@ export function QuestionFlow(props: QuestionFlowProps) {
   );
 }
 
+/** The sentence for an answer the flow cannot take (team rule 6: the domain gives the code). */
+function problemText(problem: AnswerProblem, labels: QuestionFlowLabels, locale: Locale): string {
+  switch (problem.code) {
+    case 'birth_date_out_of_range':
+      return labels.birthDateRange
+        .replace('{earliest}', formatIsoDate(problem.params.earliest, locale))
+        .replace('{latest}', formatIsoDate(problem.params.latest, locale));
+    case 'signatory_is_applicant':
+      return labels.signatoryIsApplicant;
+    case 'invalid':
+      return labels.invalid;
+  }
+}
+
 /** Cents as digits → "3200,50" for editing. */
 function centsToEuroInput(cents: string): string {
   const n = Number(cents);
@@ -228,6 +255,10 @@ type StepProps = {
   text: { text: string; why: string } | undefined;
   options: Record<string, string>;
   initial: Answer | undefined;
+  /** The other answers so far, for the checks across answers (D39). */
+  answers: Record<string, Answer>;
+  today: string;
+  locale: Locale;
   labels: QuestionFlowLabels;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   canGoBack: boolean;
@@ -248,6 +279,7 @@ function QuestionStep(props: StepProps) {
   const [draft, setDraft] = useState(initialDraft);
   const [error, setError] = useState<string | null>(null);
   const id = `question-${question.id}`;
+  const range = birthDateRange(props.today);
   const title = text?.text ?? question.id;
 
   function submit(event: React.FormEvent) {
@@ -265,7 +297,8 @@ function QuestionStep(props: StepProps) {
         .map((line) => line.trim())
         .filter(Boolean);
     }
-    if (!validateAnswer(question, value)) return setError(labels.invalid);
+    const problem = answerProblem(question, value, { today: props.today, answers: props.answers });
+    if (problem) return setError(problemText(problem, labels, props.locale));
     onSave(value);
   }
 
@@ -342,6 +375,9 @@ function QuestionStep(props: StepProps) {
                   }
                   inputMode={question.type === 'money' ? 'decimal' : undefined}
                   autoComplete={question.type === 'email' ? 'email' : undefined}
+                  {...(question.id === 'q_birth_date'
+                    ? { min: range.earliest, max: range.latest }
+                    : {})}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   className={inputClasses}

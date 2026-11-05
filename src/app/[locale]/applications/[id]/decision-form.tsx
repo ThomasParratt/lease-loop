@@ -10,28 +10,33 @@ type DecisionFormProps = {
   /** Who decides. Editable when `askWho` is given: the signatory names themself. */
   reviewer: string;
   askWho?: string;
-  labels: { approve: string; reject: string; error: string };
+  /** `forbidden` is shown when the server answers 403 (D39: not the named signatory). */
+  labels: { approve: string; reject: string; error: string; forbidden?: string };
 };
 
 export function DecisionForm({ applicationId, reviewer, askWho, labels }: DecisionFormProps) {
   const router = useRouter();
   const [who, setWho] = useState(reviewer);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
 
   async function decide(decision: 'approved' | 'rejected') {
     setPending(decision);
-    setFailed(false);
+    setFailed(null);
     try {
       const response = await fetch(`/api/applications/${applicationId}/decision`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ decision, reviewedBy: who }),
       });
+      if (response.status === 403 && labels.forbidden) {
+        setFailed(labels.forbidden);
+        return;
+      }
       if (!response.ok) throw new Error(`status ${response.status}`);
       router.refresh();
     } catch {
-      setFailed(true);
+      setFailed(labels.error);
     } finally {
       setPending(null);
     }
@@ -54,7 +59,7 @@ export function DecisionForm({ applicationId, reviewer, askWho, labels }: Decisi
       ) : null}
       {failed ? (
         <Notice tone="error" live>
-          {labels.error}
+          {failed}
         </Notice>
       ) : null}
       <div className="flex flex-wrap gap-3">

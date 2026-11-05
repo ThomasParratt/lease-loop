@@ -150,6 +150,69 @@ describe('createApplication', () => {
     });
   });
 
+  it('the trap: a birth date in the future is an invalid answer, not too_young', async () => {
+    const answers = { ...answersOf('cust-mikko'), q_birth_date: '2030-01-01' };
+    expect(await apply(await card5(), 'cust-mikko', answers)).toEqual({
+      ok: false,
+      reason: 'invalid_answer',
+      questionId: 'q_birth_date',
+      problem: {
+        code: 'birth_date_out_of_range',
+        params: { earliest: '1906-11-05', latest: TODAY },
+      },
+    });
+    expect(await db.application.count()).toBe(0);
+  });
+
+  it('the trap: card 5 Mikko answering "company" goes to manual review, not approved', async () => {
+    const answers = {
+      q_customer_type: 'company',
+      q_email: 'mikko.laine@example.com',
+      q_business_id: '0737546-2',
+      q_company_name: 'Mikko Oy',
+      q_can_sign: 'yes',
+      q_vat_registered: 'no',
+    };
+    const result = await apply(await card5(), 'cust-mikko', answers);
+    expect(result.ok && result.application).toMatchObject({
+      decision: 'manual_review',
+      reasons: [{ code: 'answer_differs_from_record', params: { question: 'q_customer_type' } }],
+    });
+  });
+
+  it('card 6: the applicant cannot name themself as the signatory', async () => {
+    const answers = { ...answersOf('cust-norvi'), q_signatory_email: 'FLEET@norvi.example.com' };
+    expect(await apply(await card6(), 'cust-norvi', answers)).toMatchObject({
+      ok: false,
+      reason: 'invalid_answer',
+      questionId: 'q_signatory_email',
+      problem: { code: 'signatory_is_applicant' },
+    });
+  });
+
+  it('the trap: card 5 Mikko cannot apply in Aino’s name with her answers (D40)', async () => {
+    const result = await createApplication(db, {
+      quoteId: await card5(),
+      customerId: 'cust-aino',
+      answers: answersOf('cust-aino'),
+      today: TODAY,
+      actor: 'cust-mikko',
+    });
+    expect(result).toEqual({ ok: false, reason: 'not_applicant' });
+    for (const actor of ['admin', 'anonymous']) {
+      const other = await createApplication(db, {
+        quoteId: await card1(),
+        customerId: 'cust-aino',
+        answers: answersOf('cust-aino'),
+        today: TODAY,
+        actor,
+      });
+      expect(other, actor).toEqual({ ok: false, reason: 'not_applicant' });
+    }
+    expect(await db.application.count()).toBe(0);
+    expect(await db.auditLog.count()).toBe(0);
+  });
+
   it('unknown quote, unknown customer and an expired quote', async () => {
     expect(await apply('nope', 'cust-aino')).toEqual({ ok: false, reason: 'quote_not_found' });
     const quoteId = await card1();
@@ -211,6 +274,33 @@ describe('decideApplication (D10)', () => {
     expect(result.ok && result.application.reasons.at(-1)?.code).toBe('signatory_decided');
   });
 
+  it('the trap: card 6 cannot be signed by a name other than the named signatory', async () => {
+    const created = await apply(await card6(), 'cust-norvi');
+    if (!created.ok) throw new Error('setup');
+    const sign = (reviewedBy: string, actor: string) =>
+      decideApplication(db, {
+        id: created.application.id,
+        decision: 'approved',
+        reviewedBy,
+        today: TODAY,
+        actor,
+      });
+    expect(await sign('fleet@norvi.example.com', 'cust-norvi')).toEqual({
+      ok: false,
+      reason: 'not_signatory',
+    });
+    expect(await sign('signatory@norvi.example.com', 'cust-aino')).toEqual({
+      ok: false,
+      reason: 'not_signatory',
+    });
+    expect(await sign('signatory@norvi.example.com', 'admin')).toEqual({
+      ok: false,
+      reason: 'not_signatory',
+    });
+    expect((await getApplication(db, created.application.id))?.decision).toBe('awaiting_signatory');
+    expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(0);
+  });
+
   it('a PEP case that also needs a signatory waits for the signatory after the review', async () => {
     const answers = {
       ...answersOf('cust-haapala'),
@@ -222,6 +312,14 @@ describe('decideApplication (D10)', () => {
     expect(created.application.decision).toBe('manual_review');
     const result = await decide(created.application.id, 'approved');
     expect(result.ok && result.application.decision).toBe('awaiting_signatory');
+    const signed = await decideApplication(db, {
+      id: created.application.id,
+      decision: 'approved',
+      reviewedBy: 'jussi@haapala.example.com',
+      today: TODAY,
+      actor: 'cust-haapala',
+    });
+    expect(signed.ok && signed.application.decision).toBe('approved');
   });
 
   it('a decided application is final; an unknown id is not found', async () => {

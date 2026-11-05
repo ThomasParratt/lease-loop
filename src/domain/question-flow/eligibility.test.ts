@@ -248,3 +248,66 @@ describe('every customer in customers.json gets a decision without throwing', ()
     }
   });
 });
+
+describe('evaluate: answers that differ from the customer record (D38)', () => {
+  const company: EligibilityInput = {
+    customerType: 'company',
+    startDate: '2026-11-05',
+    grossMonthlyRentCents: 10_005,
+    businessId: '0737546-2',
+    isPep: false,
+    applicantCanSign: true,
+    financedCents: 289_000,
+    financedLimits: LIMITS,
+  };
+
+  it('the trap: card 5 Mikko answering "company" is never approved by a rule', () => {
+    const result = evaluate(rules, { ...company, recordMismatches: ['q_customer_type'] });
+    expect(result).toEqual({
+      decision: 'manual_review',
+      reasons: [{ code: 'answer_differs_from_record', params: { question: 'q_customer_type' } }],
+    });
+  });
+
+  it('every differing answer is listed, after pep', () => {
+    const result = evaluate(rules, {
+      ...base,
+      isPep: true,
+      recordMismatches: ['q_birth_date', 'q_country'],
+    });
+    expect(result.decision).toBe('manual_review');
+    expect(result.reasons).toEqual([
+      { code: 'pep', params: {} },
+      { code: 'answer_differs_from_record', params: { question: 'q_birth_date' } },
+      { code: 'answer_differs_from_record', params: { question: 'q_country' } },
+    ]);
+  });
+
+  it('a failed rule still rejects, with the failures only', () => {
+    const result = evaluate(rules, {
+      ...base,
+      birthDate: '2009-03-10',
+      recordMismatches: ['q_birth_date'],
+    });
+    expect(result.decision).toBe('rejected');
+    expect(result.reasons.map((r) => r.code)).toEqual(['too_young']);
+  });
+
+  it('a company that cannot sign and differs from the record: manual review, then the signatory', () => {
+    const result = evaluate(rules, {
+      ...company,
+      applicantCanSign: false,
+      signatoryEmail: 'sign@x.fi',
+      recordMismatches: ['q_business_id'],
+    });
+    expect(result.decision).toBe('manual_review');
+    expect(result.reasons.map((r) => r.code)).toEqual([
+      'answer_differs_from_record',
+      'signatory_needed',
+    ]);
+  });
+
+  it('no differences (an empty list) changes nothing', () => {
+    expect(evaluate(rules, { ...base, recordMismatches: [] }).decision).toBe('approved');
+  });
+});

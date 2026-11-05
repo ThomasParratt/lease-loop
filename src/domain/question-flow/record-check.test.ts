@@ -1,0 +1,59 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { loadCustomers } from '@/data/load';
+import type { Customer } from '@/data/schemas';
+import { answersFromCustomer } from './answers';
+import { recordMismatches } from './record-check';
+
+let customers: Customer[];
+beforeAll(async () => {
+  customers = await loadCustomers();
+});
+const customer = (id: string) => customers.find((c) => c.id === id)!;
+
+describe('recordMismatches (D38)', () => {
+  it('every persona answering from their own record matches it', () => {
+    for (const c of customers) {
+      expect(recordMismatches(c, answersFromCustomer(c)), c.id).toEqual([]);
+    }
+  });
+
+  it('the trap: card 5 Mikko, a consumer on record, answers "company" and names it', () => {
+    const answers = {
+      q_customer_type: 'company',
+      q_business_id: '0737546-2',
+      q_company_name: 'Mikko Oy',
+    };
+    expect(recordMismatches(customer('cust-mikko'), answers)).toEqual(['q_customer_type']);
+  });
+
+  it('a birth date or a country other than the record is named', () => {
+    const answers = {
+      ...answersFromCustomer(customer('cust-mikko')),
+      q_birth_date: '2000-03-10',
+      q_country: 'SE',
+    };
+    expect(recordMismatches(customer('cust-mikko'), answers)).toEqual([
+      'q_birth_date',
+      'q_country',
+    ]);
+  });
+
+  it('a country outside FI, SE and EE on record is answered as "other"', () => {
+    const abroad = { ...customer('cust-aino'), country: 'DE' } as Customer;
+    expect(recordMismatches(abroad, { q_country: 'other' })).toEqual([]);
+    expect(recordMismatches(abroad, { q_country: 'FI' })).toEqual(['q_country']);
+  });
+
+  it('a business id other than the record is named; spaces around it are not a difference', () => {
+    const norvi = customer('cust-norvi');
+    const recorded = norvi.type === 'company' ? norvi.business_id : '';
+    expect(recordMismatches(norvi, { q_business_id: ` ${recorded} ` })).toEqual([]);
+    expect(recordMismatches(norvi, { q_business_id: '0737546-2' })).toEqual(['q_business_id']);
+  });
+
+  it('a question not answered is not compared, nor one the record does not know', () => {
+    expect(recordMismatches(customer('cust-aino'), {})).toEqual([]);
+    // a consumer record has no business id
+    expect(recordMismatches(customer('cust-aino'), { q_business_id: '0737546-2' })).toEqual([]);
+  });
+});

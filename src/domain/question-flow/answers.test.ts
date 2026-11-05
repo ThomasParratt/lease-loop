@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCustomers, loadQuestions } from '@/data/load';
 import type { Customer, Question } from '@/data/schemas';
 import {
+  answerProblem,
   answersFromCustomer,
+  birthDateRange,
   eligibilityInputFromAnswers,
   grossFromNetCents,
   parseEurosToCents,
@@ -140,6 +142,68 @@ describe('validateAnswer', () => {
     for (const c of customers) {
       for (const [id, answer] of Object.entries(answersFromCustomer(c))) {
         expect(validateAnswer(q(id), answer), `${c.id} ${id}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('birthDateRange (D37)', () => {
+  it('runs from 120 years before today to today', () => {
+    expect(birthDateRange('2026-11-05')).toEqual({ earliest: '1906-11-05', latest: '2026-11-05' });
+  });
+
+  it('on 29 February the earliest day is 28 February of a common year', () => {
+    // 1900 is not a leap year (divisible by 100, not by 400)
+    expect(birthDateRange('2020-02-29')).toEqual({ earliest: '1900-02-28', latest: '2020-02-29' });
+    expect(birthDateRange('2024-02-29').earliest).toBe('1904-02-29');
+  });
+});
+
+describe('answerProblem', () => {
+  const q = (id: string) => bank.find((x) => x.id === id)!;
+  const today = '2026-11-05';
+
+  it('the trap: a birth date in the future is not an answer, nor is one before 1906-11-05', () => {
+    const range = { code: 'birth_date_out_of_range', params: birthDateRange(today) };
+    expect(answerProblem(q('q_birth_date'), '2030-01-01', { today })).toEqual(range);
+    expect(answerProblem(q('q_birth_date'), '2026-11-06', { today })).toEqual(range);
+    expect(answerProblem(q('q_birth_date'), '1800-01-01', { today })).toEqual(range);
+    expect(answerProblem(q('q_birth_date'), '1906-11-04', { today })).toEqual(range);
+  });
+
+  it('both ends of the range are answers; card 5 Mikko (2009-03-10) is one', () => {
+    expect(answerProblem(q('q_birth_date'), '2026-11-05', { today })).toBeNull();
+    expect(answerProblem(q('q_birth_date'), '1906-11-05', { today })).toBeNull();
+    expect(answerProblem(q('q_birth_date'), '2009-03-10', { today })).toBeNull();
+  });
+
+  it('a wrong shape is invalid before the range is looked at', () => {
+    expect(answerProblem(q('q_birth_date'), '2009-02-29', { today })).toEqual({
+      code: 'invalid',
+      params: {},
+    });
+    expect(answerProblem(q('q_can_sign'), 'maybe', { today })).toEqual({
+      code: 'invalid',
+      params: {},
+    });
+  });
+
+  it('card 6: the signatory cannot be the applicant, whatever the case or spaces', () => {
+    const answers = { q_email: 'fleet@norvi.example.com' };
+    const signatory = q('q_signatory_email');
+    expect(answerProblem(signatory, ' Fleet@Norvi.example.com ', { today, answers })).toEqual({
+      code: 'signatory_is_applicant',
+      params: {},
+    });
+    expect(answerProblem(signatory, 'signatory@norvi.example.com', { today, answers })).toBeNull();
+    expect(answerProblem(signatory, 'signatory@norvi.example.com', { today })).toBeNull();
+  });
+
+  it('every persona answer has no problem on the demo day', () => {
+    for (const c of customers) {
+      const answers = answersFromCustomer(c);
+      for (const [id, answer] of Object.entries(answers)) {
+        expect(answerProblem(q(id), answer, { today, answers }), `${c.id} ${id}`).toBeNull();
       }
     }
   });

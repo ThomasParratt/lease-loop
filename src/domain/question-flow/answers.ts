@@ -3,6 +3,7 @@ import type { Customer, Question } from '@/data/schemas';
 import { splitVat } from '@/domain/money-math';
 import type { Answer, Answers, FlowContext } from './engine';
 import type { EligibilityInput } from './eligibility';
+import { sameEmail } from './signatory';
 
 const text = (answer: Answer | undefined): string | undefined =>
   typeof answer === 'string' && answer.trim() !== '' ? answer.trim() : undefined;
@@ -46,6 +47,52 @@ export function validateAnswer(question: Question, answer: Answer): boolean {
   }
 }
 
+/** The oldest applicant we take as a real answer, in years (D37). */
+export const MAX_AGE_YEARS = 120;
+
+/**
+ * The birth dates that are real answers on `today`: from the same day 120 years ago up to
+ * today (D37). On 29 February the earliest day falls on 28 February when that year has no
+ * 29th. "Too young" is an eligibility reason, not a typo: only a future day is refused here.
+ */
+export function birthDateRange(today: string): { earliest: string; latest: string } {
+  const [y = 0, m = 0, d = 0] = today.split('-').map(Number);
+  const year = y - MAX_AGE_YEARS;
+  const day = m === 2 && d === 29 && !isRealDay(`${year}-02-29`) ? 28 : d;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return { earliest: `${String(year).padStart(4, '0')}-${pad(m)}-${pad(day)}`, latest: today };
+}
+
+export type AnswerProblem =
+  | { code: 'invalid'; params: Record<string, never> }
+  | { code: 'birth_date_out_of_range'; params: { earliest: string; latest: string } }
+  | { code: 'signatory_is_applicant'; params: Record<string, never> };
+
+/**
+ * Why an answer cannot be taken, as a code for the page, or null when it can. First the
+ * shape (`validateAnswer`), then the checks that need the day or the other answers: a birth
+ * date from the future or more than 120 years back (D37), and a signatory e-mail that is the
+ * applicant's own (D39), since the applicant would then sign for themself.
+ */
+export function answerProblem(
+  question: Question,
+  answer: Answer,
+  flow: { today: string; answers?: Answers }
+): AnswerProblem | null {
+  if (!validateAnswer(question, answer)) return { code: 'invalid', params: {} };
+  const value = text(answer);
+  if (question.id === 'q_birth_date' && value !== undefined) {
+    const range = birthDateRange(flow.today);
+    if (value < range.earliest || value > range.latest) {
+      return { code: 'birth_date_out_of_range', params: range };
+    }
+  }
+  if (question.id === 'q_signatory_email' && sameEmail(value, text(flow.answers?.q_email))) {
+    return { code: 'signatory_is_applicant', params: {} };
+  }
+  return null;
+}
+
 function isRealDay(iso: string): boolean {
   const [y = 0, m = 0, d = 0] = iso.split('-').map(Number);
   if (m < 1 || m > 12 || d < 1) return false;
@@ -76,6 +123,8 @@ export type InputFromAnswers = {
   financedLimits?: { minCents: number; maxCents: number };
   /** The customer record knows a PEP even when the amount is too small to ask. */
   knownPep?: boolean;
+  /** Question ids answered other than the customer record (`recordMismatches`, D38). */
+  recordMismatches?: readonly string[];
 };
 
 /** The eligibility input from the (pruned) answers of a flow. */
@@ -95,6 +144,7 @@ export function eligibilityInputFromAnswers(args: InputFromAnswers): Eligibility
     signatoryEmail: text(answers.q_signatory_email),
     financedCents: context.financedCents,
     financedLimits: args.financedLimits,
+    recordMismatches: args.recordMismatches,
   };
 }
 

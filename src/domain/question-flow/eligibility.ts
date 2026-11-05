@@ -14,6 +14,7 @@ export type ReasonCode =
   | 'financed_out_of_range'
   | 'missing_answer'
   | 'pep'
+  | 'answer_differs_from_record'
   | 'signatory_needed'
   | 'all_checks_passed';
 
@@ -38,6 +39,8 @@ export type EligibilityInput = {
   financedCents: number;
   /** The coefficient table's lowest and highest financed amount. */
   financedLimits?: { minCents: number; maxCents: number };
+  /** Question ids answered other than the customer record (D38): each holds the case. */
+  recordMismatches?: readonly string[];
 };
 
 export const MIN_AGE_YEARS = 18;
@@ -136,7 +139,8 @@ function rejections(ruleIds: ReadonlySet<string>, input: EligibilityInput): Reas
 
 /**
  * The decision, in this order: any failed rule → rejected (every failure listed); else a PEP
- * → manual_review (never auto-approved); else a company applicant who cannot sign →
+ * or an answer that differs from the customer record (D38) → manual_review (never
+ * auto-approved, every reason listed); else a company applicant who cannot sign →
  * awaiting_signatory (the named signatory signs); else approved. Rules not listed in
  * `rules` (by id) are not checked; unknown ids are ignored.
  */
@@ -151,6 +155,9 @@ export function evaluate(
 
   const held: Reason[] = [];
   if (ruleIds.has('pep_manual_review') && input.isPep) held.push({ code: 'pep', params: {} });
+  for (const question of input.recordMismatches ?? []) {
+    held.push({ code: 'answer_differs_from_record', params: { question } });
+  }
   const cannotSign = input.customerType === 'company' && input.applicantCanSign === false;
   const signatory: Reason = {
     code: 'signatory_needed',

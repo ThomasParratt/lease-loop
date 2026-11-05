@@ -97,6 +97,7 @@ export default async function ApplyPage({ params }: PageProps<'/[locale]/apply/[
         locale={locale}
         quoteId={quoteId}
         customerId={customer.id}
+        today={today}
         bank={bank}
         context={context}
         texts={texts}
@@ -114,6 +115,8 @@ export default async function ApplyPage({ params }: PageProps<'/[locale]/apply/[
           error: t('apply.error'),
           required: t('apply.required'),
           invalid: t('apply.invalid'),
+          birthDateRange: raw('apply.birthDateRange'),
+          signatoryIsApplicant: t('apply.signatoryIsApplicant'),
           pruned: raw('apply.pruned'),
           moneyHint: t('apply.moneyHint'),
           listHint: t('apply.listHint'),

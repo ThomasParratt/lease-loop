@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { Badge, Card, Notice, PageHeader } from '@/components/ui';
+import { loadQuestions } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, messages, type MessageKey } from '@/i18n/get-t';
@@ -23,10 +24,20 @@ export async function generateMetadata({
   return { title: t('meta.pageTitle', { page: t('decision.title') }) };
 }
 
-/** Params that are days or cents are written for the reader; the rest as they are. */
-function formatParams(params: StoredReason['params'], locale: Locale) {
+/**
+ * Params that are days or cents are written for the reader, a question id as the question's
+ * text (`questionText`); the rest as they are.
+ */
+function formatParams(
+  params: StoredReason['params'],
+  locale: Locale,
+  questionText: Record<string, string>
+) {
   return Object.fromEntries(
     Object.entries(params).map(([name, value]) => {
+      if (name === 'question' && typeof value === 'string') {
+        return [name, questionText[value] ?? value];
+      }
       if (typeof value === 'number' && name.endsWith('Cents')) {
         return [name, formatEuro(value, intlLocale[locale])];
       }
@@ -77,11 +88,14 @@ export default async function ApplicationPage({
     );
   }
   const actor = await readActor(db);
+  const questionText = Object.fromEntries(
+    (await loadQuestions()).questions.map((q) => [q.id, q.text[locale]])
+  );
   const dictionary: Record<string, string> = messages[locale];
   const reasonText = (reason: StoredReason) => {
     const key = `decision.reason.${reason.code}`;
     return key in dictionary
-      ? t(key as MessageKey, formatParams(reason.params, locale))
+      ? t(key as MessageKey, formatParams(reason.params, locale, questionText))
       : t('decision.reason.unknown', { code: reason.code });
   };
   const { decision } = application;
@@ -150,16 +164,21 @@ export default async function ApplicationPage({
           titleId="decision-sign"
           className="mt-6"
         >
-          <DecisionForm
-            applicationId={application.id}
-            reviewer={String(application.answers.q_signatory_email ?? '')}
-            askWho={t('decision.sign.who')}
-            labels={{
-              approve: t('decision.sign'),
-              reject: t('decision.decline'),
-              error: t('decision.error'),
-            }}
-          />
+          {actor === application.customerId ? (
+            <DecisionForm
+              applicationId={application.id}
+              reviewer={String(application.answers.q_signatory_email ?? '')}
+              askWho={t('decision.sign.who')}
+              labels={{
+                approve: t('decision.sign'),
+                reject: t('decision.decline'),
+                error: t('decision.error'),
+                forbidden: t('decision.sign.notSignatory'),
+              }}
+            />
+          ) : (
+            <Notice tone="info">{t('decision.sign.companyOnly')}</Notice>
+          )}
         </Card>
       ) : null}
     </div>
