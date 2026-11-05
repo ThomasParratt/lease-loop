@@ -2,7 +2,7 @@
 
 ## What it does
 
-Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided, per item on the passport page and for the whole fleet in the catalogue's impact strip (smart problem 7, problem 3's passport bonus, scenario card 10).
+Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided, per item on the passport page and in total and per category in the landing page's impact strip, which names no items (each item's saving is on its passport, reached from its price page) (smart problem 7, problem 3's passport bonus, scenario card 10).
 
 ## The rule: the method, worked through card 10
 
@@ -97,7 +97,7 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[]
 - `src/domain/second-life/co2.ts`, `src/domain/passport.ts` and their tests
 - `src/server/asset-events.ts`, `src/server/passport-handlers.ts`, `src/server/event-handlers.ts` and tests; `tests/helpers/contract-fixture.ts`
 - `src/app/api/assets/[id]/passport/route.ts` (`GET`, row in `src/server/routes.ts`, in `docs/openapi.json`)
-- `src/app/[locale]/assets/[id]/passport/page.tsx`, `src/components/impact-strip.tsx` (mounted on the catalogue), a "Passport" link on the asset card
+- `src/app/[locale]/assets/[id]/passport/page.tsx`, `src/components/impact-strip.tsx` (mounted on the landing page), a "Passport" link on the price page
 - `passport.*` and `impact.*` keys in the four message files
 
 ## Tests that pin the numbers

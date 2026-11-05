@@ -1,10 +1,12 @@
 'use client';
 
 // The main navigation links. A client component only because it marks the current page
-// with aria-current, which needs the path.
+// with aria-current, which needs the path, and a link to a section (`/en#how-it-works`)
+// scrolls there on every click, not only the first.
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cx } from './cx';
+import { onSectionLinkClick } from './hash-link';
 
 export type NavItem = { href: string; label: string };
 
@@ -33,6 +35,7 @@ export function NavLinks({
             <li key={item.href}>
               <Link
                 href={item.href}
+                onClick={(event) => onSectionLinkClick(event, item.href, pathname)}
                 aria-current={active ? 'page' : undefined}
                 className={cx(
                   'block rounded-full px-4 py-2 font-semibold transition-colors',

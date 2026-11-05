@@ -1,6 +1,6 @@
-// Why it's greener: the CO2 the fleet's later lives have saved so far, per category, with a
-// link to each such item's passport. A server component: it reads the database itself.
-import Link from 'next/link';
+// Why it's greener: the CO2 that items leased again (second and third lives) have saved so far,
+// in total and per category. Each item's own saving is on its passport, reached from its page.
+// A server component: it reads the database itself.
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
@@ -11,7 +11,7 @@ import { LifeStamp } from './ui';
 type ImpactStripProps = { today: string; locale: Locale; t: Translate };
 
 export async function ImpactStrip({ today, locale, t }: ImpactStripProps) {
-  const { fleet, assets } = await readFleetImpact(db, today);
+  const { fleet } = await readFleetImpact(db, today);
   const kg = (value: number) => formatNumber(value, locale);
 
   return (
@@ -66,28 +66,6 @@ export async function ImpactStrip({ today, locale, t }: ImpactStripProps) {
               tilt={-4}
             />
           </div>
-          {assets.length > 0 ? (
-            <details className="mt-6">
-              <summary className="cursor-pointer font-bold text-brand-text underline decoration-2 underline-offset-4">
-                {t('impact.items')}
-              </summary>
-              <ul className="mt-3 grid gap-1 sm:grid-cols-2">
-                {assets.map(({ asset, kg: saved }) => (
-                  <li key={asset.id}>
-                    <Link
-                      href={`/${locale}/assets/${asset.id}/passport`}
-                      className="text-brand-text underline-offset-4 hover:underline"
-                    >
-                      {t('impact.itemLink', {
-                        name: `${asset.make} ${asset.model}`,
-                        kg: kg(saved),
-                      })}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
         </div>
       </div>
     </section>

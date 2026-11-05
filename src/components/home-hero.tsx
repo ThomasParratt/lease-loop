@@ -2,7 +2,7 @@
 // Only promises the app keeps: no shops, no delivery, no PDFs.
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
-import { LinkButton } from './ui';
+import { HashLink, LinkButton, buttonClasses } from './ui';
 
 /** A character no translation contains, used to find where the green word goes. */
 const MARK = '\u0000';
@@ -31,9 +31,9 @@ export function HomeHero({ locale, t }: { locale: Locale; t: Translate }) {
           <LinkButton href={`/${locale}/catalogue`} size="lg">
             {t('home.cta.catalogue')} <span aria-hidden="true">→</span>
           </LinkButton>
-          <LinkButton href={`/${locale}#how-it-works`} size="lg" variant="secondary">
+          <HashLink href={`/${locale}#how-it-works`} className={buttonClasses('secondary', 'lg')}>
             {t('home.cta.how')}
-          </LinkButton>
+          </HashLink>
         </div>
       </div>
 
