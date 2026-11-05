@@ -6,7 +6,7 @@
 // Contract first (AGENTS.md, team rule 2): a slice's first commit adds its row here.
 import { z } from 'zod';
 import { assetCategorySchema, assetSchema, assetStatusSchema, isoDateSchema } from '@/data/schemas';
-import { assetEventKindSchema } from '@/domain/statuses';
+import { applicationDecisionSchema, assetEventKindSchema } from '@/domain/statuses';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -69,6 +69,46 @@ export const auditLogEntrySchema = z.object({
   entity_type: z.string(),
   entity_id: z.string(),
   details: z.unknown(),
+});
+
+// ---------- applications ----------
+
+/** One answer: text, a choice, an ISO day, cents as digits, or a list (beneficial owners). */
+export const answerSchema = z.union([z.string().max(500), z.array(z.string().max(200)).max(20)]);
+
+export const answersSchema = z.record(z.string().regex(/^q_[a-z0-9_]+$/), answerSchema);
+
+/** Body of `POST /api/applications`. The server prunes, validates and evaluates. */
+export const createApplicationBodySchema = z.strictObject({
+  quoteId: z.string().min(1).max(100),
+  customerId: z.string().min(1).max(100),
+  answers: answersSchema,
+});
+
+export const applicationIdParamsSchema = z.object({ id: z.string().min(1) });
+
+/** Body of `POST /api/applications/[id]/decision` (D10). */
+export const decideApplicationBodySchema = z.strictObject({
+  decision: z.enum(['approved', 'rejected']),
+  /** The reviewer, or the named signatory who signs or declines. */
+  reviewedBy: z.string().trim().min(1).max(200),
+});
+
+export const applicationReasonSchema = z.object({
+  code: z.string(),
+  params: z.record(z.string(), z.union([z.string(), z.number()])),
+});
+
+export const applicationSchema = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  quoteId: z.string(),
+  answers: answersSchema,
+  decision: applicationDecisionSchema,
+  reasons: z.array(applicationReasonSchema),
+  decidedOn: isoDateSchema,
+  reviewedBy: z.string().nullable(),
+  createdAt: z.iso.datetime(),
 });
 
 // ---------- passport and impact ----------
@@ -164,6 +204,33 @@ export const ROUTES: readonly RouteDefinition[] = [
     summary: 'The 50 newest audit rows, newest first',
     tag: 'audit',
     response: z.array(auditLogEntrySchema),
+  },
+  {
+    method: 'POST',
+    path: '/api/applications',
+    summary:
+      'Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9)',
+    tag: 'applications',
+    body: createApplicationBodySchema,
+    response: applicationSchema,
+    status: 201,
+  },
+  {
+    method: 'GET',
+    path: '/api/applications/[id]',
+    summary: 'An application with its decision and reasons as codes with params',
+    tag: 'applications',
+    params: applicationIdParamsSchema,
+    response: applicationSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/applications/[id]/decision',
+    summary: 'An admin decides a manual review, or the named signatory signs or declines (D10)',
+    tag: 'applications',
+    params: applicationIdParamsSchema,
+    body: decideApplicationBodySchema,
+    response: applicationSchema,
   },
 ];
 
