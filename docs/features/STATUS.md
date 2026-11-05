@@ -1,0 +1,59 @@
+# Feature status
+
+One row per feature of the plan (`docs/kickoff-brief.md` sections 4 and 9), kept by the coordinating session at every merge. The README's "Status" table is the judges' view (one row per scenario card); this is the team's view (one row per feature). As of 2026-11-06 00:10, `main` at `e22aae4`.
+
+**The four states.** _missing_: not started. _in progress_: a session is on it or its PR is open. _done_: squash-merged into `main` with its tests, its route rows and its feature page. _verified_: done, and also pinned by the scenario harness in `src/domain/scenarios/` or checked in a wave review under `docs/reviews/`, and shown on a page where it has one. A feature is only "verified" when the "Verified by" cell names the test or review that proves it.
+
+## Wave 0: the spine
+
+| Feature                                                      | State    | Verified by                                                                   | Page                         |
+| ------------------------------------------------------------ | -------- | ----------------------------------------------------------------------------- | ---------------------------- |
+| Schema, customer seed, actor cookie                          | verified | `docs/reviews/wave-0.md`; idempotent seed checked twice                       | [catalogue.md](catalogue.md) |
+| UI kit, demo clock, audit page, header with the actor picker | verified | `docs/reviews/wave-0.md` (live check at 375 px, four languages)               | [catalogue.md](catalogue.md) |
+| Domain events, event bus, route table, OpenAPI drift test    | verified | `routes.test.ts`, `openapi.test.ts`, rollback test in `events.test.ts`        | [catalogue.md](catalogue.md) |
+| Integer money math, VAT by date                              | verified | cards 1 and 3 in `src/domain/scenarios/`; `money-math.test.ts`, `vat.test.ts` | [invoicing.md](invoicing.md) |
+
+## Wave 1
+
+| Feature                                                                                          | State    | Verified by                                                                                                                                                                                | Page                                     |
+| ------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| Catalogue with today's price, asset statuses `leased` / `sold` (D22)                             | done     | statuses exist and `leased` is set at signing; `sold` / `returned` are set by the exits slice (in progress); the status route still takes the actor from the body (review finding 5, open) | [catalogue.md](catalogue.md)             |
+| Circular impact method (D15) and the passport across lives                                       | verified | card 10 in `src/domain/scenarios/`; `co2.test.ts`, `asset-events.test.ts`; `docs/reviews/wave-1.md`                                                                                        | [circular-impact.md](circular-impact.md) |
+| Question engine, eligibility, the application and its decision                                   | verified | cards 5, 6, 7 in `src/domain/scenarios/`; `applications.test.ts`                                                                                                                           | [question-flow.md](question-flow.md)     |
+| Price breakdown, stored quote locked at its date and list version, sliders page                  | verified | cards 1, 2, 6, 7 in `src/domain/scenarios/`; Panu's review on PR #11 and its fixes (VAT on the down payment and the buyout in the totals)                                                  | [pricing.md](pricing.md)                 |
+| Invoice schedule, VAT by invoice date, paying an invoice, the D14 balance                        | verified | cards 1, 3, 4 and the card 8 balance (330 675) in `src/domain/scenarios/`; `schedule.property.test.ts`; `quote-schedule.property.test.ts`                                                  | [invoicing.md](invoicing.md)             |
+| Scenario harness: ten cards, the pack's traps, every customer applying, property tests           | done     | it is the verifier; 64 test files on `main`                                                                                                                                                | README "Status"                          |
+| Wave 1 review and upkeep: one owner per table, the shared Date-free `addDays`, decision statuses | done     | `docs/reviews/wave-1.md` (findings 3, 4, 5, 7, 8 open for the owners)                                                                                                                      | —                                        |
+
+## Wave 2
+
+| Feature                                                                                                                                                                                                                          | State       | Verified by                                                                                                                                                                             | Page                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Signing from an approved application: the quote copied and never re-priced, the last-unit race, the signed event, the contract page with the invoice table and the price-lock explanation                                        | done        | `contracts.test.ts` (race, rollback, audit), `sign.test.ts`; cards 1 to 4 reachable through `POST /api/contracts`; not yet pinned end to end by the scenario harness (wave 2 hardening) | [contracts.md](contracts.md)                  |
+| A "Sign" button on the application page                                                                                                                                                                                          | missing     | the application page belongs to the question-flow slice; signing is the API and the tests for now                                                                                       | [contracts.md](contracts.md) "Open questions" |
+| Buy out, return and pass on (D16) at the end of the term; the D14 early exit line by line; `sold` / `returned` set by the catalogue handler; unpaid future rents cancelled                                                       | in progress | session on `feat/end-of-term`; card 8 has 3 todos in `card-08-early-exit.test.ts` waiting for it                                                                                        | exits.md (with the PR)                        |
+| Market value by the residual curve (D11 age) and the refurbishment plan from the pack                                                                                                                                            | in progress | same session; wave 3 imports both; card 9's refurbishment numbers to be pinned there                                                                                                    | exits.md (with the PR)                        |
+| Wave 2 hardening: cards 1 to 4 and 8 end to end through signing and exit, the test-isolation design (one `resetDb`, one handler-registration helper, no cross-test row dependencies, meta-rules for each)                        | missing     | planned after the exits PR                                                                                                                                                              | —                                             |
+| Wave 2 upkeep: `invoices.ts` reads the contract through `getContract`, the catalogue findings, decisions D24 to D27 written (zero down payment, invoice access, `cancelled`, test isolation), review in `docs/reviews/wave-2.md` | missing     | planned after the exits PR                                                                                                                                                              | —                                             |
+
+## Wave 3 (Friday morning)
+
+| Feature                                                                                             | State         | Verified by                                                               | Page                                                   |
+| --------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Second life: the return assessment, re-pricing (D12), matchmaking on the waiting list (D13), card 9 | missing       | `card-09-second-life.test.ts` has 5 todos with the pinned numbers         | —                                                      |
+| Third life: lease a returned item again with the passport and the CO₂ shown, card 10's page         | missing       | `card-10-third-life.test.ts` pins the passport and the CO₂ already        | [circular-impact.md](circular-impact.md)               |
+| Demo page: one button per card running the real code path with the clock                            | missing       | —                                                                         | —                                                      |
+| Fleet quantity (D8): N units on one asset row                                                       | open question | issue #13; the quote and the contract carry the quantity and lock one row | [pricing.md](pricing.md), [contracts.md](contracts.md) |
+| Submission: demo script, README current, the PR to the organiser listing every feature page         | missing       | freeze Friday 15:00                                                       | —                                                      |
+
+## Smart problems (CHALLENGE.md order)
+
+| #   | Problem                     | State                                                             |
+| --- | --------------------------- | ----------------------------------------------------------------- |
+| 1   | Lock the price, not the tax | verified (pricing + invoicing, cards 2 and 3)                     |
+| 2   | Fair early exit             | in progress (exits slice; the balance it rests on is verified)    |
+| 3   | Second-life matchmaking     | missing (wave 3)                                                  |
+| 4   | The smart question flow     | verified (cards 5, 6, 7)                                          |
+| 5   | Money that adds up          | verified (property tests, the quote total equals the invoice sum) |
+| 6   | Explain my price            | verified (the breakdown and the term comparison)                  |
+| 7   | Circular impact             | done; the third-life page is wave 3                               |

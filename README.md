@@ -91,6 +91,8 @@ The card files are in `src/domain/scenarios/`; the others sit next to the code t
 
 ## Features
 
+Per-feature state (missing, in progress, done, verified): [docs/features/STATUS.md](docs/features/STATUS.md).
+
 One page per feature slice under `docs/features/` (template: [docs/features/README.md](docs/features/README.md)):
 
 - [Catalogue, demo clock, actor and audit trail](docs/features/catalogue.md) (wave 0)
