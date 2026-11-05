@@ -27,6 +27,8 @@ You should see the asset catalogue in English. Switch to Finnish, Swedish or Est
 
 | Command                 | What it does                                                   |
 | ----------------------- | -------------------------------------------------------------- |
+| `npm run setup`         | Set up a checkout or worktree: dependencies, database, hooks   |
+| `npm run setup`         | Set up a checkout or worktree: dependencies, database, hooks   |
 | `npm run dev`           | Start the app with hot reload                                  |
 | `npm test`              | Run all tests once (`npm run test:watch` to keep them running) |
 | `npm run test:coverage` | Tests with the 60 % coverage gate                              |
