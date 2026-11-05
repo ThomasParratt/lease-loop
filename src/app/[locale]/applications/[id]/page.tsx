@@ -4,7 +4,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { Badge, Card, Notice, PageHeader } from '@/components/ui';
+import { Card, LinkButton, Notice, PageHeader } from '@/components/ui';
 import { loadQuestions } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -123,16 +123,17 @@ export default async function ApplicationPage({
         </div>
       </div>
 
-      <Card as="section" title={t('decision.reasons')} titleId="decision-reasons">
-        <div className="mb-4">
-          <Badge status={decision}>{t(`decision.badge.${decision}`)}</Badge>
-        </div>
-        <ul className="list-disc space-y-2 pl-5">
-          {application.reasons.map((reason, index) => (
-            <li key={`${reason.code}-${index}`}>{reasonText(reason)}</li>
-          ))}
-        </ul>
-      </Card>
+      {/* A yes needs no reasons ("every check passed" says nothing new); a no, a manual
+          review or a wait for the signatory does, without a badge repeating the panel. */}
+      {decision === 'approved' ? null : (
+        <Card as="section" title={t('decision.reasons')} titleId="decision-reasons">
+          <ul className="list-disc space-y-2 pl-5">
+            {application.reasons.map((reason, index) => (
+              <li key={`${reason.code}-${index}`}>{reasonText(reason)}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {decision === 'manual_review' ? (
         <Card
@@ -181,6 +182,15 @@ export default async function ApplicationPage({
           )}
         </Card>
       ) : null}
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <LinkButton href={`/${locale}`}>
+          <span aria-hidden="true">←</span> {t('decision.home')}
+        </LinkButton>
+        <LinkButton href={`/${locale}/catalogue`} variant="secondary">
+          {t('home.cta.catalogue')}
+        </LinkButton>
+      </div>
     </div>
   );
 }

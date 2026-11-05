@@ -4,6 +4,8 @@
 
 The applicant answers only the questions of `data/questions.json` that apply to their deal, one at a time, with "why we ask" for each; going back and changing an answer removes the answers that no longer apply and says so. An answer that cannot be true (a birth date in the future) is refused at the question, and an answer that differs from the customer record sends the case to a person. On submit, the eligibility rules give a clear yes, no, "a person will check" or "waiting for the signatory", each with reasons as codes the page writes in the visitor's language (CHALLENGE.md smart problem 4, spine 3).
 
+On the page: "why we ask" is a narrow teal note with a chevron under each question, so it does not read as one more option. The decision page leads with the outcome; a yes shows no reasons ("every check passed" adds nothing), while a no, a manual review and a wait for the signatory list theirs under "Why". A no is worded politely ("Sorry, your lease application was not approved"), and every outcome ends with a way back to the home page and the catalogue.
+
 ## The rule
 
 ### Which questions appear (`ask_when`)

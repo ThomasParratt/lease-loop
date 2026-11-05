@@ -302,10 +302,37 @@ function QuestionStep(props: StepProps) {
     onSave(value);
   }
 
+  // Teal, narrow and with a chevron, so it reads as a note to open and not as one more option.
   const why = (
-    <details className="rounded-md border border-line p-3 text-sm">
-      <summary className="cursor-pointer font-medium">{labels.why}</summary>
-      <p className="mt-2 text-ink-muted">{text?.why}</p>
+    <details className="group w-fit max-w-prose rounded-lg border border-info-line bg-info-soft text-sm text-info-ink">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-semibold [&::-webkit-details-marker]:hidden">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-4 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v5M12 8h.01" />
+        </svg>
+        {labels.why}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-4 shrink-0 transition-transform group-open:rotate-180"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </summary>
+      <p className="px-3 pb-3">{text?.why}</p>
     </details>
   );
 
