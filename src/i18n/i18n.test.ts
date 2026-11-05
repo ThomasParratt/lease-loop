@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatIsoDate, formatNumber } from './format';
+import { formatIsoDate, formatNumber, formatTimestamp } from './format';
 import { getT } from './get-t';
 import { defaultLocale, isLocale, locales } from './locales';
 
@@ -43,5 +43,14 @@ describe('formatting', () => {
   it('formats numbers per locale', () => {
     expect(formatNumber(18_400, 'en')).toBe('18,400');
     expect(plain(formatNumber(18_400, 'fi'))).toBe('18 400');
+  });
+
+  it('formats an instant in Helsinki time, so a UTC evening can be the next day', () => {
+    expect(formatTimestamp('2026-11-05T14:30:00.000Z', 'en')).toBe('5 Nov 2026, 16:30');
+    expect(plain(formatTimestamp('2026-11-05T22:30:00.000Z', 'en'))).toBe('6 Nov 2026, 00:30');
+  });
+
+  it('formats an instant per locale', () => {
+    expect(plain(formatTimestamp('2026-11-05T14:30:00.000Z', 'fi'))).toContain('16.30');
   });
 });

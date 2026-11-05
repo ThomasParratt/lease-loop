@@ -73,6 +73,14 @@ SQLite through Prisma 7, schema in `prisma/schema.prisma`, `snake_case` columns.
 
 There is no login (D17). The "continue as" picker (`src/components/actor-picker.tsx`) posts `{ actor }` (a customer id or `admin`) to `POST /api/actor`, which sets the `lease-loop-actor` cookie; `DELETE /api/actor` clears it. Pages and routes call `readActor(db)` from `src/server/actor.ts` once per request and pass the actor to `withAudit`; an unknown or missing cookie reads as `anonymous`.
 
+### Pages
+
+`/[locale]` is the catalogue, `/[locale]/demo` the demo page (the clock and, from wave 1, one button per scenario card), `/[locale]/audit` the newest 50 audit rows. The header nav links all three, beside the language switcher and a slot for the "continue as" actor picker; it wraps on a phone. Pages are built from the kit in `src/components/ui` (`PageHeader`, `Card`, `Button`, `LinkButton`, `Badge`, `DefinitionList`, `Field`, `Notice`, `Money`, `DateText`, `NavLinks`, one `index.ts`) and the team's design tokens in `src/app/globals.css` (D21): pages use the roles `brand`, `focus`, `success`, `warning`, `danger`, `info`, `neutral`, `surface`, `raised`, `muted`, `line`, `line-strong`, `ink`, `ink-muted` (e.g. `bg-brand`, `text-ink-muted`, `bg-success-soft`), never raw colour classes or the scales under them. Each token switches with the colour scheme, so no page needs a `dark:` class.
+
+### Demo clock
+
+The demo page moves the app to any day, so a scenario card dated September 2026 or February 2028 runs on its own date. `POST /api/demo/clock` with `{ "asOf": "2026-09-15" }` sets the `lease-loop-as-of` cookie and `{ "asOf": null }` clears it. Pages and routes call `todayForRequest()` from `src/server/demo-clock.ts` once and pass the day down; it is `todayIso()` unless the cookie holds a real calendar day (an invalid one is ignored). The catalogue's "prices on" follows it. It is the only date the server takes from the browser.
+
 ---
 
 ## Submitting
