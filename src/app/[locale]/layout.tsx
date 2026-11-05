@@ -2,6 +2,7 @@
 // <html lang> attribute is always right for the page.
 import type { Metadata } from 'next';
 import { Fredoka, Nunito } from 'next/font/google';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { LoopMark } from '@/components/loop-mark';
 import { SiteHeader } from '@/components/site-header';
@@ -62,15 +63,19 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {children}
         </main>
 
-        <footer className="mt-16 bg-brand text-brand-contrast">
+        <footer className="bg-brand text-brand-contrast">
           <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 px-4 py-10 sm:px-6">
             <div>
-              <p className="flex items-center gap-2.5 font-heading text-xl font-semibold">
+              <Link
+                href={`/${locale}`}
+                aria-label={t('brand.home')}
+                className="inline-flex items-center gap-2.5 rounded-full font-heading text-xl font-semibold underline-offset-4 hover:underline"
+              >
                 <span className="rounded-full bg-raised p-1">
                   <LoopMark className="size-7" />
                 </span>
                 {t('brand.name')}
-              </p>
+              </Link>
               <p className="mt-2 max-w-sm opacity-90">{t('brand.tagline')}</p>
             </div>
             <p className="max-w-sm text-sm opacity-80">{t('footer.note')}</p>

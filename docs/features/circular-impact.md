@@ -2,7 +2,7 @@
 
 ## What it does
 
-Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided, per item on the passport page and on the landing page's "Why it's greener": the total CO2 saved as the big number, and under it the same total per category ("29 kg CO₂e saved by e-bike leasing"), which adds up to it. The strip names no items: each item's saving is on its passport, reached from the catalogue (greyed returned and leased units link straight to theirs) (smart problem 7, problem 3's passport bonus, scenario card 10).
+Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided, per item on the passport page and on the landing page's "Why it's greener": the total CO2 saved as the big number, and under it the same total per category ("29 kg CO₂e saved by e-bike leasing"), which adds up to it. A "How is this counted?" button under the numbers shows the method in a few sentences on hover, focus or tap (the refurbishment share read from `co2-factors.json`). The strip names no items: each item's saving is on its passport, reached from the catalogue (greyed returned and leased units link straight to theirs) (smart problem 7, problem 3's passport bonus, scenario card 10).
 
 ## The rule: the method, worked through card 10
 
