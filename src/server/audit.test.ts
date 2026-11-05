@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { listAuditLog, withAudit, type AuditEntry } from './audit';
 import type { PrismaClient } from './prisma-client';
+import { RowRuleError } from './row-rules';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -71,12 +72,34 @@ describe('withAudit', () => {
   });
 
   it('rolls back the change when the audit write fails', async () => {
-    // A missing actor makes the AuditLog insert fail inside the transaction.
-    const broken = { ...entry, actor: undefined as unknown as string };
+    // A BigInt passes the entry check but JSON.stringify throws on it: the audit write fails
+    // inside the transaction, after the change was made.
+    const broken = { ...entry, details: { amount: BigInt(1) } };
+    let changed = false;
 
-    await expect(withAudit(db, broken, reserve)).rejects.toThrow();
+    await expect(
+      withAudit(db, broken, async (tx) => {
+        await reserve(tx);
+        changed = true;
+      })
+    ).rejects.toThrow(/BigInt/);
 
+    expect(changed).toBe(true);
     expect(await currentStatus()).toBe('available');
+    expect(await db.auditLog.count()).toBe(0);
+  });
+
+  it('refuses an entry that breaks its schema before the change runs (D27)', async () => {
+    let ran = false;
+    const broken = { ...entry, action: 'reserved an asset' };
+
+    await expect(
+      withAudit(db, broken, async () => {
+        ran = true;
+      })
+    ).rejects.toThrow(RowRuleError);
+
+    expect(ran).toBe(false);
     expect(await db.auditLog.count()).toBe(0);
   });
 

@@ -8,6 +8,7 @@
 // Every payload is strict: an unknown field is an error, so a typo fails at the emit.
 import { z } from 'zod';
 import { assetConditionSchema, centsSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
+import { vatRateBpSchema } from './rows/fields';
 
 /** A row id of another slice's table. */
 const idSchema = z.string().min(1);
@@ -15,8 +16,8 @@ const idSchema = z.string().min(1);
 /** A real calendar day, `YYYY-MM-DD` (Zod's ISO date regex: month 01–12, day within the month). */
 export const eventDateSchema = isoDateSchema;
 
-/** A VAT rate in basis points: 2550 means 25.5 %. */
-export const vatRateBasisPointsSchema = z.number().int().nonnegative();
+/** A VAT rate in basis points: 2550 means 25.5 %, at most 10 000 (100 %). */
+export const vatRateBasisPointsSchema = vatRateBpSchema;
 
 /** Why a unit came back: the term ended, or the customer left early. */
 export const returnReasonSchema = z.enum(['end_of_term', 'early_exit']);

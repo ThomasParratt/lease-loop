@@ -13,6 +13,7 @@ import {
   type SignRefusal,
 } from '@/domain/contracts';
 import { priceQuote, type PricingData, type QuoteStatus } from '@/domain/pricing';
+import { contractRowSchema } from '@/domain/rows/contract';
 import { contractStatusSchema, type ContractStatus } from '@/domain/statuses';
 import { ADMIN_ACTOR } from './actor';
 import { getApplication } from './applications';
@@ -22,6 +23,7 @@ import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handler
 import { emit } from './events';
 import './event-handlers';
 import type { PrismaClient } from './prisma-client';
+import { parseRow } from './row-rules';
 import { getQuote, loadPricingData, storedQuoteStatusOn, type StoredQuote } from './quotes';
 
 export type ContractView = Omit<PlannedContract, 'status'> & {
@@ -183,7 +185,10 @@ export async function signContract(
       },
       async (tx) => {
         await leaseAvailableAsset(tx, contract.assetId);
-        const created = await tx.contract.create({ data: toContractRowData(contract) });
+        // The row's own rules (D27): the frozen price, the term's last day, the status.
+        const created = await tx.contract.create({
+          data: parseRow('contract', contractRowSchema, toContractRowData(contract)),
+        });
         await emit(tx, event);
         return created;
       }

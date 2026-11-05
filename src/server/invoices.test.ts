@@ -62,13 +62,19 @@ describe('writeSchedule and listInvoices', () => {
     await expect(
       withAudit(
         db,
-        { actor: 'test', action: 'x', entityType: 'contract', entityId: contractId },
+        {
+          actor: 'test',
+          action: 'invoice.rescheduled',
+          entityType: 'contract',
+          entityId: contractId,
+        },
         (tx) =>
           writeSchedule(tx, contractId, [
             { ...first!, kind: 'rent', vatRateBasisPoints: first!.vatRateBasisPoints },
           ])
       )
-    ).rejects.toThrow();
+      // P2002: Prisma's unique-constraint violation on (contract_id, sequence).
+    ).rejects.toMatchObject({ code: 'P2002' });
   });
 });
 

@@ -5,6 +5,7 @@
 //
 // Contract first (AGENTS.md, team rule 2): a slice's first commit adds its row here.
 import { z } from 'zod';
+import { answerSchema, answersSchema } from '@/domain/rows/application';
 import {
   assetCategorySchema,
   assetSchema,
@@ -120,10 +121,8 @@ export const invoiceViewSchema = z.object({
 
 // ---------- applications ----------
 
-/** One answer: text, a choice, an ISO day, cents as digits, or a list (beneficial owners). */
-export const answerSchema = z.union([z.string().max(500), z.array(z.string().max(200)).max(20)]);
-
-export const answersSchema = z.record(z.string().regex(/^q_[a-z0-9_]+$/), answerSchema);
+// The answers' shape is the domain's (src/domain/rows/application.ts); re-exported for the routes.
+export { answerSchema, answersSchema };
 
 /** Body of `POST /api/applications`. The server prunes, validates and evaluates. */
 export const createApplicationBodySchema = z.strictObject({

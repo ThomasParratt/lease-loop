@@ -49,10 +49,13 @@ describe('addDays against Date.UTC (from the invoices session, commit 0a17495)',
     const DAY_MS = 86_400_000;
     const first = Date.UTC(1900, 0, 1) / DAY_MS;
     const last = Date.UTC(2200, 11, 31) / DAY_MS;
+    // One expect at the end: 220 000 expect calls took over Vitest's 5 s under coverage.
+    const mismatches: string[] = [];
     for (let days = first; days <= last; days += 1) {
       const iso = new Date(days * DAY_MS).toISOString().slice(0, 10);
-      expect(addDays('1970-01-01', days)).toBe(iso);
-      expect(addDays(iso, -days)).toBe('1970-01-01');
+      if (addDays('1970-01-01', days) !== iso) mismatches.push(`+${days} → ${iso}`);
+      if (addDays(iso, -days) !== '1970-01-01') mismatches.push(`${iso} −${days}`);
     }
+    expect(mismatches.slice(0, 5)).toEqual([]);
   });
 });

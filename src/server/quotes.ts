@@ -19,9 +19,11 @@ import {
   type QuoteStatus,
   type TermComparison,
 } from '@/domain/pricing';
+import { quoteRowSchema } from '@/domain/rows/quote';
 import { getAsset } from './assets';
 import { withAudit } from './audit';
 import type { PrismaClient } from './prisma-client';
+import { parseRow } from './row-rules';
 
 /** The price lists, the coefficient table and the VAT rates from the data pack. */
 export async function loadPricingData(): Promise<PricingData> {
@@ -135,7 +137,8 @@ export async function createQuote(
     },
     (tx) =>
       tx.quote.create({
-        data: {
+        // The row's own rules (D27): a frozen number that does not follow fails here.
+        data: parseRow('quote', quoteRowSchema, {
           id,
           asset_id: q.assetId,
           quantity: q.quantity,
@@ -151,7 +154,7 @@ export async function createQuote(
           monthly_net_cents: q.monthlyNetCents,
           buyout_cents: q.buyoutCents,
           vat_rate_bp_at_quote: q.vatRateBasisPoints,
-        },
+        }),
       })
   );
   return { ok: true, quote: toStoredQuote(row) };
