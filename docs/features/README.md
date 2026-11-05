@@ -4,3 +4,4 @@ One page per feature slice, shipped in the same pull request as its code (AGENTS
 
 - [catalogue.md](catalogue.md): the catalogue with today's price, the demo clock, the actor and the audit trail (wave 0).
 - [circular-impact.md](circular-impact.md): the asset passport across lives and the CO2 saved (wave 1).
+- [question-flow.md](question-flow.md): the question flow, eligibility and the application decision (wave 1).

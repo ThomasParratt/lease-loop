@@ -60,21 +60,22 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 
 Kept by each wave's hardening agent (AGENTS.md rule 9); the draft of the submission PR's "Scenario cards that work" and "Smart Problems" sections.
 
-| Card               | What the judges compare                                                                             | Works   | Proved by |
-| ------------------ | --------------------------------------------------------------------------------------------------- | ------- | --------- |
-| 1 Happy path       | Aino, `ebike-003`, 36 months, no down payment: net and gross rent, first 3 invoices, total cost     | not yet | —         |
-| 2 The price lock   | `laptop-004` quoted on v1 (5 Nov), signed on v2 (6 Nov, 8 % cheaper): which price is locked and why | not yet | —         |
-| 3 Tax is not price | `ebike-001`, 24 months from 15 Sep 2026: the December 2026 and January 2027 invoices                | not yet | —         |
-| 4 Calendar traps   | `laptop-001`, 36 months from 31 Jan 2026: due dates of the February 2026 and February 2028 invoices | not yet | —         |
-| 5 Too young        | Mikko (17) applies for `laptop-008`: a kind, clear no                                               | not yet | —         |
-| 6 Who can sign?    | Norvi Logistics, 4 × `ebike-004`: the applicant may not sign for the company                        | not yet | —         |
-| 7 Big ticket       | Haapalan Tila, `farm-002`, 48 months, €20,000 down: which questions appear, why manual review       | not yet | —         |
-| 8 Early exit       | Card 1 ended in month 7: what it costs and why                                                      | not yet | —         |
-| 9 Second life      | `ebike-007` back in fair condition at 18,400 km: refurbish, `wait-02` or `wait-13`, at what rent    | not yet | —         |
-| 10 Third life      | `ebike-008` after 2 lives: lease again, show the passport and the CO₂ saved                         | not yet | —         |
+| Card               | What the judges compare                                                                             | Works                                          | Proved by                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1 Happy path       | Aino, `ebike-003`, 36 months, no down payment: net and gross rent, first 3 invoices, total cost     | not yet                                        | —                                                                                                     |
+| 2 The price lock   | `laptop-004` quoted on v1 (5 Nov), signed on v2 (6 Nov, 8 % cheaper): which price is locked and why | not yet                                        | —                                                                                                     |
+| 3 Tax is not price | `ebike-001`, 24 months from 15 Sep 2026: the December 2026 and January 2027 invoices                | not yet                                        | —                                                                                                     |
+| 4 Calendar traps   | `laptop-001`, 36 months from 31 Jan 2026: due dates of the February 2026 and February 2028 invoices | not yet                                        | —                                                                                                     |
+| 5 Too young        | Mikko (17) applies for `laptop-008`: a kind, clear no                                               | yes                                            | `eligibility.test.ts` "card 5"; `/[locale]/applications/[id]` says "you can apply from 10 March 2027" |
+| 6 Who can sign?    | Norvi Logistics, 4 × `ebike-004`: the applicant may not sign for the company                        | questions and decision (the rent is pricing's) | `engine.test.ts`, `eligibility.test.ts`, `applications.test.ts` "card 6"                              |
+| 7 Big ticket       | Haapalan Tila, `farm-002`, 48 months, €20,000 down: which questions appear, why manual review       | questions and decision (the rent is pricing's) | `engine.test.ts`, `eligibility.test.ts`, `applications.test.ts` "card 7"                              |
+| 8 Early exit       | Card 1 ended in month 7: what it costs and why                                                      | not yet                                        | —                                                                                                     |
+| 9 Second life      | `ebike-007` back in fair condition at 18,400 km: refurbish, `wait-02` or `wait-13`, at what rent    | not yet                                        | —                                                                                                     |
+| 10 Third life      | `ebike-008` after 2 lives: lease again, show the passport and the CO₂ saved                         | not yet                                        | —                                                                                                     |
 
 **Smart problems** (order from `docs/kickoff-brief.md` section 4):
 
+- 4 The smart question flow: done ([docs/features/question-flow.md](docs/features/question-flow.md)).
 - 7 Circular impact: not yet.
 - 1 Lock the price, not the tax: not yet.
 - 5 Money that adds up: not yet (integer cents and `formatEuro` exist in `src/domain/money.ts`).
@@ -87,6 +88,7 @@ One page per feature slice under `docs/features/` (template: [docs/features/READ
 
 - [Catalogue, demo clock, actor and audit trail](docs/features/catalogue.md) (wave 0)
 - [Circular impact and the passport](docs/features/circular-impact.md) (wave 1)
+- [The question flow and the application](docs/features/question-flow.md) (wave 1)
 
 ## Team notes
 
@@ -126,7 +128,7 @@ The question flow (CHALLENGE.md smart problem 4) is pure code in `src/domain/que
 - `eligibility.ts`: `evaluate(rules, input)` → `{ decision, reasons: { code, params }[] }` (D9). Any failed rule rejects and every failure is listed (`too_young` with `eighteenOn`, `residency_not_allowed`, `unaffordable` at 30 % of net income against the gross rent, `invalid_business_id`, `financed_out_of_range`, `missing_answer`); else a PEP goes to `manual_review`; else a company applicant who cannot sign is `awaiting_signatory`; else `approved` with `all_checks_passed`. Affordability applies only when the bank asked for income (consumers from 200 000 financed). A 29 February birthday turns 18 on 1 March.
 - `business-id.ts`: the Y-tunnus check digit (weights 7 9 10 5 8 4 2, mod 11; remainder 1 is never valid). `answers.ts`: the answers → eligibility input, answer validation by type, euros typed by a person → cents without floats, gross = net + VAT rounded half up once (a local copy until pricing's VAT helper lands), and `answersFromCustomer` for the demo prefill.
 
-`src/server/applications.ts` has `createApplication` (reads the quote and customer, prunes, refuses incomplete or malformed answers and an expired quote, evaluates, writes the row through `withAudit`), `decideApplication` (D10: an admin decides a manual review, and one that also needs a signatory then waits for them; the named signatory signs or declines; anything else is final) and `getApplication`. Routes: `POST /api/applications`, `GET /api/applications/[id]`, `POST /api/applications/[id]/decision`. Pages: `/[locale]/apply/[quoteId]` asks one question at a time for the acting customer, with "why we ask", back, progress, a review with "change" per answer and a notice when a change removes answers; `/[locale]/applications/[id]` writes the decision and each reason from `decision.reason.<code>` in the visitor's language, with the admin's review buttons or the signatory's sign form.
+`src/server/applications.ts` has `createApplication` (reads the quote and customer, prunes, refuses incomplete or malformed answers and an expired quote, evaluates, writes the row through `withAudit`), `decideApplication` (D10: an admin decides a manual review, and one that also needs a signatory then waits for them; the named signatory signs or declines; anything else is final) and `getApplication`. Routes: `POST /api/applications`, `GET /api/applications/[id]`, `POST /api/applications/[id]/decision`. Pages: `/[locale]/apply/[quoteId]` asks one question at a time for the acting customer, with "why we ask", back, progress, a review with "change" per answer and a notice when a change removes answers; `/[locale]/applications/[id]` writes the decision and each reason from `decision.reason.<code>` in the visitor's language, with the admin's review buttons or the signatory's sign form. The rules worked through cards 5, 6 and 7, the signatures and the open questions: [docs/features/question-flow.md](docs/features/question-flow.md).
 
 ### Passport and impact
 
