@@ -4,14 +4,16 @@ Spine steps 1 and 2 of `CHALLENGE.md`, smart problem 6 ("Explain my price") and 
 
 ## What it does
 
-The price page shows what an item costs a month for any term, down payment and quantity, line by line from the list price to the total cost, and compares the four terms side by side. "Get a quote" freezes that price for 14 days at its date and price-list version, so a later price list never changes it.
+The price page shows what an item costs a month for any term, down payment and quantity, line by line from the list price to the total cost, and compares the four terms side by side. "Apply at this price" freezes that price for 14 days at its date and price-list version and opens the application, so a later price list never changes it.
 
 In detail:
 
 - **The price page** `/[locale]/assets/[id]`: the asset, a term slider (12/24/36/48 months), a down-payment slider (0 to the price, in steps of 1 % of the price rounded to whole euros) and a quantity field (1–20). The monthly price updates live from `GET /api/quotes/preview`; the browser never computes a price.
 - **The breakdown**, as a definition list in plain words: price of the item (and of N items), what you pay at the start, the amount we finance, the band and factor, the monthly rent without VAT, the VAT and what you pay each month, the per-item share for a fleet, the buyout at the end, and the total cost two ways (if you give it back, if you keep it).
 - **The term comparison**: the same choices priced at every term, side by side, with the terms that cannot be priced and why.
-- **The stored quote** (D7): "Get a quote" stores a `Quote` row priced on the request's day, valid 14 days, with an audit row. `?quote=<id>` on the price page shows it locked at its date and price-list version, with its validity, a notice when a cheaper list is live today (card 2) and the link to the application (`/[locale]/apply/[quoteId]`, the question-flow slice's page).
+- **The stored quote** (D7, revised): "Apply at this price" stores a `Quote` row priced on the request's day, valid 14 days, with an audit row, and opens the application (`/[locale]/apply/[quoteId]`, the question-flow slice's page), which shows "Price locked until" its last valid day while the quote is valid. `?quote=<id>` on the price page still shows a stored quote with a notice when a cheaper list is live today (card 2), but nothing links to it any more.
+- **The catalogue's offer** (`financeOffer`): the limits apply to the amount financed, not to the item. An item above the highest band is offered with the down payment that leaves exactly the maximum to finance: `farm-006` at 260 000 € gets "with 10 000 € down", financed 250 000 € in band D, and its card opens the price page with `?down=1000000`, the breakdown open. An item below the lowest band stays refused with the reason (`ebike-010` at 289 € on price list 1; 303 € and an ordinary offer on price list 2 from Friday). Offering several units of it is left to D8.
+- **The page:** the item and the price panel side by side from 768 px; the tag shows the monthly price, the total for the term and the buyout with VAT; the breakdown and the term comparison open on click, the comparison leading with the monthly price and one line on why a longer term costs more in total.
 - **Refusals are codes with params** (rule 6): `invalid_quantity`, `invalid_down_payment`, `unknown_term`, `unknown_asset`, `no_price_list_on_date`, `down_payment_too_high`, `below_minimum`, `above_maximum`, `no_vat_rate_on_date`, and from the stored quote `asset_not_available`. The page writes them from `pricing.refusal.*` in the visitor's language, with amounts formatted as euros.
 
 ## The rule
@@ -121,3 +123,8 @@ Server (`src/server/quotes.ts`): `loadPricingData()`, `createQuote(db, { assetId
 - **D8, for the mentors:** is "4 ×" in card 6 meant as one financed amount (band C, our reading) or four separate leases (band B each)? Every asset in the pack is one serialised unit and there is one `ebike-004`; this slice prices the fleet and does not assign units (that is the contract's job). The catalogue has one row per asset id, so a quote for four `ebike-004` checks only that one row is `available`, and a contract that locks the asset would lock that one row for all four units. Before the contract slice builds on it, confirm whether D8 means N units on one asset row or N rows (one per serialised unit), which would need a unit table or a quantity per asset.
 - Settled in review (PR #11): the totals put VAT on the down payment and the buyout at the quote-date rate, so they match the invoices (card 7: 510 000 of VAT on the 2 000 000 down payment, 255 000 on the 1 000 000 buyout).
 - The quote shows the totals at the quote-day VAT rate. A lease that crosses 1 Jan 2027 will invoice later months at 26 %; the invoicing slice owns that, and the quote's note says the totals are an estimate.
+
+## Added with the catalogue page (PR #23)
+
+- `financeOffer(data, { assetId, termMonths, isoDate }): FinanceOffer` in `src/domain/pricing/financeable.ts`: `standard` (one unit, nothing down), `needs_down_payment` (the excess over the maximum, with its quote) or `none` (the refusal). Tests: `financeable.test.ts` (the combine's 10 000 €, the kids bike refused on Thursday and priced on Friday, a refusal passed on).
+- `compareTerms` rows also carry `buyoutGrossCents` (the buyout with VAT at the quote day's rate), pinned at 73 229 for card 1 in `compare.test.ts`.

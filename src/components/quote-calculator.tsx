@@ -2,8 +2,9 @@
 
 // The price sliders: term, down payment and quantity. Each change asks GET /api/quotes/preview
 // (debounced, the previous request aborted) and shows the breakdown and the term comparison the
-// server priced; the browser never computes a price. "Get a quote" posts to /api/quotes and
-// opens the stored quote on this page.
+// server priced; the browser never computes a price. "Apply at this price" stores the quote
+// (POST /api/quotes, which locks the price for 14 days, D7) and goes straight to the
+// application, so the lock is part of applying rather than a step of its own.
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
 import type { QuoteBreakdown, QuoteRefusal, TermComparison } from '@/domain/pricing';
@@ -11,7 +12,7 @@ import { getT } from '@/i18n/get-t';
 import { formatEuro } from '@/domain/money';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { formatBasisPoints, QuoteBreakdownList, refusalText } from './quote-breakdown';
-import { Button, Card, Field, Money, Notice, PriceTag, inputClasses } from './ui';
+import { Button, Disclosure, Field, Money, Notice, PriceTag, inputClasses } from './ui';
 
 export type QuotePreviewData = {
   today: string;
@@ -37,9 +38,15 @@ type QuoteCalculatorProps = {
 const DEBOUNCE_MS = 200;
 const MAX_QUANTITY = 20;
 
-/** The down payment moves in steps of 1 % of the price, rounded to whole euros. */
-function downPaymentStep(totalCents: number): number {
-  return Math.max(100, Math.round(totalCents / 100 / 100) * 100);
+/**
+ * The down payment moves in steps of 1 % of the price, rounded to whole euros. When the page
+ * opens on a preset that is not on that grid (the catalogue's 10 000 € for a 260 000 € item,
+ * whose 1 % step is 2 600 €), it moves in whole euros instead, so the slider can show the
+ * preset exactly and get back to it.
+ */
+function downPaymentStep(totalCents: number, presetCents: number): number {
+  const percent = Math.max(100, Math.round(totalCents / 100 / 100) * 100);
+  return presetCents % percent === 0 ? percent : 100;
 }
 
 export function QuoteCalculator(props: QuoteCalculatorProps) {
@@ -59,7 +66,7 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
 
   const termMonths = terms[termIndex] ?? terms[0]!;
   const totalPriceCents = unitPriceCents * quantity;
-  const step = downPaymentStep(totalPriceCents);
+  const step = downPaymentStep(totalPriceCents, props.initial.downPaymentCents);
 
   useEffect(() => {
     if (firstRun.current) {
@@ -101,7 +108,7 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
     setDownPaymentCents((down) => Math.min(down, unitPriceCents * next));
   }
 
-  function getQuote() {
+  function apply() {
     setSubmitError(null);
     startTransition(async () => {
       const response = await fetch('/api/quotes', {
@@ -111,8 +118,7 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
       }).catch(() => null);
       const body = await response?.json().catch(() => null);
       if (response?.ok && body?.success) {
-        router.push(`/${locale}/assets/${assetId}?quote=${body.data.id}#quote`);
-        router.refresh();
+        router.push(`/${locale}/apply/${body.data.id}`);
         return;
       }
       const reason = body?.error?.details;
@@ -127,12 +133,12 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
 
   return (
     <div className="space-y-12">
-      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+      <div className="grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12">
         <div>{props.children}</div>
 
         <section
           aria-labelledby={`${ids}-title`}
-          className="rounded-xl bg-raised p-4 shadow-panel sm:p-6 lg:sticky lg:top-6"
+          className="rounded-xl bg-raised p-4 shadow-panel sm:p-6 md:sticky md:top-6"
         >
           <h2 id={`${ids}-title`} className="sr-only">
             {t('pricing.calculator.title')}
@@ -156,14 +162,19 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
                 quote
                   ? [
                       {
-                        label: t('pricing.line.totalIfReturn'),
+                        label: t('pricing.tag.total', { months: termMonths }),
                         value: money(quote.totalIfReturnCents),
                       },
-                      { label: t('pricing.line.totalIfBuy'), value: money(quote.totalIfBuyCents) },
+                      { label: t('pricing.tag.buyout'), value: money(quote.buyoutGrossCents) },
                     ]
                   : undefined
               }
             />
+            {quote ? (
+              <p className="mt-3 text-sm text-ink-muted">
+                {t('pricing.tag.note', { months: termMonths })}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-6 space-y-6">
@@ -255,12 +266,12 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
                 type="button"
                 size="lg"
                 className="w-full"
-                onClick={getQuote}
+                onClick={apply}
                 disabled={!quote || loading}
                 pending={pending}
                 pendingLabel={t('pricing.calculator.saving')}
               >
-                {t('pricing.calculator.getQuote')} <span aria-hidden="true">→</span>
+                {t('pricing.calculator.apply')} <span aria-hidden="true">→</span>
               </Button>
             ) : (
               <Notice tone="info">{t('pricing.calculator.notAvailable')}</Notice>
@@ -274,20 +285,26 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
         </section>
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <Card as="section" title={t('pricing.breakdown.title')} titleId={`${ids}-breakdown`}>
+      <div className="space-y-4">
+        <Disclosure
+          title={t('pricing.breakdown.title')}
+          summary={t('pricing.breakdown.summary')}
+          // Opened by a catalogue preset (e.g. the down payment an item needs): show why.
+          defaultOpen={props.initial.downPaymentCents > 0 || props.initial.quantity > 1}
+        >
           {quote ? (
             <QuoteBreakdownList quote={quote} locale={locale} t={t} />
           ) : (
             <p className="text-ink-muted">{t('pricing.breakdown.none')}</p>
           )}
-        </Card>
-        <TermTable
-          comparison={preview.comparison}
-          selected={termMonths}
-          locale={locale}
-          titleId={`${ids}-compare`}
-        />
+        </Disclosure>
+        <Disclosure
+          title={t('pricing.compare.title')}
+          summary={t('pricing.compare.summary', { terms: terms.join(', ') })}
+          padded={false}
+        >
+          <TermTable comparison={preview.comparison} selected={termMonths} locale={locale} />
+        </Disclosure>
       </div>
     </div>
   );
@@ -297,34 +314,36 @@ function TermTable({
   comparison,
   selected,
   locale,
-  titleId,
 }: {
   comparison: TermComparison;
   selected: number;
   locale: Locale;
-  titleId: string;
 }) {
   const t = getT(locale);
   const money = (cents: number) => <Money cents={cents} locale={locale} />;
+  const head = 'px-4 py-3 text-right align-bottom font-bold sm:px-6';
+  const cell = 'px-4 py-3 text-right sm:px-6';
   return (
-    <Card as="section" title={t('pricing.compare.title')} titleId={titleId} padded={false}>
+    <>
+      <p className="px-4 pt-4 text-sm text-ink-muted sm:px-6">{t('pricing.compare.explain')}</p>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm" aria-labelledby={titleId}>
-          <thead className="text-left text-ink-muted">
-            <tr className="border-b border-line">
-              <th scope="col" className="px-4 py-2 font-medium">
+        <table className="mt-2 w-full text-sm">
+          <caption className="sr-only">{t('pricing.compare.title')}</caption>
+          <thead className="text-ink-muted">
+            <tr className="border-b-2 border-line">
+              <th scope="col" className={head.replace('text-right', 'text-left')}>
                 {t('pricing.compare.term')}
               </th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">
+              <th scope="col" className={head}>
                 {t('pricing.compare.gross')}
               </th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">
-                {t('pricing.compare.buyout')}
-              </th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">
+              <th scope="col" className={head}>
                 {t('pricing.compare.totalIfReturn')}
               </th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">
+              <th scope="col" className={head}>
+                {t('pricing.compare.buyout')}
+              </th>
+              <th scope="col" className={head}>
                 {t('pricing.compare.totalIfBuy')}
               </th>
             </tr>
@@ -340,24 +359,23 @@ function TermTable({
                 }
                 aria-current={row.termMonths === selected ? 'true' : undefined}
               >
-                <th scope="row" className="px-4 py-2 text-left font-medium whitespace-nowrap">
+                <th scope="row" className="px-4 py-3 text-left whitespace-nowrap sm:px-6">
                   {t('pricing.months', { months: row.termMonths })}
-                  <span className="block text-xs font-normal text-ink-muted">
-                    {t('pricing.compare.band', { band: row.band })}
-                  </span>
                 </th>
-                <td className="px-4 py-2 text-right">{money(row.monthlyGrossCents)}</td>
-                <td className="px-4 py-2 text-right">{money(row.buyoutCents)}</td>
-                <td className="px-4 py-2 text-right">{money(row.totalIfReturnCents)}</td>
-                <td className="px-4 py-2 text-right">{money(row.totalIfBuyCents)}</td>
+                <td className={`${cell} text-base font-bold text-brand-text`}>
+                  {money(row.monthlyGrossCents)}
+                </td>
+                <td className={cell}>{money(row.totalIfReturnCents)}</td>
+                <td className={cell}>{money(row.buyoutGrossCents)}</td>
+                <td className={cell}>{money(row.totalIfBuyCents)}</td>
               </tr>
             ))}
             {comparison.unavailable.map(({ termMonths, reason }) => (
               <tr key={termMonths} className="border-b border-line text-ink-muted">
-                <th scope="row" className="px-4 py-2 text-left font-medium whitespace-nowrap">
+                <th scope="row" className="px-4 py-3 text-left whitespace-nowrap sm:px-6">
                   {t('pricing.months', { months: termMonths })}
                 </th>
-                <td colSpan={4} className="px-4 py-2">
+                <td colSpan={4} className="px-4 py-3 sm:px-6">
                   {refusalText(t, reason, locale)}
                 </td>
               </tr>
@@ -365,6 +383,6 @@ function TermTable({
           </tbody>
         </table>
       </div>
-    </Card>
+    </>
   );
 }

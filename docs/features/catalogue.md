@@ -2,7 +2,7 @@
 
 ## What it does
 
-The catalogue lists the 30 assets of `data/assets.json` by category, each with its net list price on today's date, and the demo clock lets anyone move "today" to the date of a scenario card. The "continue as" picker in the header says who is acting, and every data change writes an audit row naming that actor, shown newest first on the audit page.
+The landing page (`/[locale]`) says what Lease Loop is and leads into the catalogue (`/[locale]/catalogue`, filtered by `?category=`), which lists the 30 assets of `data/assets.json`, each with its monthly price at 36 months on today's date (or the down payment it needs, or why it cannot be financed), and the demo clock lets anyone move "today" to the date of a scenario card. The "continue as" picker in the header says who is acting, and every data change writes an audit row naming that actor, shown newest first on the audit page.
 
 ## The rule
 
@@ -25,7 +25,7 @@ D17 (the actor, no login), D21 (the palette and type). The demo clock follows th
 
 ## Files
 
-`src/app/[locale]/page.tsx` (catalogue), `src/components/asset-card.tsx`, `src/app/[locale]/demo/page.tsx` and `src/app/api/demo/clock/route.ts` (demo clock), `src/server/demo-clock.ts`, `src/server/today.ts`, `src/components/actor-picker.tsx`, `src/server/actor.ts`, `src/app/api/actor/route.ts`, `src/server/audit.ts`, `src/app/[locale]/audit/page.tsx`, `src/app/api/audit-log/route.ts`, `src/app/api/assets/route.ts`, `src/app/api/assets/[id]/status/route.ts`, `src/components/ui/*`.
+`src/app/[locale]/page.tsx` (landing), `src/app/[locale]/catalogue/page.tsx` (catalogue), `src/components/asset-card.tsx`, `src/app/[locale]/demo/page.tsx` and `src/app/api/demo/clock/route.ts` (demo clock), `src/server/demo-clock.ts`, `src/server/today.ts`, `src/components/actor-picker.tsx`, `src/server/actor.ts`, `src/app/api/actor/route.ts`, `src/server/audit.ts`, `src/app/[locale]/audit/page.tsx`, `src/app/api/audit-log/route.ts`, `src/app/api/assets/route.ts`, `src/app/api/assets/[id]/status/route.ts`, `src/components/ui/*`.
 
 ## Tests that pin the numbers
 
@@ -37,6 +37,6 @@ D17 (the actor, no login), D21 (the palette and type). The demo clock follows th
 
 ## Open questions
 
-- The catalogue shows the net list price only; the monthly price from today's price is wave 1's pricing slice.
+- Done in PR #23: the catalogue shows the monthly price from today's price list through pricing's `financeOffer`.
 - The demo clock needs JavaScript; `?asOf=` on the demo routes is not built (`docs/reviews/wave-0.md`, Open).
 - `PATCH /api/assets/[id]/status` reads the old status outside its transaction, so two changes at once can audit a stale `from`, and it can overwrite `leased` around the signing race. Admin-only demo tool; left as is.

@@ -6,6 +6,7 @@ export { Card } from './card';
 export { cx } from './cx';
 export { DateText } from './date';
 export { DefinitionList, type DefinitionItem } from './definition-list';
+export { Disclosure } from './disclosure';
 export { Field, inputClasses, type FieldControlProps } from './field';
 export { LifeStamp } from './life-stamp';
 export { LinkButton } from './link-button';

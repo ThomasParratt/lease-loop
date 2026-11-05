@@ -33,7 +33,9 @@ export function PriceTag({
       <p
         className={cx(
           'font-heading leading-none font-semibold tabular-nums',
-          size === 'lg' ? 'mt-2 text-5xl sm:text-6xl' : 'mt-1 text-3xl'
+          // Sized for the narrowest panel it sits in (21rem from tablet width), so a farm
+          // machine's €8,268.57 fits as well as an e-bike's €134.66.
+          size === 'lg' ? 'mt-2 text-4xl lg:text-5xl xl:text-6xl' : 'mt-1 text-3xl'
         )}
       >
         <span key={flipKey} className={flipKey === undefined ? undefined : 'price-flip'}>

@@ -28,7 +28,7 @@ export function HomeHero({ locale, t }: { locale: Locale; t: Translate }) {
         </h1>
         <p className="mt-6 max-w-xl text-lg text-ink-muted sm:text-xl">{t('home.intro')}</p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <LinkButton href={`/${locale}#catalogue`} size="lg">
+          <LinkButton href={`/${locale}/catalogue`} size="lg">
             {t('home.cta.catalogue')} <span aria-hidden="true">→</span>
           </LinkButton>
           <LinkButton href={`/${locale}#how-it-works`} size="lg" variant="secondary">

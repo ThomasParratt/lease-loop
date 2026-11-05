@@ -8,6 +8,8 @@ export type TermRow = {
   monthlyNetCents: number;
   monthlyGrossCents: number;
   buyoutCents: number;
+  /** The buyout with VAT at the quote day's rate, as the customer would pay it. */
+  buyoutGrossCents: number;
   totalIfReturnCents: number;
   totalIfBuyCents: number;
 };
@@ -38,6 +40,7 @@ export function compareTerms(
       monthlyNetCents: q.monthlyNetCents,
       monthlyGrossCents: q.monthlyGrossCents,
       buyoutCents: q.buyoutCents,
+      buyoutGrossCents: q.buyoutGrossCents,
       totalIfReturnCents: q.totalIfReturnCents,
       totalIfBuyCents: q.totalIfBuyCents,
     });

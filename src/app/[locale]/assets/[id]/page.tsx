@@ -33,6 +33,13 @@ import {
 } from '@/server/quotes';
 
 const DEFAULT_TERM = 36;
+const MAX_QUANTITY = 20;
+
+/** A whole number from a search param, kept within [min, max]; `fallback` if absent or broken. */
+function clampInt(raw: string | string[] | undefined, min: number, max: number, fallback: number) {
+  const value = typeof raw === 'string' ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isSafeInteger(value) ? Math.min(max, Math.max(min, value)) : fallback;
+}
 
 export default async function PricePage({
   params,
@@ -48,17 +55,22 @@ export default async function PricePage({
   const asset = assets.find((a) => a.id === id);
   if (!asset) notFound();
 
-  const quoteParam = (await searchParams).quote;
+  const query = await searchParams;
+  const quoteParam = query.quote;
   const quoteId = typeof quoteParam === 'string' ? quoteParam : undefined;
   const stored = quoteId ? await getQuote(db, quoteId) : null;
   const storedForAsset = stored && stored.breakdown.assetId === asset.id ? stored : null;
 
   const price = listPriceOn(data.priceLists, asset.id, today);
   const terms = termsOf(data.table);
+  // The catalogue links an item it can only finance with more units or a down payment as
+  // ?quantity=2 or ?down=1000000, so the sliders open on the card's offer. Out-of-range values
+  // are clamped; a missing or broken one falls back to the default.
+  const quantity = clampInt(query.quantity, 1, MAX_QUANTITY, 1);
   const initial = {
     termMonths: terms.includes(DEFAULT_TERM) ? DEFAULT_TERM : terms[0]!,
-    downPaymentCents: 0,
-    quantity: 1,
+    downPaymentCents: price.ok ? clampInt(query.down, 0, price.priceCents * quantity - 1, 0) : 0,
+    quantity,
   };
 
   const facts = [
@@ -78,7 +90,7 @@ export default async function PricePage({
   const item = (
     <div>
       <Link
-        href={`/${locale}#catalogue`}
+        href={`/${locale}/catalogue`}
         className="inline-flex items-center gap-1 rounded font-bold underline decoration-brand/30 decoration-2 underline-offset-4 hover:decoration-brand"
       >
         <span aria-hidden="true">←</span>

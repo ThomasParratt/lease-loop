@@ -78,7 +78,7 @@ export default async function PassportPage({
       <PageHeader
         title={t('passport.title')}
         intro={t('passport.intro', { make: asset.make, model: asset.model })}
-        back={{ href: `/${locale}`, label: t('passport.back') }}
+        back={{ href: `/${locale}/catalogue`, label: t('passport.back') }}
       >
         <div className="flex flex-wrap gap-2">
           <Badge tone="info">

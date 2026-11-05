@@ -26,6 +26,7 @@ describe('compareTerms', () => {
       monthlyNetCents: 10_730,
       monthlyGrossCents: 13_466,
       buyoutCents: 58_350,
+      buyoutGrossCents: 73_229,
       totalIfReturnCents: 36 * 13_466,
       totalIfBuyCents: 36 * 13_466 + 73_229,
     });

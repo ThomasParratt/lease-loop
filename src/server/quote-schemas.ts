@@ -72,6 +72,7 @@ export const termRowSchema = z.object({
   monthlyNetCents: centsSchema,
   monthlyGrossCents: centsSchema,
   buyoutCents: centsSchema,
+  buyoutGrossCents: centsSchema,
   totalIfReturnCents: centsSchema,
   totalIfBuyCents: centsSchema,
 });

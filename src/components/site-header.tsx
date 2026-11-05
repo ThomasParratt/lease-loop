@@ -26,7 +26,7 @@ export function SiteHeader({ locale, t, actor, customers }: SiteHeaderProps) {
     ...(isAdmin ? [{ href: `/${locale}/audit`, label: t('nav.audit') }] : []),
   ];
   const mainLinks = [
-    { href: `/${locale}`, label: t('nav.catalogue') },
+    { href: `/${locale}/catalogue`, label: t('nav.catalogue') },
     { href: `/${locale}#how-it-works`, label: t('nav.howItWorks') },
   ];
 

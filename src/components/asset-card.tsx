@@ -1,28 +1,33 @@
 // One catalogue item: its drawing with the life stamp, the make and model, the facts a
-// second-hand buyer checks (condition, usage, year), and the monthly price on a small tag.
+// second-hand buyer checks (condition, usage, year), and its offer on a small tag: the monthly
+// price, the price with the down payment it needs, or why it cannot be financed.
 // A server component: it renders to HTML and ships no JavaScript. The whole card is one link
 // (the title's link stretches over it), so there is one tab stop per item.
 import Link from 'next/link';
 import type { Asset } from '@/data/schemas';
-import type { QuoteResult } from '@/domain/pricing';
+import { formatEuro } from '@/domain/money';
+import type { FinanceOffer } from '@/domain/pricing';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
-import type { Locale } from '@/i18n/locales';
+import { intlLocale, type Locale } from '@/i18n/locales';
 import { ItemArt } from './item-art';
+import { refusalText } from './quote-breakdown';
 import { Badge, LifeStamp, Money, PriceTag } from './ui';
 
 type AssetCardProps = {
   asset: Asset;
-  /** The standard monthly price (36 months, no down payment) on the demo clock's day. */
-  monthly: QuoteResult;
+  /** How the item can be financed at `termMonths` on the demo clock's day. */
+  offer: FinanceOffer;
   termMonths: number;
   locale: Locale;
   t: Translate;
 };
 
-export function AssetCard({ asset, monthly, termMonths, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, offer, termMonths, locale, t }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const life = asset.previous_lives + 1;
+  // The price page opens set up for the offer, so its price matches the card's.
+  const query = offer.kind === 'needs_down_payment' ? `?down=${offer.downPaymentCents}` : '';
 
   return (
     <article
@@ -54,7 +59,7 @@ export function AssetCard({ asset, monthly, termMonths, locale, t }: AssetCardPr
         </p>
         <h3 id={headingId} className="mt-1 text-xl leading-snug">
           <Link
-            href={`/${locale}/assets/${asset.id}`}
+            href={`/${locale}/assets/${asset.id}${query}`}
             className="rounded after:absolute after:inset-0 after:rounded-xl after:content-['']"
           >
             {asset.model}
@@ -69,27 +74,28 @@ export function AssetCard({ asset, monthly, termMonths, locale, t }: AssetCardPr
         </p>
 
         <div className="mt-auto pt-5">
-          {monthly.ok ? (
+          {offer.kind === 'none' ? (
+            <p className="rounded-lg bg-muted px-4 py-3 text-sm font-semibold text-ink-muted">
+              {refusalText(t, offer.reason, locale)}
+            </p>
+          ) : (
             <PriceTag
               size="sm"
               className="w-fit min-w-44"
               label={t('catalogue.card.monthly')}
-              amount={<Money cents={monthly.quote.monthlyGrossCents} locale={locale} />}
-              sub={t('catalogue.card.terms', { months: termMonths })}
+              amount={<Money cents={offer.quote.monthlyGrossCents} locale={locale} />}
+              sub={
+                offer.kind === 'needs_down_payment'
+                  ? t('catalogue.card.withDown', {
+                      down: formatEuro(offer.downPaymentCents, intlLocale[locale]),
+                      months: termMonths,
+                    })
+                  : t('catalogue.card.terms', { months: termMonths })
+              }
             />
-          ) : (
-            <p className="rounded-lg bg-muted px-4 py-3 text-sm font-semibold text-ink-muted">
-              {t(`catalogue.card.${refusalKey(monthly.reason.code)}`)}
-            </p>
           )}
         </div>
       </div>
     </article>
   );
-}
-
-function refusalKey(code: string): 'below' | 'above' | 'noPrice' {
-  if (code === 'below_minimum') return 'below';
-  if (code === 'above_maximum') return 'above';
-  return 'noPrice';
 }
