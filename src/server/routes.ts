@@ -19,6 +19,11 @@ import {
   invoiceStatusSchema,
 } from '@/domain/statuses';
 import {
+  contractIdParamsSchema,
+  contractResponseSchema,
+  signContractBodySchema,
+} from './contract-schemas';
+import {
   createQuoteBodySchema,
   previewQuoteQuerySchema,
   previewQuoteResponseSchema,
@@ -315,6 +320,24 @@ export const ROUTES: readonly RouteDefinition[] = [
     params: applicationIdParamsSchema,
     body: decideApplicationBodySchema,
     response: applicationSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/contracts',
+    summary:
+      "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin)",
+    tag: 'contracts',
+    body: signContractBodySchema,
+    response: contractResponseSchema,
+    status: 201,
+  },
+  {
+    method: 'GET',
+    path: '/api/contracts/[id]',
+    summary: "A contract with its frozen price and why it holds (the contract's customer or admin)",
+    tag: 'contracts',
+    params: contractIdParamsSchema,
+    response: contractResponseSchema,
   },
 ];
 

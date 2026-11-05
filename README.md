@@ -98,6 +98,7 @@ One page per feature slice under `docs/features/` (template: [docs/features/READ
 - [Pricing and quotes](docs/features/pricing.md) (wave 1): the price page with live sliders, the line-by-line breakdown, the term comparison and the stored quote locked at its date and list version (cards 1, 2, 6, 7; smart problem 6)
 - [The question flow and the application](docs/features/question-flow.md) (wave 1)
 - [Invoicing: the schedule, VAT by invoice date, the balance](docs/features/invoicing.md) (wave 1): the monthly schedule billed in advance, paying an invoice, the outstanding balance for an early exit
+- [Contracts: signing and the contract page](docs/features/contracts.md) (wave 2): signing an approved application from its stored quote, the last-unit race, the price lock explained (cards 1, 2) and the invoices under the contract (card 3)
 
 ## Team notes
 
