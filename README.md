@@ -55,6 +55,16 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 
 ---
 
+## Team notes
+
+- `AGENTS.md`: the organiser's rules plus our working rules; every agent and person reads it first.
+- `docs/kickoff-brief.md`: the plan (scope, decisions, schema ownership, events, waves, the agent brief template).
+- `docs/decisions.md`: every decision with its reason; `docs/stack-notes.md`: the traps of this stack; `docs/log/`: one time log per task; `docs/reviews/`: the wave reviews.
+- `tests/meta-rules.test.ts`: the engineering rules checked against the repository itself, in `npm test`.
+- The practice repo (`ThomasParratt/leasing-platform`) is a read-only parts bin cloned beside this one; port functions with their tests, never structure.
+
+---
+
 ## Submitting
 
 You can't push to this repo. You work in **your own fork** and send us a **pull request**.

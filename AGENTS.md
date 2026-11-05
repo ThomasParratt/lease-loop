@@ -14,6 +14,25 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
 - Before saying a change is done, run `npm run check:all`; it's what CI runs.
 - Read `data/DATA.md` before using the data pack. Schemas for every data file are in `src/data/schemas.ts`.
 
+## Team working rules (on top of the organiser's)
+
+The full kick-off brief is `docs/kickoff-brief.md`; the hour-one decisions are `docs/decisions.md`; the stack traps are `docs/stack-notes.md`. The meta rules above are tested: `tests/meta-rules.test.ts` runs in `npm test` and fails on a file over 600 lines, AI in the app, a domain module without a test, an impure domain file, a route without `handleRoute` or a write outside `withAudit`.
+
+**Priority of sources.** `CHALLENGE.md`, `RULES.md`, `data/DATA.md` and the data pack win. The brief and the decisions file are second. The practice repo (`C:/Git/leasing-platform`, a read-only clone of `ThomasParratt/leasing-platform`) is a parts bin: port functions with their tests, rewrite them under this repo's domain lint, never port its structure or let its design override a rule here.
+
+1. **Test first.** The domain function's test file exists before the function; the test names the card or the trap it proves. A handler test mocks nothing it does not own.
+2. **Contract first.** A slice's first commit is its Zod schemas (params, body, response) and its row in the route table; the others build against them before the handler exists.
+3. **One owner per table and per shared shape** (`docs/kickoff-brief.md` section 6). Another slice's rows are read through the owner's read function, never with a query on its table. A change two slices must make at one instant is an event inside the transaction (section 7), not a call.
+4. **Dates are ISO day strings passed in.** `todayIso()` is called once per request in the page or the route and passed down; the demo clock override lives there and nowhere else. No endpoint trusts a date from the browser except the demo override.
+5. **Money is integer cents and the factor is integer millionths.** Multiply cents by the factor in millionths and divide once, rounding half up to the cent, in one function with the rule in its comment.
+6. **Outcomes are codes with params, never sentences.** The domain returns `{ code, params }`; the page writes it from the message files in the visitor's language.
+7. **Nothing is hard-coded to a scenario card.** A test may pin a card's numbers; the code never knows the card exists.
+8. **Write it down.** A decision goes into `docs/decisions.md` with its reason and what was chosen against; every agent task keeps a time log in `docs/log/<task>.md` (real clock: steps, commits, what blocked it, what it left undone); the README stays current in the same commit as the change.
+9. **Waves.** Features are built in parallel waves, each agent in its own slot (worktree) on its own slice, from a brief (template: `docs/kickoff-brief.md` section 11) that names the base commit, the slot, the files it owns and does not own, the tests to write first, the time limit and the README sections to update. After every wave: one hardening agent and one review-and-upkeep agent (the review in `docs/reviews/`).
+10. **Done means** `npm run check:all` green, the tests of the change in the same commit, the route in the route table and the OpenAPI file regenerated, the message keys in all four files, the README section current, the time log closed.
+
+**Which model does what.** The coordinating session runs on Claude Fable; every agent or session that writes code or tests runs on Claude Opus (`docs/decisions.md` D18). This is about the tools that write the code; the product itself has no AI in it.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
