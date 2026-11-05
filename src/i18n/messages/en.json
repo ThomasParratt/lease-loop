@@ -32,5 +32,11 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} battery cycles",
   "usage.engine_hours": "{value} engine hours",
-  "footer.skeleton": "Starter skeleton — replace me"
+  "footer.skeleton": "Starter skeleton — replace me",
+  "actor.label": "Continue as",
+  "actor.anonymous": "Nobody (just looking)",
+  "actor.admin": "Admin",
+  "actor.submit": "Continue",
+  "actor.clear": "Stop",
+  "actor.error": "Could not switch. Try again."
 }

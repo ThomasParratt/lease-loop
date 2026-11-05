@@ -1,7 +1,11 @@
 // Database schema. Change it, then run `npm run db:migrate -- --name <what_changed>`.
 // Never hand-write files in prisma/migrations/: the Prisma CLI generates them.
 // SQLite has no enums here, so allowed values (category, condition, status) are
-// checked with Zod in src/data/schemas.ts before anything is written.
+// checked with Zod before anything is written: src/data/schemas.ts for the data pack's
+// values, src/domain/statuses.ts for decisions, contract and invoice statuses, event kinds.
+// Money is integer euro cents (`_cents`), rent factors integer millionths, VAT rates basis
+// points (`_bp`, 2550 = 25.5 %). Business dates are ISO day strings (`YYYY-MM-DD`); DateTime
+// is only for a row's own timestamps. Who owns which model: docs/kickoff-brief.md section 6.
 
 generator client {
   provider = "prisma-client"
@@ -29,7 +33,193 @@ model Asset {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
+  quotes             Quote[]
+  contracts          Contract[]
+  events             AssetEvent[]
+  return_assessments ReturnAssessment[]
+
   @@index([category])
+}
+
+// A test applicant from data/customers.json. One table for the three types: the fields a
+// type does not have are null (see `customerSchema` in src/data/schemas.ts).
+model Customer {
+  id                       String   @id
+  type                     String // consumer | sole_trader | company
+  name                     String
+  birth_date               String? // consumer, sole_trader
+  country                  String
+  city                     String
+  email                    String
+  employment               String? // consumer
+  monthly_net_income_cents Int? // consumer
+  business_id              String? // sole_trader, company
+  vat_registered           Boolean? // sole_trader, company
+  annual_revenue_cents     Int? // company
+  applicant_can_sign       Boolean? // company
+  beneficial_owners_json   String? // company, JSON array of names, null when the file has none
+  is_pep                   Boolean
+  story                    String
+  // Not in the data pack: the language to write to the customer in, set by the app if used.
+  preferred_locale         String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  applications Application[]
+  contracts    Contract[]
+}
+
+// A priced offer for an asset on a date, frozen so a later price list does not change it.
+model Quote {
+  id                   String   @id @default(cuid())
+  asset_id             String
+  quantity             Int      @default(1)
+  quote_date           String
+  valid_until          String
+  price_list_version   Int
+  list_price_cents     Int // per unit
+  down_payment_cents   Int
+  financed_cents       Int
+  band                 String
+  factor_millionths    Int
+  term_months          Int
+  monthly_net_cents    Int
+  buyout_cents         Int
+  vat_rate_bp_at_quote Int
+  created_at           DateTime @default(now())
+
+  asset        Asset         @relation(fields: [asset_id], references: [id])
+  applications Application[]
+
+  @@index([asset_id])
+}
+
+// A customer's answers to the questions for a quote, and what the rules decided.
+model Application {
+  id           String   @id @default(cuid())
+  customer_id  String
+  quote_id     String
+  answers_json String // question id → answer
+  decision     String // approved | rejected | manual_review | awaiting_signatory
+  reasons_json String // [{ code, params }]
+  decided_on   String
+  reviewed_by  String? // the actor who decided a manual review
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  customer Customer  @relation(fields: [customer_id], references: [id])
+  quote    Quote     @relation(fields: [quote_id], references: [id])
+  contract Contract?
+
+  @@index([customer_id])
+  @@index([quote_id])
+}
+
+// A signed lease. The prices are copied from the quote at signing and never change.
+model Contract {
+  id                     String   @id @default(cuid())
+  number                 String   @unique
+  application_id         String   @unique
+  customer_id            String
+  asset_id               String
+  quantity               Int      @default(1)
+  previous_contract_id   String? // the lease this asset had before (second life)
+  signed_on              String
+  start_date             String
+  end_date               String
+  term_months            Int
+  list_price_cents       Int // per unit
+  down_payment_cents     Int
+  financed_cents         Int
+  band                   String
+  factor_millionths      Int
+  monthly_net_cents      Int
+  buyout_cents           Int
+  vat_rate_bp_at_signing Int
+  price_list_version     Int
+  status                 String // active | bought | returned | passed_on | ended_early
+  ended_on               String?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  application        Application        @relation(fields: [application_id], references: [id])
+  customer           Customer           @relation(fields: [customer_id], references: [id])
+  asset              Asset              @relation(fields: [asset_id], references: [id])
+  previous_contract  Contract?          @relation("ContractChain", fields: [previous_contract_id], references: [id])
+  next_contracts     Contract[]         @relation("ContractChain")
+  invoices           Invoice[]
+  events             AssetEvent[]
+  return_assessments ReturnAssessment[]
+
+  @@index([customer_id])
+  @@index([asset_id])
+  @@index([previous_contract_id])
+}
+
+// One invoice of a contract. Gross = net + VAT, all in cents; the domain proves it.
+model Invoice {
+  id           String   @id @default(cuid())
+  contract_id  String
+  sequence     Int // 1, 2, 3 … within the contract
+  period_start String? // null for an invoice that is not for a period (buyout, early exit)
+  period_end   String?
+  issue_date   String
+  due_date     String
+  net_cents    Int
+  vat_rate_bp  Int
+  vat_cents    Int
+  gross_cents  Int
+  kind         String // down_payment | rent | buyout | early_exit
+  status       String // issued | paid
+  paid_on      String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  contract Contract @relation(fields: [contract_id], references: [id])
+
+  @@unique([contract_id, sequence])
+  @@index([contract_id, due_date])
+}
+
+// The asset's passport: one row per thing that happened to it. The id is the order.
+model AssetEvent {
+  id           Int      @id @default(autoincrement())
+  asset_id     String
+  contract_id  String?
+  kind         String // leased | returned | assessed | refurbished | repriced | bought | passed_on
+  on_date      String
+  details_json String
+  created_at   DateTime @default(now())
+
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract? @relation(fields: [contract_id], references: [id])
+
+  @@index([asset_id, id])
+  @@index([contract_id])
+}
+
+// What a returned asset was found to be, what refurbishing it costs and where it goes next.
+model ReturnAssessment {
+  id                         String   @id @default(cuid())
+  asset_id                   String
+  contract_id                String
+  assessed_on                String
+  condition                  String // as returned
+  usage_value                Int
+  refurbishment_json         String // [{ step, cost_cents }]
+  refurbish                  Boolean
+  new_condition              String // after refurbishment, or the same as `condition`
+  market_value_cents         Int
+  second_life_financed_cents Int
+  matched_demand_id          String? // an id from data/second-life-demand.json
+  match_reasons_json         String // [{ code, params }]
+  created_at                 DateTime @default(now())
+
+  asset    Asset    @relation(fields: [asset_id], references: [id])
+  contract Contract @relation(fields: [contract_id], references: [id])
+
+  @@index([asset_id])
+  @@index([contract_id])
 }
 
 // Who changed what, and when. Written in the same transaction as the change

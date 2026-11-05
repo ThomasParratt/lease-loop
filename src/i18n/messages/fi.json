@@ -32,5 +32,11 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} latauskertaa",
   "usage.engine_hours": "{value} käyttötuntia",
-  "footer.skeleton": "Aloituspohja — korvaa minut"
+  "footer.skeleton": "Aloituspohja — korvaa minut",
+  "actor.label": "Jatka käyttäjänä",
+  "actor.anonymous": "Ei kukaan (vain selaan)",
+  "actor.admin": "Ylläpitäjä",
+  "actor.submit": "Jatka",
+  "actor.clear": "Lopeta",
+  "actor.error": "Vaihto ei onnistunut. Yritä uudelleen."
 }

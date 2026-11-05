@@ -32,5 +32,11 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laadimistsüklit",
   "usage.engine_hours": "{value} mootoritundi",
-  "footer.skeleton": "Algmall — asenda mind"
+  "footer.skeleton": "Algmall — asenda mind",
+  "actor.label": "Jätka kasutajana",
+  "actor.anonymous": "Mitte keegi (ainult vaatan)",
+  "actor.admin": "Administraator",
+  "actor.submit": "Jätka",
+  "actor.clear": "Lõpeta",
+  "actor.error": "Vahetamine ei õnnestunud. Proovi uuesti."
 }

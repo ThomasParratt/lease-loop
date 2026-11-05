@@ -32,5 +32,11 @@
   "usage.km": "{value} km",
   "usage.battery_cycles": "{value} laddningscykler",
   "usage.engine_hours": "{value} motortimmar",
-  "footer.skeleton": "Startskelett — byt ut mig"
+  "footer.skeleton": "Startskelett — byt ut mig",
+  "actor.label": "Fortsätt som",
+  "actor.anonymous": "Ingen (tittar bara)",
+  "actor.admin": "Administratör",
+  "actor.submit": "Fortsätt",
+  "actor.clear": "Sluta",
+  "actor.error": "Det gick inte att byta. Försök igen."
 }
