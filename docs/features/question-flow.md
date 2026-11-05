@@ -64,6 +64,8 @@ At 36 and 48 months the age is the only reason; at 24 both reasons are listed. O
 
 **Card 7**: Haapala's owner is a PEP: `manual_review` with `pep`, never approved by a rule. An admin decides on the decision page; the decision and the reviewer are kept as a `reviewed` reason. A PEP case that also needs a signatory goes to `awaiting_signatory` once the admin approves.
 
+**Two decisions at once.** The decision is a conditional write: `updateMany where { id, decision: <the state read> }`, and exactly one row must change. If two admins (or a double-click) decide the same case at the same instant, the first wins; the second answers 409 `APPLICATION_NOT_PENDING`, and its transaction rolls back with no second audit row and no second `reviewed` reason.
+
 ### The Y-tunnus check digit
 
 Seven digits, a hyphen, a check digit. Multiply the digits by **7 9 10 5 8 4 2**, sum, take the remainder mod 11: remainder 0 → check digit 0; remainder 1 → no valid id; otherwise 11 − remainder.
@@ -132,6 +134,7 @@ getApplication(db, id): Promise<ApplicationView | null>;
 | 10 730 net → 13 466 gross                                                       | `answers.test.ts` "grossFromNetCents"                                                                                               |
 | Every persona decides without throwing                                          | `eligibility.test.ts` "every customer in customers.json …"                                                                          |
 | Admin review, signatory sign-off, final states                                  | `applications.test.ts` "decideApplication (D10)"                                                                                    |
+| Two decisions at the same instant: one wins, the other writes nothing           | `applications.test.ts` "two decisions at the same instant …"                                                                        |
 | Cards 5, 6, 7 and every customer × category on the data pack (scenario harness) | `src/domain/scenarios/card-05-too-young.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `customers.test.ts` |
 
 ## Open questions
@@ -139,4 +142,5 @@ getApplication(db, id): Promise<ApplicationView | null>;
 - The signatory signs by typing their name or e-mail (no login, D17); the actor is audited. A real flow would send them a link.
 - Should a PEP below 10 000 EUR (not asked by the bank, known from the record) go to manual review? We say yes; the bank's targeting suggests the question only matters from 10 000 EUR.
 - Affordability uses the chosen term's gross rent; the page could suggest the shortest term that passes (Mikko's 36 months).
+- A double-submit of the application form creates two applications for one quote (`quote_id` is not unique on purpose: a rejected customer may reapply). Only one can be signed; the form should disable its button while sending.
 - `grossFromNetCents` is a local copy until the money/VAT helper on main replaces it.

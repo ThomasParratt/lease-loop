@@ -39,3 +39,4 @@ D17 (the actor, no login), D21 (the palette and type). The demo clock follows th
 
 - The catalogue shows the net list price only; the monthly price from today's price is wave 1's pricing slice.
 - The demo clock needs JavaScript; `?asOf=` on the demo routes is not built (`docs/reviews/wave-0.md`, Open).
+- `PATCH /api/assets/[id]/status` reads the old status outside its transaction, so two changes at once can audit a stale `from`, and it can overwrite `leased` around the signing race. Admin-only demo tool; left as is.

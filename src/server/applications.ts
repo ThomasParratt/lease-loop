@@ -206,6 +206,9 @@ export type DecideApplicationInput = {
   actor: string;
 };
 
+/** Thrown inside the transaction when another request decided first, so nothing is written. */
+class LostDecisionRace extends Error {}
+
 export type DecideApplicationResult =
   | { ok: true; application: ApplicationView }
   | { ok: false; reason: 'not_found' | 'not_pending' | 'admin_only' };
@@ -213,7 +216,8 @@ export type DecideApplicationResult =
 /**
  * D10. A manual review is decided by an admin; a manual review that also needs a signatory
  * becomes `awaiting_signatory` when approved. An `awaiting_signatory` case is signed (approved)
- * or declined (rejected) by the named signatory. Any other state is final.
+ * or declined (rejected) by the named signatory. Any other state is final. Two decisions at
+ * the same instant: the first wins, the second answers `not_pending` and writes nothing.
  */
 export async function decideApplication(
   db: PrismaClient,
@@ -239,25 +243,37 @@ export async function decideApplication(
       ? 'awaiting_signatory'
       : input.decision;
 
-  const row = await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'application.decided',
-      entityType: 'application',
-      entityId: input.id,
-      details: { from: current.decision, to: decision, by: input.reviewedBy },
-    },
-    (tx) =>
-      tx.application.update({
-        where: { id: input.id },
-        data: parseRow('application', applicationDecisionUpdateSchema, {
-          decision,
-          reasons_json: JSON.stringify([...current.reasons, reason]),
-          decided_on: input.today,
-          reviewed_by: input.reviewedBy,
-        }),
-      })
-  );
+  const data = parseRow('application', applicationDecisionUpdateSchema, {
+    decision,
+    reasons_json: JSON.stringify([...current.reasons, reason]),
+    decided_on: input.today,
+    reviewed_by: input.reviewedBy,
+  });
+  let row: ApplicationRow;
+  try {
+    row = await withAudit(
+      db,
+      {
+        actor: input.actor,
+        action: 'application.decided',
+        entityType: 'application',
+        entityId: input.id,
+        details: { from: current.decision, to: decision, by: input.reviewedBy },
+      },
+      async (tx) => {
+        // Only a row still in the state this request read changes, so a concurrent second
+        // decision is a no-op, not an overwrite.
+        const { count } = await tx.application.updateMany({
+          where: { id: input.id, decision: current.decision },
+          data,
+        });
+        if (count === 0) throw new LostDecisionRace();
+        return tx.application.findUniqueOrThrow({ where: { id: input.id } });
+      }
+    );
+  } catch (error) {
+    if (error instanceof LostDecisionRace) return { ok: false, reason: 'not_pending' };
+    throw error;
+  }
   return { ok: true, application: toApplicationView(row) };
 }

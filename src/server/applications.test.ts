@@ -233,6 +233,21 @@ describe('decideApplication (D10)', () => {
     });
     expect(await decide('nope', 'approved')).toEqual({ ok: false, reason: 'not_found' });
   });
+
+  it('two decisions at the same instant: exactly one wins, the other is not_pending and writes nothing', async () => {
+    const created = await apply(await card7(), 'cust-haapala');
+    if (!created.ok) throw new Error('setup');
+    const id = created.application.id;
+    const results = await Promise.all([decide(id, 'approved'), decide(id, 'rejected')]);
+
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.find((r) => !r.ok)).toEqual({ ok: false, reason: 'not_pending' });
+    const winner = results.find((r) => r.ok);
+    const stored = await getApplication(db, id);
+    expect(stored?.decision).toBe(winner?.ok && winner.application.decision);
+    expect(stored?.reasons.filter((r) => r.code === 'reviewed')).toHaveLength(1);
+    expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(1);
+  });
 });
 
 describe('getApplication', () => {
