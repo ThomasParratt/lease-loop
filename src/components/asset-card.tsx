@@ -4,6 +4,7 @@ import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import Link from 'next/link';
 import { Badge, Card, DefinitionList, Money } from './ui';
 
 type AssetCardProps = {
@@ -60,6 +61,12 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {price.ok ? (
             <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
           ) : null}
+          <Link
+            href={`/${locale}/assets/${asset.id}/passport`}
+            className="text-brand-text underline-offset-4 hover:underline"
+          >
+            {t('passport.link')}
+          </Link>
         </div>
         <p className="text-right text-xl font-semibold">
           {price.ok ? <Money cents={price.priceCents} locale={locale} /> : t('asset.noPrice')}

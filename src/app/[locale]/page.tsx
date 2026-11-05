@@ -3,6 +3,7 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AssetCard } from '@/components/asset-card';
+import { ImpactStrip } from '@/components/impact-strip';
 import { Badge, Notice, PageHeader } from '@/components/ui';
 import { loadPriceLists } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
@@ -37,6 +38,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
           </time>
         </Badge>
       </PageHeader>
+      <ImpactStrip today={today} locale={locale} t={t} />
 
       {groups.length === 0 ? <Notice tone="warning">{t('catalogue.empty')}</Notice> : null}
 
