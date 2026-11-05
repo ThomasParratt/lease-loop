@@ -106,6 +106,7 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[]
 - `passport.test.ts`: whole months (15 Jan → 14 Feb is one month, 31 Jan clamps), open life, two events on one day in log order, "card 10: ebike-008 shows its two past lives, undated and estimated".
 - `asset-events.test.ts`: card 10 through the database (58 kg after 24 months, 29 kg on the signing day), a new item with no history, the fleet total.
 - `passport-handlers.test.ts`: each event writes its row; a later handler failure rolls the row back with the audit row.
+- `src/domain/scenarios/card-10-third-life.test.ts` (scenario harness): the passport from the data pack and a logged third life feeds the CO2 counter, [0, 29, 29] → 58 kg; an open third life at 12 months adds 15 kg.
 
 ## Open questions
 

@@ -104,16 +104,17 @@ Server (`src/server/quotes.ts`): `loadPricingData()`, `createQuote(db, { assetId
 
 ## Tests that pin the numbers
 
-| Number                                                              | Test                                                                                  |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Card 1: B, 27 584, 10 730, 2 736, 13 466, 58 350, both totals       | `quote.test.ts` "card 1"; `compare.test.ts` row 36; `quotes.test.ts` stored row       |
-| Card 2: 349 000 → 9 627, 321 100 → 8 857, locked, v2 cheaper        | `quote.test.ts` "card 2"; `quote-status.test.ts`; `quotes.test.ts` "getQuote, card 2" |
-| Card 6: 2 196 000, band C, 58 993; one alone B 15 144; the split    | `quote.test.ts` "card 6"; `quotes.test.ts` "card 6"                                   |
-| Card 7: 12 500 000, band D, 272 038, buyout 1 000 000               | `quote.test.ts` "card 7"                                                              |
-| `laptop-002` A, `laptop-003` B; `ebike-010` below; `farm-006` above | `quote.test.ts` "the traps"                                                           |
-| Quantity 0, down = price, bad term, unknown asset, no list, no VAT  | `quote.test.ts` "the traps"                                                           |
-| Valid until 2026-11-19, expired on the 20th, leap days              | `days.test.ts`, `quote-status.test.ts`                                                |
-| Reserved `ebike-009` cannot be quoted; nothing written on refusal   | `quotes.test.ts`                                                                      |
+| Number                                                                                    | Test                                                                                                                                                           |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card 1: B, 27 584, 10 730, 2 736, 13 466, 58 350, both totals                             | `quote.test.ts` "card 1"; `compare.test.ts` row 36; `quotes.test.ts` stored row                                                                                |
+| Card 2: 349 000 → 9 627, 321 100 → 8 857, locked, v2 cheaper                              | `quote.test.ts` "card 2"; `quote-status.test.ts`; `quotes.test.ts` "getQuote, card 2"                                                                          |
+| Card 6: 2 196 000, band C, 58 993; one alone B 15 144; the split                          | `quote.test.ts` "card 6"; `quotes.test.ts` "card 6"                                                                                                            |
+| Card 7: 12 500 000, band D, 272 038, buyout 1 000 000                                     | `quote.test.ts` "card 7"                                                                                                                                       |
+| `laptop-002` A, `laptop-003` B; `ebike-010` below; `farm-006` above                       | `quote.test.ts` "the traps"                                                                                                                                    |
+| Quantity 0, down = price, bad term, unknown asset, no list, no VAT                        | `quote.test.ts` "the traps"                                                                                                                                    |
+| Valid until 2026-11-19, expired on the 20th, leap days                                    | `days.test.ts`, `quote-status.test.ts`                                                                                                                         |
+| Reserved `ebike-009` cannot be quoted; nothing written on refusal                         | `quotes.test.ts`                                                                                                                                               |
+| Cards 1, 2, 6, 7, the band edges and the table limits on the data pack (scenario harness) | `src/domain/scenarios/card-01-happy-path.test.ts`, `card-02-price-lock.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `traps.test.ts` |
 
 ## Open questions
 

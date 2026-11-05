@@ -133,6 +133,7 @@ handleContractSigned(tx, event, vatRates?): Promise<number>   // event.signedOn 
   - a failing later handler rolls the invoices and the audit row back;
   - a missing contract row rolls back.
 - `invoices.test.ts`: list, the unique sequence, the access lookups, pay (audited, `INVOICE_PAID` with the gross), already paid / not found, and a throwing `INVOICE_PAID` handler rolling back the payment.
+- `src/domain/scenarios/` (scenario harness): cards 1, 3, 4 and 8 from `priceQuote` to `buildSchedule` (486 612 total for card 1, 8 731 / 8 766, 28 Feb 2026 / 29 Feb 2028, 311 170 and 330 675), the VAT boundary and leap-day traps, and `quote-schedule.property.test.ts` (the quote total is what the invoices add up to).
 
 ## Open questions
 

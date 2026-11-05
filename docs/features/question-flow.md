@@ -121,17 +121,18 @@ getApplication(db, id): Promise<ApplicationView | null>;
 
 ## Tests that pin the numbers
 
-| Number                                              | Test                                                                          |
-| --------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Card 7's ten questions, PEP details after yes       | `engine.test.ts` "card 7: …"                                                  |
-| Card 6 at 2 196 000, signatory pruning              | `engine.test.ts` "card 6: …", "pruneAnswers … card 6"                         |
-| Card 1's consumer questions                         | `engine.test.ts` "card 1: …"                                                  |
-| Mikko 2027-03-10; rents 12 888 / 10 005 / 8 322     | `eligibility.test.ts` "evaluate: card 5"                                      |
-| Norvi `awaiting_signatory`, Haapala `manual_review` | `eligibility.test.ts` "card 6", "card 7"; `applications.test.ts` on a real DB |
-| 1234567-8 → check digit 1; every other id valid     | `business-id.test.ts`                                                         |
-| 10 730 net → 13 466 gross                           | `answers.test.ts` "grossFromNetCents"                                         |
-| Every persona decides without throwing              | `eligibility.test.ts` "every customer in customers.json …"                    |
-| Admin review, signatory sign-off, final states      | `applications.test.ts` "decideApplication (D10)"                              |
+| Number                                                                          | Test                                                                                                                                |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Card 7's ten questions, PEP details after yes                                   | `engine.test.ts` "card 7: …"                                                                                                        |
+| Card 6 at 2 196 000, signatory pruning                                          | `engine.test.ts` "card 6: …", "pruneAnswers … card 6"                                                                               |
+| Card 1's consumer questions                                                     | `engine.test.ts` "card 1: …"                                                                                                        |
+| Mikko 2027-03-10; rents 12 888 / 10 005 / 8 322                                 | `eligibility.test.ts` "evaluate: card 5"                                                                                            |
+| Norvi `awaiting_signatory`, Haapala `manual_review`                             | `eligibility.test.ts` "card 6", "card 7"; `applications.test.ts` on a real DB                                                       |
+| 1234567-8 → check digit 1; every other id valid                                 | `business-id.test.ts`                                                                                                               |
+| 10 730 net → 13 466 gross                                                       | `answers.test.ts` "grossFromNetCents"                                                                                               |
+| Every persona decides without throwing                                          | `eligibility.test.ts` "every customer in customers.json …"                                                                          |
+| Admin review, signatory sign-off, final states                                  | `applications.test.ts` "decideApplication (D10)"                                                                                    |
+| Cards 5, 6, 7 and every customer × category on the data pack (scenario harness) | `src/domain/scenarios/card-05-too-young.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `customers.test.ts` |
 
 ## Open questions
 
