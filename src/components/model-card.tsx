@@ -6,6 +6,7 @@
 // A server component: it renders to HTML and ships no JavaScript. The whole card is one link
 // (the title's link stretches over it), so there is one tab stop per model.
 import Link from 'next/link';
+import type { Asset } from '@/data/schemas';
 import type { ModelGroup } from '@/domain/catalogue/catalogue';
 import { formatEuro } from '@/domain/money';
 import type { FinanceOffer } from '@/domain/pricing';
@@ -13,7 +14,7 @@ import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ItemArt } from './item-art';
-import { LifeStamp, Money, PriceTag } from './ui';
+import { Badge, LifeStamp, Money, PriceTag } from './ui';
 
 type ModelCardProps = {
   group: ModelGroup;
@@ -100,6 +101,62 @@ export function ModelCard({ group, offer, termMonths, locale, t }: ModelCardProp
             }
             sub={sub}
           />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+type UnavailableCardProps = { asset: Asset; locale: Locale; t: Translate };
+
+/**
+ * A returned or leased unit at the bottom of the catalogue: greyed out under its status, with
+ * no price (a returned unit is re-priced before its next life; a leased one belongs to
+ * someone). It links straight to its passport: its lives and the CO2 they saved.
+ */
+export function UnavailableCard({ asset, locale, t }: UnavailableCardProps) {
+  const headingId = `unit-${asset.id}`;
+  return (
+    <article
+      aria-labelledby={headingId}
+      className="group relative flex h-full flex-col rounded-xl border border-line bg-raised p-3"
+    >
+      <div className="relative rounded-lg bg-muted px-6 pt-8 pb-2">
+        <div className="opacity-40 grayscale">
+          <ItemArt category={asset.category} model={asset.model} />
+        </div>
+        <Badge
+          status={asset.status}
+          srPrefix={t('status.label')}
+          className="absolute top-3 right-3"
+        >
+          {t(`status.${asset.status}`)}
+        </Badge>
+      </div>
+      <div className="flex flex-1 flex-col px-2 pt-4 pb-2 text-ink-muted">
+        <p className="text-xs font-extrabold tracking-[0.14em] uppercase">{asset.make}</p>
+        <h3 id={headingId} className="mt-1 text-xl leading-snug text-ink">
+          <Link
+            href={`/${locale}/assets/${asset.id}/passport`}
+            className="rounded after:absolute after:inset-0 after:rounded-xl after:content-['']"
+          >
+            {asset.model}
+          </Link>
+        </h3>
+        <p className="mt-1 text-sm">
+          {[
+            t(`condition.${asset.condition}`),
+            t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) }),
+            String(asset.model_year),
+          ].join(' · ')}
+        </p>
+        <div className="mt-auto pt-5">
+          <p className="rounded-lg bg-muted px-4 py-3 text-sm">
+            <span className="block font-semibold">{t('catalogue.card.unavailable')}</span>
+            <span className="block text-brand-text underline decoration-2 underline-offset-4">
+              {t('catalogue.card.unavailableHint')}
+            </span>
+          </p>
         </div>
       </div>
     </article>

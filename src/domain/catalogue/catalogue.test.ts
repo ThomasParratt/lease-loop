@@ -6,6 +6,7 @@ import {
   isListed,
   isUsed,
   modelVersions,
+  unavailableUnits,
   parseCatalogueFilters,
   type CatalogueEntry,
   type CatalogueFilters,
@@ -61,6 +62,17 @@ const entries: CatalogueEntry[] = [
   ),
   entry(asset('ebike-013', { make: 'Lumo', model: 'Kids 20' }), null),
   entry(asset('ebike-014', { make: 'Lumo', model: 'Gravel X', status: 'leased' }), 15_890),
+  entry(
+    asset('ebike-015', {
+      make: 'Nordvolt',
+      model: 'Cargo Duo',
+      status: 'returned',
+      condition: 'fair',
+      previous_lives: 1,
+    }),
+    19_006
+  ),
+  entry(asset('ebike-016', { make: 'Nordvolt', model: 'Trail 500', status: 'sold' }), 13_466),
 ];
 
 describe('isListed and isUsed', () => {
@@ -147,6 +159,30 @@ describe('buildCatalogue', () => {
   });
 });
 
+describe('unavailableUnits', () => {
+  it('lists the returned units first, then the leased ones, never reserved or sold (D42)', () => {
+    const ids = unavailableUnits(entries, ALL).map((a) => a.id);
+    expect(ids).toEqual(['ebike-015', 'ebike-014']);
+  });
+
+  it('shows the same units under the Unavailable filter, and the stacks are then empty', () => {
+    const filters: CatalogueFilters = { ...ALL, condition: 'unavailable' };
+    expect(unavailableUnits(entries, filters).map((a) => a.id)).toEqual(['ebike-015', 'ebike-014']);
+    expect(buildCatalogue(entries, filters)).toEqual([]);
+  });
+
+  it('shows none under New or Used, which are about what can be leased', () => {
+    expect(unavailableUnits(entries, { ...ALL, condition: 'new' })).toEqual([]);
+    expect(unavailableUnits(entries, { ...ALL, condition: 'used' })).toEqual([]);
+  });
+
+  it('follows the category and the brand', () => {
+    expect(unavailableUnits(entries, { ...ALL, category: 'laptop' })).toEqual([]);
+    const lumo = unavailableUnits(entries, { ...ALL, category: 'e_bike', make: 'Lumo' });
+    expect(lumo.map((a) => a.id)).toEqual(['ebike-014']);
+  });
+});
+
 describe('modelVersions', () => {
   it('gives the versions of the unit model, new first, for the version picker', () => {
     const versions = modelVersions(entries, 'ebike-008');
@@ -181,6 +217,7 @@ describe('parseCatalogueFilters', () => {
         sort: 'price_asc',
       })
     ).toEqual({ category: 'e_bike', condition: 'used', make: 'Nordvolt', sort: 'price_asc' });
+    expect(parseCatalogueFilters({ condition: 'unavailable' }).condition).toBe('unavailable');
   });
 
   it('ignores unknown or repeated values and a brand without a category', () => {

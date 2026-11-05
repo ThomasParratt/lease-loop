@@ -1,5 +1,5 @@
 // The catalogue a customer browses: what can be leased today, one card per model rather than
-// one per unit, narrowed by filters from the URL. A model's units differ only in their life
+// one per unit, then the returned and leased units greyed out at the bottom, narrowed by filters from the URL. A model's units differ only in their life
 // (new, or used with its wear and year); identical units fold into one version that counts
 // them, and the price page lets the customer pick a version. Pure: the caller passes each
 // unit's monthly price (from pricing's financeOffer), so this never prices anything.
@@ -33,7 +33,7 @@ export type ModelGroup = {
   maxMonthlyCents: number | null;
 };
 
-export const conditionFilters = ['new', 'used'] as const;
+export const conditionFilters = ['new', 'used', 'unavailable'] as const;
 export type ConditionFilter = (typeof conditionFilters)[number];
 export const catalogueSorts = ['default', 'price_asc', 'price_desc'] as const;
 export type CatalogueSort = (typeof catalogueSorts)[number];
@@ -52,6 +52,17 @@ export type CatalogueFilters = {
  */
 export function isListed(asset: Asset): boolean {
   return asset.status === 'available';
+}
+
+/**
+ * The units shown at the bottom of the catalogue, greyed out, so their pages and passports
+ * stay one click away: returned ones (they come back once second life re-prices them) before
+ * leased ones. Reserved and sold units are not shown (D42).
+ */
+const UNAVAILABLE_ORDER = ['returned', 'leased'] as const;
+
+export function isShownUnavailable(asset: Asset): boolean {
+  return (UNAVAILABLE_ORDER as readonly string[]).includes(asset.status);
 }
 
 /** Used means it has had a lease before, whatever its condition ("like new" included). */
@@ -79,6 +90,7 @@ function matches(entry: CatalogueEntry, filters: CatalogueFilters): boolean {
   if (!isListed(asset)) return false;
   if (filters.category && asset.category !== filters.category) return false;
   if (filters.category && filters.make && asset.make !== filters.make) return false;
+  if (filters.condition === 'unavailable') return false;
   if (filters.condition === 'new' && isUsed(asset)) return false;
   if (filters.condition === 'used' && !isUsed(asset)) return false;
   return true;
@@ -161,10 +173,30 @@ export function modelVersions(entries: CatalogueEntry[], assetId: string): Model
   }));
 }
 
-/** The brands a category has something to lease from, for its brand filter. */
+/**
+ * The returned and leased units that pass the filters, one by one (not stacked), returned
+ * first and then leased, each in the catalogue's order. Shown under "Any" and "Unavailable";
+ * "New" and "Used" are about what can be leased, so they show none.
+ */
+export function unavailableUnits(entries: CatalogueEntry[], filters: CatalogueFilters): Asset[] {
+  if (filters.condition === 'new' || filters.condition === 'used') return [];
+  const shown = entries
+    .map((e) => e.asset)
+    .filter(
+      (asset) =>
+        isShownUnavailable(asset) &&
+        (!filters.category || asset.category === filters.category) &&
+        (!filters.category || !filters.make || asset.make === filters.make)
+    );
+  return UNAVAILABLE_ORDER.flatMap((status) => shown.filter((a) => a.status === status));
+}
+
+/** The brands a category shows (to lease, or greyed out), for its brand filter. */
 export function brandsIn(entries: CatalogueEntry[], category: AssetCategory): string[] {
   const brands = entries
-    .filter((e) => isListed(e.asset) && e.asset.category === category)
+    .filter(
+      (e) => (isListed(e.asset) || isShownUnavailable(e.asset)) && e.asset.category === category
+    )
     .map((e) => e.asset.make);
   return [...new Set(brands)].sort((a, b) => a.localeCompare(b));
 }
