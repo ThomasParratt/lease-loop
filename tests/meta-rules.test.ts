@@ -1,0 +1,185 @@
+// Meta rules: checks the repository itself against RULES.md and AGENTS.md, so `npm test`
+// (pre-push hook and CI) fails as soon as someone breaks one. ESLint and the scripts in
+// scripts/ enforce some of these too; this file is the belt to their braces.
+import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { findOversizedFiles, MAX_LINES } from '../scripts/check-file-size.mjs';
+import { checkProject } from '../scripts/check-no-ai.mjs';
+
+const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+
+// ---------- pure helpers ----------
+
+/** All files under `dir` (relative to the repo root, forward slashes) that match `pattern`. */
+function listFiles(dir: string, pattern: RegExp): string[] {
+  return readdirSync(path.join(repoRoot, dir), { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(repoRoot, path.join(entry.parentPath, entry.name)))
+    .map((file) => file.split(path.sep).join('/'))
+    .filter((file) => pattern.test(file))
+    .sort();
+}
+
+const read = (file: string) => readFileSync(path.join(repoRoot, file), 'utf8');
+
+/** Lines of `file`; works with LF and CRLF checkouts. */
+const readLines = (file: string) => read(file).split(/\r?\n/);
+
+const isTest = (file: string) => /\.test\.tsx?$/.test(file);
+
+/** A comment line (`// …`, `/* …`, ` * …`): comments may name the calls they forbid. */
+const isComment = (line: string) => /^\s*(\/\/|\/\*|\*)/.test(line);
+
+type Finding = { file: string; line: number; problem: string };
+type Check = { pattern: RegExp; problem: string };
+
+const formatFindings = (findings: Finding[]) =>
+  findings.map(({ file, line, problem }) => `${file}:${line} ${problem}`).join('\n');
+
+/** Every non-comment line of `file` that matches a check, unless `skipLine` says otherwise. */
+function scanLines(
+  file: string,
+  checks: readonly Check[],
+  skipLine: (index: number, lines: string[]) => boolean = () => false
+): Finding[] {
+  const lines = readLines(file);
+  return lines.flatMap((text, index) =>
+    isComment(text) || skipLine(index, lines)
+      ? []
+      : checks
+          .filter(({ pattern }) => pattern.test(text))
+          .map(({ problem }) => ({ file, line: index + 1, problem }))
+  );
+}
+
+/** src/domain/**\/*.ts without tests and type declarations. */
+const domainModules = () =>
+  listFiles('src/domain', /\.ts$/).filter((file) => !isTest(file) && !file.endsWith('.d.ts'));
+
+// `from '…'`, `import('…')` or `import '…'` of a module that does I/O or needs a framework.
+const FORBIDDEN_DOMAIN_IMPORT = new RegExp(
+  String.raw`(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"]` +
+    String.raw`(node:[^'"]*|fs(/[^'"]*)?|path|next(/[^'"]*)?|react(-dom)?(/[^'"]*)?` +
+    String.raw`|@prisma/[^'"]*|@/server/[^'"]*|@/data/load|@/generated/[^'"]*)['"]`
+);
+
+const DOMAIN_IMPURITIES: readonly Check[] = [
+  { pattern: /\bnew Date\(\s*\)/, problem: 'new Date() reads the clock' },
+  { pattern: /\bDate\.now\b/, problem: 'Date.now reads the clock' },
+  { pattern: /\bMath\.random\b/, problem: 'Math.random is not deterministic' },
+  { pattern: /(?<![\w.])fetch\(/, problem: 'fetch( does network I/O' },
+  { pattern: /(?<![\w.])process\./, problem: 'process. reads the environment' },
+  { pattern: FORBIDDEN_DOMAIN_IMPORT, problem: 'imports I/O, a framework or server code' },
+];
+
+const HTTP_METHOD = '(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)';
+const IMPORTS_HANDLE_ROUTE =
+  /import\s*\{[^}]*\bhandleRoute\b[^}]*\}\s*from\s*['"]@\/server\/api-response['"]/;
+const FUNCTION_HANDLER = new RegExp(String.raw`^export\s+(async\s+)?function\s+${HTTP_METHOD}\b`);
+const CONST_HANDLER = new RegExp(String.raw`^export\s+const\s+${HTTP_METHOD}\s*=\s*(.*)$`);
+
+/** Problems with the exported HTTP handlers of one route.ts. */
+function findUnwrappedHandlers(file: string): Finding[] {
+  const findings: Finding[] = [];
+  if (!IMPORTS_HANDLE_ROUTE.test(read(file))) {
+    findings.push({ file, line: 1, problem: 'does not import handleRoute' });
+  }
+  readLines(file).forEach((text, index) => {
+    const line = index + 1;
+    if (FUNCTION_HANDLER.test(text)) {
+      findings.push({ file, line, problem: 'exports a bare function, not handleRoute(…)' });
+    }
+    const constant = CONST_HANDLER.exec(text);
+    if (constant && !/^handleRoute\(/.test(constant[2] ?? '')) {
+      findings.push({ file, line, problem: `${constant[1]} is not handleRoute(…)` });
+    }
+  });
+  return findings;
+}
+
+// Data-pack loaders are not business changes, so they may write without an audit row.
+// A function counts as a loader when its name starts with `seed` (e.g. seedAssets).
+const SEED_FUNCTION = /^(export\s+)?(async\s+)?function\s+seed\w*\s*[<(]/;
+
+/** True inside a top-level `function seed…` (Prettier closes it with `}` at column 0). */
+function isInsideSeedFunction(index: number, lines: string[]): boolean {
+  for (let i = index; i >= 0; i--) {
+    const text = lines[i] ?? '';
+    if (SEED_FUNCTION.test(text)) return true;
+    if (i < index && text === '}') return false;
+  }
+  return false;
+}
+
+const UNAUDITED_WRITES: readonly Check[] = [
+  {
+    pattern: /\bdb\.\w+\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/,
+    problem: 'writes through db instead of the tx from withAudit()',
+  },
+  { pattern: /\$transaction\(/, problem: 'opens its own $transaction instead of withAudit()' },
+];
+
+// ---------- the rules ----------
+
+describe('meta rules', () => {
+  // RULES.md §8 "Small files" and AGENTS.md; also scripts/check-file-size.mjs.
+  it(`no hand-written source file is over ${MAX_LINES} lines`, () => {
+    const output = execFileSync(
+      'git',
+      ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+      { cwd: repoRoot, encoding: 'utf8' }
+    );
+    const paths = [...new Set(output.split('\0').filter(Boolean))];
+    const readIfExists = (file: string): string | null =>
+      existsSync(path.join(repoRoot, file)) ? read(file) : null;
+    const oversized: { path: string; lines: number }[] = findOversizedFiles(paths, readIfExists);
+    expect(oversized, `split these files, the limit is ${MAX_LINES} lines`).toEqual([]);
+  });
+
+  // RULES.md §1 "No AI inside the product" and AGENTS.md; also scripts/check-no-ai.mjs.
+  it('the app has no AI/ML package, import or API key', () => {
+    const problems: string[] = checkProject(repoRoot);
+    expect(problems).toEqual([]);
+  });
+
+  // RULES.md §4: "Every domain function has tests next to it".
+  it('every domain module has a test next to it', () => {
+    const untested = domainModules().filter(
+      (file) => !existsSync(path.join(repoRoot, file.replace(/\.ts$/, '.test.ts')))
+    );
+    expect(untested, 'add a <name>.test.ts next to each of these').toEqual([]);
+  });
+
+  // RULES.md §4 and src/domain/README.md rules 1-2: pure and deterministic.
+  it('domain code never reads the clock, randomness, the network or the environment', () => {
+    const findings = domainModules().flatMap((file) => scanLines(file, DOMAIN_IMPURITIES));
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // RULES.md §6 "One API shape": wrap handlers in handleRoute().
+  it('every API route handler is wrapped in handleRoute', () => {
+    const routes = listFiles('src/app/api', /(^|\/)route\.ts$/);
+    expect(routes.length).toBeGreaterThan(0);
+    const findings = routes.flatMap(findUnwrappedHandlers);
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // RULES.md §7 "Every change leaves an audit trail": writes use the tx from withAudit().
+  it('every write to the database goes through withAudit', () => {
+    const candidates = [...listFiles('src/server', /\.ts$/), ...listFiles('src/app', /\.tsx?$/)];
+    const files = candidates.filter((file) => !isTest(file) && file !== 'src/server/audit.ts');
+    const findings = files.flatMap((file) =>
+      scanLines(file, UNAUDITED_WRITES, isInsideSeedFunction)
+    );
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // RULES.md §9 "Four languages". Same keys in all four: src/i18n/messages.test.ts.
+  it('the UI has message files for exactly en, fi, sv and et', () => {
+    const files = readdirSync(path.join(repoRoot, 'src/i18n/messages')).sort();
+    expect(files).toEqual(['en.json', 'et.json', 'fi.json', 'sv.json']);
+  });
+});
