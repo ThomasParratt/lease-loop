@@ -3,13 +3,13 @@
 // DELETE /api/actor   Clears it, so the visitor is `anonymous` again.
 import {
   ANONYMOUS_ACTOR,
-  actorBodySchema,
   actorCookieHeader,
   clearActorCookieHeader,
   resolveActor,
 } from '@/server/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { db } from '@/server/db';
+import { actorBodySchema } from '@/server/routes';
 
 export const POST = handleRoute(async (request) => {
   const { actor } = await readJsonBody(request, actorBodySchema);

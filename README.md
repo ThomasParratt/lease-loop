@@ -73,6 +73,14 @@ SQLite through Prisma 7, schema in `prisma/schema.prisma`, `snake_case` columns.
 
 There is no login (D17). The "continue as" picker (`src/components/actor-picker.tsx`) posts `{ actor }` (a customer id or `admin`) to `POST /api/actor`, which sets the `lease-loop-actor` cookie; `DELETE /api/actor` clears it. Pages and routes call `readActor(db)` from `src/server/actor.ts` once per request and pass the actor to `withAudit`; an unknown or missing cookie reads as `anonymous`.
 
+### API
+
+Every API route has one row in the route table, `src/server/routes.ts`: method, the Next.js path pattern (`/api/assets/[id]/status`), a summary, a tag, and the Zod schemas of its params, query, body and success `data`. Route files import their schemas from there. `npm run openapi` turns the table into [docs/openapi.json](docs/openapi.json) (OpenAPI 3.1, success bodies wrapped in the `ok()` envelope, errors in the `fail()` one). Tests fail when a `route.ts` has no row (or a row no file) and when the committed `docs/openapi.json` differs from the table, so add the row first and run `npm run openapi` after.
+
+### Events
+
+When one change touches several slices' rows at one instant, the owner emits one event inside `withAudit` and the other slices react in the same transaction (`docs/kickoff-brief.md` section 7). The payloads are Zod schemas in `src/domain/events.ts`: `CONTRACT_SIGNED`, `CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`, `INVOICE_PAID`. `src/server/events.ts` has `onEvent(type, handler)` and `emit(tx, event)`: handlers get the same `tx`, run in registration order, and a handler that throws rolls the whole change back.
+
 ### Pages
 
 `/[locale]` is the catalogue, `/[locale]/demo` the demo page (the clock and, from wave 1, one button per scenario card), `/[locale]/audit` the newest 50 audit rows. The header nav links all three, beside the language switcher and a slot for the "continue as" actor picker; it wraps on a phone. Pages are built from the kit in `src/components/ui` (`PageHeader`, `Card`, `Button`, `LinkButton`, `Badge`, `DefinitionList`, `Field`, `Notice`, `Money`, `DateText`, `NavLinks`, one `index.ts`) and the team's design tokens in `src/app/globals.css` (D21): pages use the roles `brand`, `focus`, `success`, `warning`, `danger`, `info`, `neutral`, `surface`, `raised`, `muted`, `line`, `line-strong`, `ink`, `ink-muted` (e.g. `bg-brand`, `text-ink-muted`, `bg-success-soft`), never raw colour classes or the scales under them. Each token switches with the colour scheme, so no page needs a `dark:` class.

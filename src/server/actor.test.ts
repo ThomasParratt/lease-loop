@@ -5,12 +5,12 @@ import { loadCustomers } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import {
   ACTOR_COOKIE,
-  actorBodySchema,
   actorCookieHeader,
   actorFromCookieValue,
   clearActorCookieHeader,
   resolveActor,
 } from './actor';
+import { actorBodySchema } from './routes';
 import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
 

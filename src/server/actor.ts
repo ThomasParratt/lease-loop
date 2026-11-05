@@ -2,7 +2,6 @@
 // cookie with a customer id or `admin`, and every withAudit entry names that actor. A cookie
 // that names nobody we know reads as `anonymous`.
 import { cookies } from 'next/headers';
-import { z } from 'zod';
 import type { PrismaClient } from './prisma-client';
 
 export const ACTOR_COOKIE = 'lease-loop-actor';
@@ -13,11 +12,6 @@ export const ANONYMOUS_ACTOR = 'anonymous';
 export type Actor = string;
 
 const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-
-/** Body of `POST /api/actor`. Whether the actor exists is checked against the database. */
-export const actorBodySchema = z.strictObject({
-  actor: z.string().min(1).max(100),
-});
 
 /**
  * The actor a cookie value names: the value itself when it is `admin` or one of `knownIds`,
