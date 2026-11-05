@@ -24,7 +24,7 @@ type FieldProps = {
 
 /** The look of a text input, date input or select inside a Field. */
 export const inputClasses =
-  'block min-h-11 w-full rounded-md border border-line bg-raised px-3 py-2 text-base text-ink ' +
+  'block min-h-11 w-full rounded-md border-2 border-neutral-solid bg-raised px-3 py-2 text-base text-ink ' +
   'aria-invalid:border-danger-solid';
 
 export function Field({ id, label, hint, error, className, children }: FieldProps) {

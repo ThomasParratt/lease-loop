@@ -25,14 +25,14 @@ export function Card({
     <Element
       aria-labelledby={title && titleId ? titleId : undefined}
       className={cx(
-        'rounded-lg border border-line bg-raised shadow-sm',
+        'rounded-xl border border-line bg-raised shadow-card',
         padded && 'p-4 sm:p-6',
         className
       )}
       {...rest}
     >
       {title ? (
-        <h2 id={titleId} className="mb-4 text-lg font-bold">
+        <h2 id={titleId} className="mb-4 text-xl">
           {title}
         </h2>
       ) : null}

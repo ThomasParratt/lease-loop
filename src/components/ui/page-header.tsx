@@ -19,7 +19,7 @@ export function PageHeader({ title, intro, back, actions, children }: PageHeader
       {back ? (
         <Link
           href={back.href}
-          className="mb-4 inline-flex items-center gap-1 rounded text-sm font-medium text-brand-text underline-offset-4 hover:underline"
+          className="mb-5 inline-flex items-center gap-1 rounded font-bold text-ink underline decoration-brand/30 decoration-2 underline-offset-4 hover:decoration-brand"
         >
           <span aria-hidden="true">←</span>
           {back.label}
@@ -27,7 +27,7 @@ export function PageHeader({ title, intro, back, actions, children }: PageHeader
       ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+          <h1 className="text-4xl leading-tight text-balance sm:text-5xl">{title}</h1>
           {intro ? <p className="mt-3 text-lg text-ink-muted">{intro}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}

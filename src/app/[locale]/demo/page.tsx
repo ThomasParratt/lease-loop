@@ -3,7 +3,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { Badge, Card, DateText, Notice, PageHeader } from '@/components/ui';
+import { Badge, Card, DateText, Notice, PageHeader, StaffNote } from '@/components/ui';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -44,7 +44,9 @@ export default async function DemoPage({ params }: PageProps<'/[locale]/demo'>) 
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-      <PageHeader title={t('demo.title')} intro={t('demo.intro')} />
+      <PageHeader title={t('demo.title')} intro={t('demo.intro')}>
+        <StaffNote>{t('staff.note')}</StaffNote>
+      </PageHeader>
 
       <Card as="section" title={t('demo.clock.title')} titleId="demo-clock">
         <div className="mb-6 flex flex-wrap items-center gap-3">

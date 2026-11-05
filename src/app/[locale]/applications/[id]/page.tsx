@@ -45,6 +45,20 @@ const TONE = {
   awaiting_signatory: 'warning',
 } as const;
 
+// The decision panel: one colour, one glyph per outcome. The glyph is decoration; the
+// sentence beside it says the same in words.
+const PANEL = {
+  success: 'border-success-line bg-success-soft text-success-ink',
+  warning: 'border-warning-line bg-warning-soft text-warning-ink',
+  error: 'border-danger-line bg-danger-soft text-danger-ink',
+} as const;
+const ICON = {
+  success: 'bg-success-solid text-raised',
+  warning: 'bg-warning-solid text-raised',
+  error: 'bg-danger-solid text-raised',
+} as const;
+const GLYPH = { success: '✓', warning: '…', error: '!' } as const;
+
 export default async function ApplicationPage({
   params,
 }: PageProps<'/[locale]/applications/[id]'>) {
@@ -75,11 +89,25 @@ export default async function ApplicationPage({
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader title={t('decision.title')} />
-      <Notice tone={TONE[decision]} title={t(`decision.status.${decision}`)} className="mb-6">
-        <p className="text-sm">
-          {t('decision.decidedOn', { date: formatIsoDate(application.decidedOn, locale) })}
-        </p>
-      </Notice>
+      <div
+        role="status"
+        className={`mb-8 flex items-center gap-5 rounded-xl border-2 p-6 ${PANEL[TONE[decision]]}`}
+      >
+        <span
+          aria-hidden="true"
+          className={`grid size-14 shrink-0 place-items-center rounded-full font-heading text-3xl font-semibold ${ICON[TONE[decision]]}`}
+        >
+          {GLYPH[TONE[decision]]}
+        </span>
+        <div>
+          <p className="font-heading text-2xl leading-tight font-semibold sm:text-3xl">
+            {t(`decision.status.${decision}`)}
+          </p>
+          <p className="mt-1">
+            {t('decision.decidedOn', { date: formatIsoDate(application.decidedOn, locale) })}
+          </p>
+        </div>
+      </div>
 
       <Card as="section" title={t('decision.reasons')} titleId="decision-reasons">
         <div className="mb-4">

@@ -3,25 +3,27 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cx } from './cx';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'onDark';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-brand text-brand-contrast hover:bg-brand-hover',
-  secondary: 'border border-line-strong bg-transparent text-ink hover:bg-muted',
-  danger: 'bg-danger-solid text-white hover:bg-danger-hover',
+  secondary: 'border-2 border-brand bg-transparent text-brand-text hover:bg-brand-soft',
+  danger: 'bg-danger-solid text-raised hover:bg-danger-hover',
+  /** On a dark strip (the staff strip): outlined in the strip's own text colour. */
+  onDark: 'border-2 border-current/60 bg-transparent text-current hover:bg-staff-hover',
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'min-h-9 px-3 text-sm',
-  md: 'min-h-11 px-4 text-base',
-  lg: 'min-h-12 px-6 text-lg',
+  sm: 'min-h-9 px-4 text-sm',
+  md: 'min-h-11 px-5 text-base',
+  lg: 'min-h-13 px-7 text-lg',
 };
 
 /** The classes of a button, shared with LinkButton so a link can look like one. */
 export function buttonClasses(variant: ButtonVariant = 'primary', size: ButtonSize = 'md'): string {
   return cx(
-    'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
+    'inline-flex items-center justify-center gap-2 rounded-full font-bold transition-colors',
     'disabled:cursor-not-allowed disabled:opacity-60',
     variants[variant],
     sizes[size]

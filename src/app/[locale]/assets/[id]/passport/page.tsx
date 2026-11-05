@@ -3,7 +3,16 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { Badge, Card, DateText, DefinitionList, Notice, PageHeader } from '@/components/ui';
+import { ItemArt } from '@/components/item-art';
+import {
+  Badge,
+  Card,
+  DateText,
+  DefinitionList,
+  LifeStamp,
+  Notice,
+  PageHeader,
+} from '@/components/ui';
 import { loadCo2Factors } from '@/data/load';
 import type { PassportEvent } from '@/domain/passport';
 import { DESIGN_LIFE_MONTHS } from '@/domain/second-life/co2';
@@ -83,15 +92,20 @@ export default async function PassportPage({
         </div>
       </PageHeader>
 
-      <Card className="mb-8 bg-success-soft">
-        <p className="text-sm font-medium text-success-ink">{t('passport.co2Total')}</p>
-        <p className="mt-1 text-4xl font-bold text-success-ink tabular-nums">
-          {t('passport.kg', { kg: kg(co2.totalKg) })}
-        </p>
-      </Card>
+      <div className="mb-10 grid items-center gap-6 sm:grid-cols-[1fr_1fr]">
+        <div className="rounded-xl bg-muted px-6 pt-8 pb-2">
+          <ItemArt category={asset.category} model={asset.model} />
+        </div>
+        <div className="rounded-xl bg-brand-soft p-6">
+          <p className="font-bold text-success-ink">{t('passport.co2Total')}</p>
+          <p className="mt-1 font-heading text-5xl font-semibold text-brand-text tabular-nums">
+            {t('passport.kg', { kg: kg(co2.totalKg) })}
+          </p>
+        </div>
+      </div>
 
       <section aria-labelledby="passport-lives">
-        <h2 id="passport-lives" className="mb-4 text-xl font-bold">
+        <h2 id="passport-lives" className="mb-4 text-3xl">
           {t('passport.timeline')}
         </h2>
         {passport.lives.length === 0 ? (
@@ -115,10 +129,18 @@ export default async function PassportPage({
               return [
                 <li key={`life-${life.index}`}>
                   <Card as="article" aria-labelledby={`life-${life.index}`}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <h3 id={`life-${life.index}`} className="text-lg font-bold">
-                        {t('passport.life', { number: life.index + 1 })}
-                      </h3>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-4">
+                        <LifeStamp
+                          life={t('stamp.life', { n: life.index + 1 })}
+                          note={life.index === 0 ? t('stamp.new') : t('stamp.checked')}
+                          later={life.index > 0}
+                          tilt={life.index % 2 === 0 ? -8 : 6}
+                        />
+                        <h3 id={`life-${life.index}`} className="text-2xl">
+                          {t('passport.life', { number: life.index + 1 })}
+                        </h3>
+                      </div>
                       {life.estimated ? null : (
                         <Badge tone={life.end === null ? 'success' : 'neutral'}>
                           {t(`passport.end.${life.endKind ?? 'open'}`)}

@@ -8,7 +8,7 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { ContractDetails } from '@/server/contracts';
 import { formatFactor } from './quote-breakdown';
-import { Badge, Card, DefinitionList, Money, Notice } from './ui';
+import { Badge, Card, DefinitionList, Money, Notice, PriceTag } from './ui';
 
 type ContractSummaryProps = {
   details: ContractDetails;
@@ -37,6 +37,19 @@ export function ContractSummary({ details, asset, locale, t }: ContractSummaryPr
           </p>
         </Notice>
       ) : null}
+      <PriceTag
+        className="max-w-xl"
+        label={t('contract.tag.label')}
+        amount={<Money cents={contract.monthlyNetCents} locale={locale} />}
+        sub={t('contract.tag.sub')}
+        lines={[
+          {
+            label: t('contract.tag.buyout'),
+            value: <Money cents={contract.buyoutCents} locale={locale} />,
+          },
+          { label: t('contract.tag.ends'), value: day(contract.endDate) },
+        ]}
+      />
       <Card title={t('contract.terms')}>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Badge status={contract.status}>{t(`contract.status.${contract.status}`)}</Badge>

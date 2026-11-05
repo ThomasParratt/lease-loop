@@ -1,177 +1,181 @@
 @import 'tailwindcss';
 
 /*
- * The team's design tokens (docs/decisions.md D21), from the `design-tokens` branch of
- * patsastus/northfina-lease-loop. The four scales below replace Tailwind's; `neutral` is a
- * warm grey that replaces stone. 950 is not in the tokens: it is the dark-mode page colour,
- * one step darker than neutral-900 in the same hue.
+ * The Lease Loop look (docs/decisions.md D21, revised 2026-11-05): warm cream paper, forest
+ * green for the brand, terracotta as the one accent, deep teal for information. Pages never
+ * use these raw colours: they use the roles below.
  *
- * Spacing needs no tokens: Tailwind's 4 px step already gives the scale
- * (xs 1, sm 2, md 4, lg 6, xl 8, 2xl 12, 3xl 16, 4xl 24). Shadows are Tailwind's.
+ * Fonts: Fredoka (rounded, semibold) for headings only, Nunito for text and numbers; both
+ * through next/font in the layout, falling back to system-ui.
+ *
+ * Spacing needs no tokens: Tailwind's 4 px step is the scale. Shadows are Tailwind's.
  */
 @theme {
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-heading: var(--font-jakarta), system-ui, sans-serif;
+  --font-sans: var(--font-nunito), system-ui, sans-serif;
+  --font-heading: var(--font-fredoka), var(--font-nunito), system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 
-  --color-primary-50: #f6f7f8;
-  --color-primary-100: #eaedf1;
-  --color-primary-200: #ccd7e6;
-  --color-primary-300: #9cb9dd;
-  --color-primary-400: #5f96d8;
-  --color-primary-500: #2877d7;
-  --color-primary-600: #1a65c1;
-  --color-primary-700: #1354a5;
-  --color-primary-800: #14427b;
-  --color-primary-900: #123054;
+  --color-cream: #f6eedf;
+  --color-paper: #fffbf3;
+  --color-sand: #ece1cc;
+  --color-sand-line: #ddcfb4;
+  --color-sand-strong: #c9b896;
+  --color-ink-900: #1f2a2a;
+  --color-ink-600: #4b5551;
+  --color-forest-50: #eef3ec;
+  --color-forest-100: #dfe7dc;
+  --color-forest-200: #bfd2bb;
+  --color-forest-300: #8fb59a;
+  --color-forest-600: #2e6b4c;
+  --color-forest-700: #1f4a35;
+  --color-forest-800: #153526;
+  --color-forest-950: #0f1b16;
+  --color-terra-100: #f7e1d6;
+  --color-terra-200: #ecbda8;
+  --color-terra-500: #c4552d;
+  --color-terra-700: #9a3f1f;
+  --color-terra-900: #5e2410;
+  --color-teal-100: #d8e8e5;
+  --color-teal-200: #aacdc7;
+  --color-teal-600: #1d6b65;
+  --color-teal-800: #134e4a;
+  --color-ochre-100: #f6e6c4;
+  --color-ochre-200: #e7c98b;
+  --color-ochre-500: #b7811c;
+  --color-ochre-900: #5c3f08;
 
-  --color-secondary-50: #f7f8f7;
-  --color-secondary-100: #eaf0ec;
-  --color-secondary-200: #cde5d5;
-  --color-secondary-300: #9edbb4;
-  --color-secondary-400: #63d48b;
-  --color-secondary-500: #2ed167;
-  --color-secondary-600: #20bc56;
-  --color-secondary-700: #17a047;
-  --color-secondary-800: #177839;
-  --color-secondary-900: #14522a;
-
-  --color-accent-50: #f8f7f6;
-  --color-accent-100: #f1ede9;
-  --color-accent-200: #e9dac8;
-  --color-accent-300: #e6bf94;
-  --color-accent-400: #e7a150;
-  --color-accent-500: #ed8712;
-  --color-accent-600: #d67505;
-  --color-accent-700: #b76200;
-  --color-accent-800: #884c07;
-  --color-accent-900: #5c360a;
-
-  --color-neutral-50: #f7f7f7;
-  --color-neutral-100: #ededed;
-  --color-neutral-200: #dad9d8;
-  --color-neutral-300: #bfbcbb;
-  --color-neutral-400: #a09b98;
-  --color-neutral-500: #857f7a;
-  --color-neutral-600: #736d68;
-  --color-neutral-700: #615b57;
-  --color-neutral-800: #4b4744;
-  --color-neutral-900: #353331;
-  --color-neutral-950: #1c1b1a;
-
-  /* Semantic colours from the tokens. Destructive has no scale, so its tints are Tailwind's red. */
-  --color-destructive: #dc2626;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
+  /* Shadows in the ink's hue: a card at rest, a raised panel, an item card. */
+  --shadow-card: 0 1px 0 var(--line), 0 8px 24px -16px rgb(31 42 42 / 0.25);
+  --shadow-panel: 0 24px 60px -30px rgb(31 42 42 / 0.45);
+  --shadow-item: 0 8px 24px -18px rgb(31 42 42 / 0.35);
 }
 
 /*
  * The roles pages use. Pages use these and the kit in src/components/ui, never raw colour
- * classes (not even the scales above), so retuning the look is this file only. Each role is a
- * CSS variable that changes with the colour scheme, so `bg-brand` is right in light and dark
- * mode without a `dark:` class.
+ * classes, so retuning the look is this file only. Each role is a CSS variable that changes
+ * with the colour scheme, so `bg-brand` is right in light and dark mode without `dark:`.
  *
- *   surface / raised / muted   the page, a card, a quiet strip           (neutral)
- *   line, line-strong          borders; the secondary button's border     (neutral)
- *   ink, ink-muted             text, secondary text                       (neutral)
- *   brand, focus               primary actions, links; the focus ring     (primary)
- *   success                    approved, paid, available                  (secondary)
- *   warning                    warnings, manual review                    (accent)
- *   danger                     rejected, overdue, destructive             (destructive)
- *   info                       information, reserved                      (primary)
+ *   surface / raised / muted   the page (cream), a card (paper), a quiet strip (sand)
+ *   line, line-strong          dashed rules and borders; the secondary button's border
+ *   ink, ink-muted             text, secondary text
+ *   brand, focus               primary actions, links, the price tag; the focus ring (forest)
+ *   accent                     the one warm accent: eyebrows, stamps of later lives (terra)
+ *   success                    approved, paid, available                  (forest)
+ *   warning                    warnings, manual review                    (ochre)
+ *   danger                     rejected, overdue, destructive             (terra, deeper)
+ *   info                       information, reserved                      (teal)
+ *   staff                      the back-office strip for admin and demo tools (teal)
  *
  * A tone has four shades: -soft (a tinted background), -ink (text on -soft),
  * -line (a border or ring on -soft) and -solid (a dot, an icon or a filled button).
  */
 :root {
-  --surface: var(--color-neutral-50);
-  --raised: #ffffff;
-  --muted: var(--color-neutral-100);
-  --line: var(--color-neutral-200);
-  --line-strong: var(--color-neutral-300);
-  --ink: var(--color-neutral-900);
-  --ink-muted: var(--color-neutral-600);
+  --surface: var(--color-cream);
+  --raised: var(--color-paper);
+  --muted: var(--color-sand);
+  --line: var(--color-sand-line);
+  --line-strong: var(--color-sand-strong);
+  --ink: var(--color-ink-900);
+  --ink-muted: var(--color-ink-600);
 
-  --brand: var(--color-primary-600);
-  --brand-hover: var(--color-primary-700);
-  --brand-contrast: #ffffff;
-  --brand-text: var(--color-primary-700);
-  --focus: var(--color-primary-500);
+  --brand: var(--color-forest-700);
+  --brand-hover: var(--color-forest-800);
+  --brand-contrast: var(--color-cream);
+  --brand-text: var(--color-forest-700);
+  --brand-soft: var(--color-forest-100);
+  --focus: var(--color-forest-700);
 
-  --success-soft: var(--color-secondary-100);
-  --success-ink: var(--color-secondary-900);
-  --success-line: var(--color-secondary-200);
-  --success-solid: var(--color-success);
+  --accent: var(--color-terra-500);
+  --accent-ink: var(--color-terra-700);
+  --accent-soft: var(--color-terra-100);
 
-  --warning-soft: var(--color-accent-100);
-  --warning-ink: var(--color-accent-900);
-  --warning-line: var(--color-accent-200);
-  --warning-solid: var(--color-warning);
+  --success-soft: var(--color-forest-100);
+  --success-ink: var(--color-forest-800);
+  --success-line: var(--color-forest-200);
+  --success-solid: var(--color-forest-600);
 
-  --danger-soft: var(--color-red-50);
-  --danger-ink: var(--color-red-900);
-  --danger-line: var(--color-red-200);
-  --danger-solid: var(--color-destructive);
-  --danger-hover: var(--color-red-700);
+  --warning-soft: var(--color-ochre-100);
+  --warning-ink: var(--color-ochre-900);
+  --warning-line: var(--color-ochre-200);
+  --warning-solid: var(--color-ochre-500);
 
-  --info-soft: var(--color-primary-100);
-  --info-ink: var(--color-primary-900);
-  --info-line: var(--color-primary-200);
-  --info-solid: var(--color-primary-500);
+  --danger-soft: var(--color-terra-100);
+  --danger-ink: var(--color-terra-900);
+  --danger-line: var(--color-terra-200);
+  --danger-solid: var(--color-terra-700);
+  --danger-hover: var(--color-terra-900);
 
-  --neutral-soft: var(--color-neutral-100);
-  --neutral-ink: var(--color-neutral-800);
-  --neutral-line: var(--color-neutral-300);
-  --neutral-solid: var(--color-neutral-500);
+  --info-soft: var(--color-teal-100);
+  --info-ink: var(--color-teal-800);
+  --info-line: var(--color-teal-200);
+  --info-solid: var(--color-teal-600);
+
+  --neutral-soft: var(--color-sand);
+  --neutral-ink: #3d4643;
+  --neutral-line: var(--color-sand-strong);
+  --neutral-solid: #8a7f6c;
+
+  --staff: var(--color-teal-800);
+  --staff-contrast: var(--color-paper);
+  --staff-hover: rgb(255 251 243 / 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: var(--color-neutral-950);
-    --raised: #282624;
-    --muted: var(--color-neutral-900);
-    --line: var(--color-neutral-800);
-    --line-strong: var(--color-neutral-700);
-    --ink: var(--color-neutral-100);
-    --ink-muted: var(--color-neutral-400);
+    --surface: var(--color-forest-950);
+    --raised: #17251f;
+    --muted: #1f2f28;
+    --line: #2d4037;
+    --line-strong: #436054;
+    --ink: #f3ecdf;
+    --ink-muted: #bdb5a5;
 
-    /* The same hues, lighter: a primary button carries dark text on primary-400. */
-    --brand: var(--color-primary-400);
-    --brand-hover: var(--color-primary-300);
-    --brand-contrast: var(--color-neutral-950);
-    --brand-text: var(--color-primary-300);
-    --focus: var(--color-primary-400);
+    /* The same hues, lighter: a primary button carries dark text on light forest. */
+    --brand: var(--color-forest-300);
+    --brand-hover: var(--color-forest-200);
+    --brand-contrast: var(--color-forest-950);
+    --brand-text: var(--color-forest-300);
+    --brand-soft: #22382d;
+    --focus: var(--color-forest-300);
 
-    --success-soft: var(--color-secondary-900);
-    --success-ink: var(--color-secondary-200);
-    --success-line: var(--color-secondary-800);
-    --success-solid: var(--color-secondary-400);
+    --accent: #e08a66;
+    --accent-ink: #eda283;
+    --accent-soft: #3a2219;
 
-    --warning-soft: var(--color-accent-900);
-    --warning-ink: var(--color-accent-200);
-    --warning-line: var(--color-accent-800);
-    --warning-solid: var(--color-accent-400);
+    --success-soft: #1c3428;
+    --success-ink: var(--color-forest-200);
+    --success-line: #2e5240;
+    --success-solid: var(--color-forest-300);
 
-    --danger-soft: var(--color-red-950);
-    --danger-ink: var(--color-red-200);
-    --danger-line: var(--color-red-800);
-    --danger-solid: var(--color-destructive);
-    --danger-hover: var(--color-red-700);
+    --warning-soft: #3a2c0d;
+    --warning-ink: var(--color-ochre-200);
+    --warning-line: #5f4813;
+    --warning-solid: #d9a43e;
 
-    --info-soft: var(--color-primary-900);
-    --info-ink: var(--color-primary-200);
-    --info-line: var(--color-primary-800);
-    --info-solid: var(--color-primary-400);
+    --danger-soft: #3a1d12;
+    --danger-ink: var(--color-terra-200);
+    --danger-line: #6a2e18;
+    --danger-solid: #e08a66;
+    --danger-hover: #eda283;
 
-    --neutral-soft: var(--color-neutral-800);
-    --neutral-ink: var(--color-neutral-200);
-    --neutral-line: var(--color-neutral-700);
-    --neutral-solid: var(--color-neutral-400);
+    --info-soft: #14302d;
+    --info-ink: var(--color-teal-200);
+    --info-line: #24504a;
+    --info-solid: #6fb3aa;
+
+    --neutral-soft: #24332c;
+    --neutral-ink: #ddd5c6;
+    --neutral-line: #3d5248;
+    --neutral-solid: #9d9585;
+
+    --staff: #1e4d48;
+    --staff-contrast: #f3ecdf;
+    --staff-hover: rgb(243 236 223 / 0.14);
   }
 }
 
@@ -188,7 +192,12 @@
   --color-brand-hover: var(--brand-hover);
   --color-brand-contrast: var(--brand-contrast);
   --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
   --color-focus: var(--focus);
+
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
 
   --color-success-soft: var(--success-soft);
   --color-success-ink: var(--success-ink);
@@ -215,6 +224,10 @@
   --color-neutral-ink: var(--neutral-ink);
   --color-neutral-line: var(--neutral-line);
   --color-neutral-solid: var(--neutral-solid);
+
+  --color-staff: var(--staff);
+  --color-staff-contrast: var(--staff-contrast);
+  --color-staff-hover: var(--staff-hover);
 }
 
 @layer base {
@@ -222,11 +235,107 @@
   h2,
   h3 {
     font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: var(--brand-contrast);
+  }
+
+  input[type='range'] {
+    accent-color: var(--brand);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
   }
 }
 
 /* A visible keyboard focus everywhere, in both colour schemes. */
 :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* On the teal staff strip the forest ring would vanish (about 1:1), so it is light there. */
+.staff-zone {
+  --focus: var(--staff-contrast);
+}
+
+/* The dashed rule of the paper look, for dividers that are not borders of a box. */
+.rule-dashed {
+  border-color: var(--line);
+  border-style: dashed;
+}
+
+/*
+ * The price tag: a pointed end with a punched hole. The hole shows the card behind it, so
+ * the tag reads as a physical tag hanging on the item.
+ */
+.price-tag {
+  position: relative;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 50%);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  padding-left: 2.25rem;
+}
+
+.price-tag::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 9999px;
+  background: var(--raised);
+}
+
+/* A new price flips in from below, like a split-flap digit. Transform only: the digits
+   stay readable on every frame, so a paused or skipped animation hides nothing. */
+@keyframes price-flip {
+  0% {
+    transform: translateY(30%) rotateX(55deg);
+  }
+  60% {
+    transform: translateY(-4%) rotateX(0deg);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.price-flip {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  animation: price-flip 240ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+/* A stamp is pressed onto the page: it lands a touch big, then settles. */
+@keyframes stamp-press {
+  0% {
+    transform: rotate(var(--stamp-tilt, -8deg)) scale(1.18);
+  }
+  70% {
+    transform: rotate(var(--stamp-tilt, -8deg)) scale(0.96);
+  }
+  100% {
+    transform: rotate(var(--stamp-tilt, -8deg)) scale(1);
+  }
+}
+
+.life-stamp {
+  transform: rotate(var(--stamp-tilt, -8deg));
+  animation: stamp-press 420ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .price-flip,
+  .life-stamp {
+    animation: none;
+  }
 }

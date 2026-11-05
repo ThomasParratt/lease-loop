@@ -8,12 +8,21 @@ import { cx } from './cx';
 
 export type NavItem = { href: string; label: string };
 
-export function NavLinks({ items, label }: { items: NavItem[]; label: string }) {
+export function NavLinks({
+  items,
+  label,
+  vertical = false,
+}: {
+  items: NavItem[];
+  label: string;
+  /** True in the phone menu: one link per row. */
+  vertical?: boolean;
+}) {
   const pathname = usePathname();
 
   return (
     <nav aria-label={label}>
-      <ul className="flex flex-wrap gap-1">
+      <ul className={cx('flex gap-1', vertical ? 'flex-col' : 'flex-wrap')}>
         {items.map((item) => {
           // The catalogue is /en; every other page is /en/<page> and owns its sub-pages.
           const isRoot = item.href.split('/').length === 2;
@@ -26,10 +35,8 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }) 
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cx(
-                  'block rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-muted text-ink underline decoration-brand decoration-2 underline-offset-8'
-                    : 'text-ink-muted hover:bg-muted hover:text-ink'
+                  'block rounded-full px-4 py-2 font-semibold transition-colors',
+                  active ? 'bg-brand-soft text-brand-text' : 'text-ink hover:bg-muted'
                 )}
               >
                 {item.label}

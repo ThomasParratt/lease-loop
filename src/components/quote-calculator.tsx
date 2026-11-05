@@ -5,13 +5,13 @@
 // server priced; the browser never computes a price. "Get a quote" posts to /api/quotes and
 // opens the stored quote on this page.
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
 import type { QuoteBreakdown, QuoteRefusal, TermComparison } from '@/domain/pricing';
 import { getT } from '@/i18n/get-t';
 import { formatEuro } from '@/domain/money';
 import { intlLocale, type Locale } from '@/i18n/locales';
-import { QuoteBreakdownList, refusalText } from './quote-breakdown';
-import { Button, Card, Field, Money, Notice, inputClasses } from './ui';
+import { formatBasisPoints, QuoteBreakdownList, refusalText } from './quote-breakdown';
+import { Button, Card, Field, Money, Notice, PriceTag, inputClasses } from './ui';
 
 export type QuotePreviewData = {
   today: string;
@@ -30,6 +30,8 @@ type QuoteCalculatorProps = {
   initialPreview: QuotePreviewData;
   /** False when the asset is reserved or returned: the price shows, the button does not. */
   canQuote: boolean;
+  /** The item itself (its drawing and facts), shown beside the price panel. */
+  children?: ReactNode;
 };
 
 const DEBOUNCE_MS = 200;
@@ -121,122 +123,158 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
   }
 
   const quote = preview.quote;
+  const money = (cents: number) => <Money cents={cents} locale={locale} />;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-      <Card as="section" title={t('pricing.calculator.title')} titleId={`${ids}-title`}>
-        <div className="space-y-6">
-          <Field id={`${ids}-term`} label={t('pricing.calculator.term')}>
-            {(control) => (
-              <div>
-                <p className="mb-2 text-2xl font-semibold tabular-nums" aria-hidden="true">
-                  {t('pricing.months', { months: termMonths })}
-                </p>
-                <input
-                  {...control}
-                  type="range"
-                  min={0}
-                  max={terms.length - 1}
-                  step={1}
-                  value={termIndex}
-                  aria-valuetext={t('pricing.months', { months: termMonths })}
-                  onChange={(e) => setTermIndex(Number(e.target.value))}
-                  className="h-11 w-full accent-brand"
-                />
-                <div className="flex justify-between text-xs text-ink-muted" aria-hidden="true">
-                  {terms.map((term) => (
-                    <span key={term}>{term}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Field>
+    <div className="space-y-12">
+      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+        <div>{props.children}</div>
 
-          <Field
-            id={`${ids}-down`}
-            label={t('pricing.calculator.downPayment')}
-            hint={t('pricing.calculator.downPaymentHint')}
-          >
-            {(control) => (
-              <div>
-                <p className="mb-2 text-2xl font-semibold" aria-hidden="true">
-                  <Money cents={downPaymentCents} locale={locale} />
-                </p>
-                <input
-                  {...control}
-                  type="range"
-                  min={0}
-                  max={totalPriceCents}
-                  step={step}
-                  value={downPaymentCents}
-                  aria-valuetext={formatEuro(downPaymentCents, intlLocale[locale])}
-                  onChange={(e) => setDownPaymentCents(Number(e.target.value))}
-                  className="h-11 w-full accent-brand"
-                />
-              </div>
-            )}
-          </Field>
-
-          <Field
-            id={`${ids}-quantity`}
-            label={t('pricing.calculator.quantity')}
-            hint={t('pricing.calculator.quantityHint')}
-          >
-            {(control) => (
-              <input
-                {...control}
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={MAX_QUANTITY}
-                value={quantity}
-                onChange={(e) => onQuantity(e.target.value)}
-                className={`${inputClasses} max-w-32`}
-              />
-            )}
-          </Field>
-
-          <div aria-live="polite" className="rounded-lg bg-muted p-4">
-            <p className="text-sm text-ink-muted">{t('pricing.calculator.youPay')}</p>
-            <p className="text-3xl font-bold">
-              {quote ? <Money cents={quote.monthlyGrossCents} locale={locale} /> : '–'}
-            </p>
-            <p className="text-sm text-ink-muted">
-              {loading ? t('pricing.calculator.updating') : t('pricing.calculator.inclVat')}
-            </p>
+        <section
+          aria-labelledby={`${ids}-title`}
+          className="rounded-xl bg-raised p-4 shadow-panel sm:p-6 lg:sticky lg:top-6"
+        >
+          <h2 id={`${ids}-title`} className="sr-only">
+            {t('pricing.calculator.title')}
+          </h2>
+          <div aria-live="polite">
+            <PriceTag
+              label={t('pricing.calculator.youPay')}
+              flipKey={quote?.monthlyGrossCents}
+              amount={quote ? money(quote.monthlyGrossCents) : '–'}
+              sub={
+                loading
+                  ? t('pricing.calculator.updating')
+                  : quote
+                    ? t('pricing.calculator.tagSub', {
+                        months: termMonths,
+                        rate: formatBasisPoints(quote.vatRateBasisPoints, locale),
+                      })
+                    : t('pricing.calculator.inclVat')
+              }
+              lines={
+                quote
+                  ? [
+                      {
+                        label: t('pricing.line.totalIfReturn'),
+                        value: money(quote.totalIfReturnCents),
+                      },
+                      { label: t('pricing.line.totalIfBuy'), value: money(quote.totalIfBuyCents) },
+                    ]
+                  : undefined
+              }
+            />
           </div>
 
-          {failed ? <Notice tone="error">{t('pricing.calculator.previewFailed')}</Notice> : null}
-          {preview.refusal ? (
-            <Notice tone="warning" live>
-              {refusalText(t, preview.refusal, locale)}
-            </Notice>
-          ) : null}
+          <div className="mt-6 space-y-6">
+            <Field id={`${ids}-term`} label={t('pricing.calculator.term')}>
+              {(control) => (
+                <div>
+                  <p
+                    className="mb-1 font-heading text-2xl font-semibold tabular-nums"
+                    aria-hidden="true"
+                  >
+                    {t('pricing.months', { months: termMonths })}
+                  </p>
+                  <input
+                    {...control}
+                    type="range"
+                    min={0}
+                    max={terms.length - 1}
+                    step={1}
+                    value={termIndex}
+                    aria-valuetext={t('pricing.months', { months: termMonths })}
+                    onChange={(e) => setTermIndex(Number(e.target.value))}
+                    className="h-11 w-full"
+                  />
+                  <div className="flex justify-between text-xs text-ink-muted" aria-hidden="true">
+                    {terms.map((term) => (
+                      <span key={term}>{term}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Field>
 
-          {canQuote ? (
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              onClick={getQuote}
-              disabled={!quote || loading}
-              pending={pending}
-              pendingLabel={t('pricing.calculator.saving')}
+            <Field
+              id={`${ids}-down`}
+              label={t('pricing.calculator.downPayment')}
+              hint={t('pricing.calculator.downPaymentHint')}
             >
-              {t('pricing.calculator.getQuote')}
-            </Button>
-          ) : (
-            <Notice tone="info">{t('pricing.calculator.notAvailable')}</Notice>
-          )}
-          {submitError ? (
-            <Notice tone="error" live>
-              {submitError}
-            </Notice>
-          ) : null}
-        </div>
-      </Card>
+              {(control) => (
+                <div>
+                  <p
+                    className="mb-1 font-heading text-2xl font-semibold tabular-nums"
+                    aria-hidden="true"
+                  >
+                    {money(downPaymentCents)}
+                  </p>
+                  <input
+                    {...control}
+                    type="range"
+                    min={0}
+                    max={totalPriceCents}
+                    step={step}
+                    value={downPaymentCents}
+                    aria-valuetext={formatEuro(downPaymentCents, intlLocale[locale])}
+                    onChange={(e) => setDownPaymentCents(Number(e.target.value))}
+                    className="h-11 w-full"
+                  />
+                </div>
+              )}
+            </Field>
 
-      <div className="space-y-6">
+            <Field
+              id={`${ids}-quantity`}
+              label={t('pricing.calculator.quantity')}
+              hint={t('pricing.calculator.quantityHint')}
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_QUANTITY}
+                  value={quantity}
+                  onChange={(e) => onQuantity(e.target.value)}
+                  className={`${inputClasses} max-w-32`}
+                />
+              )}
+            </Field>
+
+            {failed ? <Notice tone="error">{t('pricing.calculator.previewFailed')}</Notice> : null}
+            {preview.refusal ? (
+              <Notice tone="warning" live>
+                {refusalText(t, preview.refusal, locale)}
+              </Notice>
+            ) : null}
+
+            {canQuote ? (
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={getQuote}
+                disabled={!quote || loading}
+                pending={pending}
+                pendingLabel={t('pricing.calculator.saving')}
+              >
+                {t('pricing.calculator.getQuote')} <span aria-hidden="true">→</span>
+              </Button>
+            ) : (
+              <Notice tone="info">{t('pricing.calculator.notAvailable')}</Notice>
+            )}
+            {submitError ? (
+              <Notice tone="error" live>
+                {submitError}
+              </Notice>
+            ) : null}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Card as="section" title={t('pricing.breakdown.title')} titleId={`${ids}-breakdown`}>
           {quote ? (
             <QuoteBreakdownList quote={quote} locale={locale} t={t} />
@@ -297,7 +335,7 @@ function TermTable({
                 key={row.termMonths}
                 className={
                   row.termMonths === selected
-                    ? 'border-b border-line bg-muted font-semibold'
+                    ? 'border-b border-line bg-brand-soft font-bold'
                     : 'border-b border-line'
                 }
                 aria-current={row.termMonths === selected ? 'true' : undefined}

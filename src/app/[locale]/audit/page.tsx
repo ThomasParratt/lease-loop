@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AuditChainBadge } from '@/components/audit-chain-badge';
-import { Card, Notice, PageHeader } from '@/components/ui';
+import { Card, Notice, PageHeader, StaffNote } from '@/components/ui';
 import { formatTimestamp } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -38,7 +38,9 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <PageHeader title={t('audit.title')} intro={t('audit.intro')} />
+      <PageHeader title={t('audit.title')} intro={t('audit.intro')}>
+        <StaffNote>{t('staff.note')}</StaffNote>
+      </PageHeader>
       <AuditChainBadge verdict={verdict} t={t} />
 
       {rows.length === 0 ? (

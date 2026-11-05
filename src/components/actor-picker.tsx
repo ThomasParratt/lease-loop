@@ -20,10 +20,13 @@ export function ActorPicker({
   customers,
   current,
   labels,
+  onDark = false,
 }: {
   customers: readonly { id: string; name: string }[];
   current: string;
   labels: ActorPickerLabels;
+  /** True on the teal staff strip: light label and an outlined light button. */
+  onDark?: boolean;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState(current === 'anonymous' ? '' : current);
@@ -52,8 +55,17 @@ export function ActorPicker({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2 text-sm">
-      <label htmlFor="actor-picker" className="font-medium text-ink-muted">
+    <form
+      onSubmit={onSubmit}
+      className={cx(
+        'flex items-center gap-2 text-sm',
+        onDark ? 'min-w-0 flex-1 justify-end' : 'flex-wrap'
+      )}
+    >
+      <label
+        htmlFor="actor-picker"
+        className={cx('font-semibold', onDark ? 'max-sm:sr-only' : 'text-ink-muted')}
+      >
         {labels.label}
       </label>
       <select
@@ -61,7 +73,7 @@ export function ActorPicker({
         name="actor"
         value={selected}
         onChange={(event) => setSelected(event.target.value)}
-        className={cx(inputClasses, 'w-auto max-w-56 text-sm')}
+        className={cx(inputClasses, 'min-h-9 w-auto max-w-56 min-w-0 py-1 text-sm')}
       >
         <option value="">{labels.anonymous}</option>
         <option value="admin">{labels.admin}</option>
@@ -71,11 +83,11 @@ export function ActorPicker({
           </option>
         ))}
       </select>
-      <Button type="submit" variant="secondary" size="sm" pending={pending}>
+      <Button type="submit" variant={onDark ? 'onDark' : 'secondary'} size="sm" pending={pending}>
         {selected === '' && current !== 'anonymous' ? labels.clear : labels.submit}
       </Button>
       {failed ? (
-        <span role="alert" className="text-danger-ink">
+        <span role="alert" className={onDark ? 'font-semibold' : 'text-danger-ink'}>
           {labels.error}
         </span>
       ) : null}

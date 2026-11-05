@@ -1,17 +1,20 @@
 // The price page: one asset, the sliders with the live breakdown and the term comparison, and,
 // with `?quote=<id>`, the stored quote locked at its date and list version (D7, card 2).
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { QuoteBreakdownList } from '@/components/quote-breakdown';
+import { ItemArt } from '@/components/item-art';
 import { QuoteCalculator } from '@/components/quote-calculator';
 import {
   Badge,
   Card,
   DefinitionList,
+  LifeStamp,
   LinkButton,
   Money,
   Notice,
-  PageHeader,
+  PriceTag,
 } from '@/components/ui';
 import { termsOf, type QuoteStatus } from '@/domain/pricing';
 import { listPriceOn } from '@/domain/price-list';
@@ -58,50 +61,78 @@ export default async function PricePage({
     quantity: 1,
   };
 
+  const facts = [
+    { label: t('condition.label'), value: t(`condition.${asset.condition}`) },
+    {
+      label: t('asset.usage'),
+      value: t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) }),
+    },
+    { label: t('asset.modelYear'), value: String(asset.model_year) },
+    { label: t('passport.serial'), value: asset.serial_number },
+    {
+      label: t('pricing.page.pricesOn'),
+      value: <time dateTime={today}>{formatIsoDate(today, locale)}</time>,
+    },
+  ];
+
+  const item = (
+    <div>
+      <Link
+        href={`/${locale}#catalogue`}
+        className="inline-flex items-center gap-1 rounded font-bold underline decoration-brand/30 decoration-2 underline-offset-4 hover:decoration-brand"
+      >
+        <span aria-hidden="true">←</span>
+        {t('catalogue.title')}
+      </Link>
+      <p className="mt-6 text-xs font-extrabold tracking-[0.14em] text-accent-ink uppercase">
+        {asset.make} · {t(`category.${asset.category}`)}
+      </p>
+      <div className="mt-2 flex items-start justify-between gap-4">
+        <h1 className="text-4xl leading-tight text-balance sm:text-5xl">{asset.model}</h1>
+        <LifeStamp
+          size="lg"
+          life={t('stamp.life', { n: asset.previous_lives + 1 })}
+          note={asset.previous_lives === 0 ? t('stamp.new') : t('stamp.checked')}
+          later={asset.previous_lives > 0}
+        />
+      </div>
+      <p className="mt-3 max-w-xl text-lg text-ink-muted">{t('pricing.page.intro')}</p>
+      {asset.status !== 'available' ? (
+        <Badge status={asset.status} srPrefix={t('status.label')} className="mt-4">
+          {t(`status.${asset.status}`)}
+        </Badge>
+      ) : null}
+
+      <div className="mt-8 rounded-xl bg-muted px-8 pt-10 pb-4">
+        <ItemArt category={asset.category} model={asset.model} className="mx-auto max-w-md" />
+      </div>
+
+      <dl className="mt-8">
+        {facts.map((fact) => (
+          <div
+            key={fact.label}
+            className="rule-dashed flex justify-between gap-4 border-b-2 py-3 first:border-t-2"
+          >
+            <dt className="text-ink-muted">{fact.label}</dt>
+            <dd className="text-right font-bold">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <Link
+        href={`/${locale}/assets/${asset.id}/passport`}
+        className="mt-4 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"
+      >
+        {t('passport.link')}
+      </Link>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <PageHeader
-        title={`${asset.make} ${asset.model}`}
-        intro={t('pricing.page.intro')}
-        back={{ href: `/${locale}`, label: t('catalogue.title') }}
-        actions={
-          <Badge status={asset.status} srPrefix={t('status.label')}>
-            {t(`status.${asset.status}`)}
-          </Badge>
-        }
-      >
-        <DefinitionList
-          variant="grid"
-          className="mt-4 max-w-md"
-          items={[
-            { label: t('condition.label'), value: t(`condition.${asset.condition}`) },
-            { label: t('asset.modelYear'), value: String(asset.model_year) },
-            {
-              label: t('asset.usage'),
-              value: t(`usage.${asset.usage.unit}`, {
-                value: formatNumber(asset.usage.value, locale),
-              }),
-            },
-            {
-              label: t('pricing.page.pricesOn'),
-              value: <time dateTime={today}>{formatIsoDate(today, locale)}</time>,
-            },
-          ]}
-        />
-      </PageHeader>
-
       {quoteId && !storedForAsset ? (
         <Notice tone="warning" className="mb-8">
           {t('quote.notFound')}
         </Notice>
-      ) : null}
-      {storedForAsset ? (
-        <StoredQuoteSection
-          quote={storedForAsset}
-          status={storedQuoteStatusOn(storedForAsset, today, data.priceLists)}
-          locale={locale}
-          t={t}
-        />
       ) : null}
 
       {price.ok ? (
@@ -113,10 +144,29 @@ export default async function PricePage({
           initial={initial}
           initialPreview={previewQuote(data, { assetId: asset.id, ...initial, today })}
           canQuote={asset.status === 'available'}
-        />
+        >
+          {item}
+        </QuoteCalculator>
       ) : (
-        <Notice tone="warning">{t('asset.noPrice')}</Notice>
+        <>
+          {item}
+          <Notice tone="warning" className="mt-8">
+            {t('asset.noPrice')}
+          </Notice>
+        </>
       )}
+
+      {/* After the item, so the page's h1 (the model) comes before the quote's h2. */}
+      <div className="mt-12">
+        {storedForAsset ? (
+          <StoredQuoteSection
+            quote={storedForAsset}
+            status={storedQuoteStatusOn(storedForAsset, today, data.priceLists)}
+            locale={locale}
+            t={t}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -134,7 +184,13 @@ function StoredQuoteSection({
 }) {
   const b = quote.breakdown;
   return (
-    <Card as="section" id="quote" title={t('quote.title')} titleId="quote-title" className="mb-10">
+    <Card
+      as="section"
+      id="quote"
+      title={t('quote.title')}
+      titleId="quote-title"
+      className="scroll-mt-6"
+    >
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Badge status={status.status === 'valid' ? 'quoted' : 'expired'}>
           {t(`quote.status.${status.status}`)}
@@ -143,6 +199,26 @@ function StoredQuoteSection({
           {t('quote.reference', { id: quote.id.slice(0, 8) })}
         </span>
       </div>
+      <PriceTag
+        className="mb-6 max-w-xl"
+        label={t('quote.tagLabel')}
+        amount={<Money cents={b.monthlyGrossCents} locale={locale} />}
+        sub={t('quote.tagSub', {
+          months: b.termMonths,
+          version: b.priceListVersion,
+          date: formatIsoDate(quote.quoteDate, locale),
+        })}
+        lines={[
+          {
+            label: t('pricing.line.totalIfReturn'),
+            value: <Money cents={b.totalIfReturnCents} locale={locale} />,
+          },
+          {
+            label: t('pricing.line.totalIfBuy'),
+            value: <Money cents={b.totalIfBuyCents} locale={locale} />,
+          },
+        ]}
+      />
       <DefinitionList
         variant="grid"
         className="mb-6"

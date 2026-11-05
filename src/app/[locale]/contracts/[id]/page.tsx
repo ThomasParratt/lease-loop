@@ -45,7 +45,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const asset = await getAsset(db, details.contract.assetId);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader
         title={t('contract.title')}
         intro={t('contract.number', { number: details.contract.number })}
