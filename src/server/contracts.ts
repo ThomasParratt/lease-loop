@@ -18,7 +18,7 @@ import { contractStatusSchema, type ContractStatus } from '@/domain/statuses';
 import { ADMIN_ACTOR } from './actor';
 import { getApplication } from './applications';
 import { getAsset } from './assets';
-import { withAudit } from './audit';
+import { withAudit, type TransactionClient } from './audit';
 import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handlers';
 import { emit } from './events';
 import './event-handlers';
@@ -240,7 +240,10 @@ function toContractRowData(contract: PlannedContract) {
 }
 
 /** One contract by id, or null. The owner's read other slices use (team rule 3). */
-export async function getContract(db: PrismaClient, id: string): Promise<ContractView | null> {
+export async function getContract(
+  db: PrismaClient | TransactionClient,
+  id: string
+): Promise<ContractView | null> {
   const row = await db.contract.findUnique({ where: { id } });
   return row ? toContractView(row) : null;
 }
@@ -269,4 +272,32 @@ export async function getContractDetails(
     quoteDate: stored.quoteDate,
     priceLock: priceLockOn(stored, today, pricing),
   };
+}
+
+/**
+ * The contract slice's operation for the end of a lease (kickoff brief section 6: the end of
+ * term and the early exit change the status "through the contract's operation"). Runs on the
+ * caller's `tx`, inside the exit's `withAudit`. The row as it will be is parsed with
+ * `contractRowSchema` first (D27: an ended status has an end day, never before the start),
+ * then written only while the contract is still `active`. Returns null when it is not (a
+ * second exit, or a race lost), so the caller rolls back.
+ */
+export async function endContract(
+  tx: TransactionClient,
+  input: { id: string; status: ContractStatus; endedOn: string }
+): Promise<ContractView | null> {
+  const current = await tx.contract.findUnique({ where: { id: input.id } });
+  if (!current) return null;
+  const { created_at: _created, updated_at: _updated, ...stored } = current;
+  const next = parseRow('contract', contractRowSchema, {
+    ...stored,
+    status: input.status,
+    ended_on: input.endedOn,
+  });
+  const { count } = await tx.contract.updateMany({
+    where: { id: input.id, status: contractStatusSchema.parse('active') },
+    data: { status: next.status, ended_on: next.ended_on },
+  });
+  if (count !== 1) return null;
+  return toContractView(await tx.contract.findUniqueOrThrow({ where: { id: input.id } }));
 }

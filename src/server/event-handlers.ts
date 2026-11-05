@@ -2,6 +2,7 @@
 // import-time). A service that emits imports this module, so no handler is silently missing.
 // One line per slice.
 import './invoice-handlers';
+import './catalogue-handlers';
 import { registerPassportHandlers } from './passport-handlers';
 
 registerPassportHandlers();

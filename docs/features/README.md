@@ -4,6 +4,7 @@ One page per feature slice, shipped in the same pull request as its code (AGENTS
 
 - [catalogue.md](catalogue.md): the catalogue with today's price, the demo clock, the actor and the audit trail (wave 0).
 - [contracts.md](contracts.md): signing an approved application, the last-unit race and the contract page (wave 2).
+- [exits.md](exits.md): buy out, return and pass on, the D14 early exit, the market value by the residual curve and the refurbishment plan (wave 2).
 - [circular-impact.md](circular-impact.md): the asset passport across lives and the CO2 saved (wave 1).
 - [pricing.md](pricing.md): the price breakdown, the term comparison, the fleet quantity and the stored quote (wave 1).
 - [question-flow.md](question-flow.md): the question flow, eligibility and the application decision (wave 1).

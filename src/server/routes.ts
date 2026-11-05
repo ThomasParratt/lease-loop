@@ -25,6 +25,13 @@ import {
   signContractBodySchema,
 } from './contract-schemas';
 import {
+  exitBodySchema,
+  exitParamsSchema,
+  exitPreviewQuerySchema,
+  exitPreviewResponseSchema,
+  exitResponseSchema,
+} from './exit-schemas';
+import {
   createQuoteBodySchema,
   previewQuoteQuerySchema,
   previewQuoteResponseSchema,
@@ -337,6 +344,26 @@ export const ROUTES: readonly RouteDefinition[] = [
     tag: 'contracts',
     params: contractIdParamsSchema,
     response: contractResponseSchema,
+  },
+  {
+    method: 'GET',
+    path: '/api/contracts/[id]/exit-preview',
+    summary:
+      "What buying, returning or passing on would cost on the request's day, line by line (D14), without writing",
+    tag: 'exits',
+    params: exitParamsSchema,
+    query: exitPreviewQuerySchema,
+    response: exitPreviewResponseSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/contracts/[id]/exit',
+    summary:
+      "Buy out, return or pass on on the request's day: sets the status, emits the event, bills the exit (the customer or admin)",
+    tag: 'exits',
+    params: exitParamsSchema,
+    body: exitBodySchema,
+    response: exitResponseSchema,
   },
 ];
 

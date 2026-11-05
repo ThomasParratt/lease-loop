@@ -28,7 +28,8 @@ export const invoiceKinds = ['down_payment', 'rent', 'buyout', 'early_exit'] as 
 export const invoiceKindSchema = z.enum(invoiceKinds);
 export type InvoiceKind = z.infer<typeof invoiceKindSchema>;
 
-export const invoiceStatuses = ['issued', 'paid'] as const;
+/** `cancelled`: an unpaid rent an early exit replaced with its D14 invoice (docs/features/exits.md). */
+export const invoiceStatuses = ['issued', 'paid', 'cancelled'] as const;
 export const invoiceStatusSchema = z.enum(invoiceStatuses);
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 

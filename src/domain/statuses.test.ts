@@ -29,7 +29,7 @@ describe('allowed values', () => {
 
   it('invoice kinds and statuses', () => {
     expect(invoiceKinds).toEqual(['down_payment', 'rent', 'buyout', 'early_exit']);
-    expect(invoiceStatuses).toEqual(['issued', 'paid']);
+    expect(invoiceStatuses).toEqual(['issued', 'paid', 'cancelled']);
   });
 
   it('asset event kinds are the passport entries', () => {

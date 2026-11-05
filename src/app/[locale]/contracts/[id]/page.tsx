@@ -4,6 +4,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { ContractExit } from '@/components/contract-exit';
 import { ContractSummary } from '@/components/contract-summary';
 import { InvoiceTable } from '@/components/invoice-table';
 import { Card, Notice, PageHeader } from '@/components/ui';
@@ -50,6 +51,7 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         intro={t('contract.number', { number: details.contract.number })}
       />
       <ContractSummary details={details} asset={asset} locale={locale} t={t} />
+      <ContractExit contract={details.contract} asset={asset} today={today} locale={locale} t={t} />
       <Card title={t('invoice.title')}>
         <InvoiceTable contractId={details.contract.id} today={today} locale={locale} t={t} />
       </Card>

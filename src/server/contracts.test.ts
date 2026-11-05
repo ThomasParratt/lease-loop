@@ -8,7 +8,13 @@ import { listAssetEvents } from './asset-events';
 import { getAsset } from './assets';
 import { withAudit } from './audit';
 import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handlers';
-import { contractCustomerId, getContract, getContractDetails, signContract } from './contracts';
+import {
+  contractCustomerId,
+  endContract,
+  getContract,
+  getContractDetails,
+  signContract,
+} from './contracts';
 import { listInvoices } from './invoices';
 import type { PrismaClient } from './prisma-client';
 import { createQuote, loadPricingData } from './quotes';
@@ -309,5 +315,48 @@ describe('the owner reads', () => {
 describe('getContractDetails', () => {
   it('is null for an unknown contract', async () => {
     expect(await getContractDetails(db, 'nope', '2026-11-05', data)).toBeNull();
+  });
+});
+
+describe('endContract, the contract operation the exits call (kickoff brief section 6)', () => {
+  async function signed(): Promise<string> {
+    const applicationId = await application();
+    const result = await signContract(
+      db,
+      { applicationId, actor: 'cust-aino' },
+      '2026-11-05',
+      data
+    );
+    if (!result.ok) throw new Error(result.reason.code);
+    return result.details.contract.id;
+  }
+  const entry = (id: string) => ({
+    actor: 'admin',
+    action: 'contract.ended_early',
+    entityType: 'contract' as const,
+    entityId: id,
+  });
+
+  it('ends an active contract once; a second call finds nothing active and returns null', async () => {
+    const id = await signed();
+    const first = await withAudit(db, entry(id), (tx) =>
+      endContract(tx, { id, status: 'ended_early', endedOn: '2027-06-04' })
+    );
+    expect(first).toMatchObject({ status: 'ended_early', endedOn: '2027-06-04' });
+    const second = await withAudit(db, entry(id), (tx) =>
+      endContract(tx, { id, status: 'returned', endedOn: '2027-06-05' })
+    );
+    expect(second).toBeNull();
+    expect((await getContract(db, id))?.status).toBe('ended_early');
+  });
+
+  it('D27: an end day before the start is a row error and nothing is written', async () => {
+    const id = await signed();
+    await expect(
+      withAudit(db, entry(id), (tx) =>
+        endContract(tx, { id, status: 'ended_early', endedOn: '2026-11-04' })
+      )
+    ).rejects.toThrow();
+    expect((await getContract(db, id))?.status).toBe('active');
   });
 });

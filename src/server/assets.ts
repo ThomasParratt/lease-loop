@@ -8,7 +8,7 @@ import {
   type AssetCategory,
   type AssetStatus,
 } from '@/data/schemas';
-import { withAudit } from './audit';
+import { withAudit, type TransactionClient } from './audit';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
 export function toAsset(row: AssetRow): Asset {
@@ -55,7 +55,10 @@ export async function listAssets(
 }
 
 /** One asset by id, or null. The read other slices use for a single asset (team rule 3). */
-export async function getAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+export async function getAsset(
+  db: PrismaClient | TransactionClient,
+  id: string
+): Promise<Asset | null> {
   const row = await db.asset.findUnique({ where: { id } });
   return row ? toAsset(row) : null;
 }

@@ -85,7 +85,10 @@ export async function writeSchedule(
 }
 
 /** A contract's invoices in sequence order; empty for an unknown contract. */
-export async function listInvoices(db: PrismaClient, contractId: string): Promise<InvoiceView[]> {
+export async function listInvoices(
+  db: PrismaClient | TransactionClient,
+  contractId: string
+): Promise<InvoiceView[]> {
   const rows = await db.invoice.findMany({
     where: { contract_id: contractId },
     orderBy: { sequence: 'asc' },

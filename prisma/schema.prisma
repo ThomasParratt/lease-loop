@@ -171,7 +171,7 @@ model Invoice {
   vat_cents    Int
   gross_cents  Int
   kind         String // down_payment | rent | buyout | early_exit
-  status       String // issued | paid
+  status       String // issued | paid | cancelled
   paid_on      String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt

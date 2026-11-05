@@ -19,7 +19,13 @@ type InvoiceTableProps = {
   t: Translate;
 };
 
-const statusBadge = { paid: 'paid', due: 'due', overdue: 'overdue', upcoming: 'issued' } as const;
+const statusBadge = {
+  paid: 'paid',
+  due: 'due',
+  overdue: 'overdue',
+  upcoming: 'issued',
+  cancelled: 'cancelled',
+} as const;
 
 const percent = (basisPoints: number, locale: Locale) => formatNumber(basisPoints / 100, locale);
 
@@ -32,7 +38,8 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
 
   const change = firstVatChange(invoices, vatRates);
   const rent = invoices.find((invoice) => invoice.kind === 'rent');
-  const totals = scheduleTotals(invoices);
+  // A rent an early exit cancelled is shown, but owes nothing (docs/features/exits.md).
+  const totals = scheduleTotals(invoices.filter((invoice) => invoice.status !== 'cancelled'));
 
   return (
     <div className="space-y-3">
@@ -80,7 +87,8 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
           </thead>
           <tbody className="divide-y divide-line">
             {invoices.map((invoice) => {
-              const status = invoiceStatusOn(invoice, today);
+              const status =
+                invoice.status === 'cancelled' ? 'cancelled' : invoiceStatusOn(invoice, today);
               return (
                 <tr key={invoice.id}>
                   <th scope="row" className={`${cell} font-medium`}>
@@ -92,7 +100,7 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
                           start: formatIsoDate(invoice.periodStart, locale),
                           end: formatIsoDate(invoice.periodEnd, locale),
                         })
-                      : t('invoice.kind.down_payment')}
+                      : t(`invoice.kind.${invoice.kind}`)}
                   </td>
                   <td className={cell}>
                     <DateText iso={invoice.dueDate} locale={locale} />
