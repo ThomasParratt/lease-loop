@@ -10,6 +10,7 @@ const signed = {
   customerId: 'cust-001',
   assetId: 'ebike-001',
   quantity: 1,
+  signedOn: '2026-11-05',
   startDate: '2026-11-06',
   endDate: '2029-11-05',
   termMonths: 36,
@@ -107,6 +108,13 @@ describe('event payloads (kickoff brief section 7)', () => {
     expect(schema.safeParse({ ...signed, quantity: 0 }).success).toBe(false);
     expect(schema.safeParse({ ...signed, quantity: 1.5 }).success).toBe(false);
     expect(schema.safeParse({ ...signed, downPaymentCents: -1 }).success).toBe(false);
+  });
+
+  it('CONTRACT_SIGNED requires the signing day as a real ISO day', () => {
+    const schema = eventPayloadSchemas.CONTRACT_SIGNED;
+    const { signedOn: _signedOn, ...withoutSignedOn } = signed;
+    expect(schema.safeParse(withoutSignedOn).success).toBe(false);
+    expect(schema.safeParse({ ...signed, signedOn: '2026-02-30' }).success).toBe(false);
   });
 
   it('CONTRACT_SIGNED rejects an end date before the start date', () => {

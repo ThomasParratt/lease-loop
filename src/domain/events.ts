@@ -28,6 +28,8 @@ export const contractSignedSchema = z
     customerId: idSchema,
     assetId: idSchema,
     quantity: z.number().int().positive(),
+    /** The signing day: the down payment's invoice day (D5). It may precede the start (D7). */
+    signedOn: eventDateSchema,
     startDate: eventDateSchema,
     /** Inclusive: the last day of the term. */
     endDate: eventDateSchema,

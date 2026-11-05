@@ -116,6 +116,14 @@ Every API route has one row in the route table, `src/server/routes.ts`: method, 
 
 When one change touches several slices' rows at one instant, the owner emits one event inside `withAudit` and the other slices react in the same transaction (`docs/kickoff-brief.md` section 7). The payloads are Zod schemas in `src/domain/events.ts`: `CONTRACT_SIGNED`, `CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`, `INVOICE_PAID`. `src/server/events.ts` has `onEvent(type, handler)` and `emit(tx, event)`: handlers get the same `tx`, run in registration order, and a handler that throws rolls the whole change back.
 
+### Features
+
+- **Invoices** (wave 1): the monthly schedule billed in advance, VAT by invoice date, paying an invoice, the outstanding balance for an early exit. [docs/features/invoicing.md](docs/features/invoicing.md).
+
+### Invoices
+
+At signing, the `CONTRACT_SIGNED` handler (`src/server/invoice-handlers.ts`, registered through `src/server/event-handlers.ts`) builds the schedule with `buildSchedule` from `src/domain/invoicing` and writes it in the signing transaction. Invoice 0 is the down payment, issued on the signing day and left out when the down payment is zero. Invoices 1 to term are each one full month of rent, issued and due on the first day of the period, with the start day clamped to short months. Each invoice takes the VAT rate in force on its issue date (D2–D5). `GET /api/invoices?contractId=` lists a contract's invoices. `POST /api/invoices/[id]/pay` pays one on the request's day, writes the audit row and emits `INVOICE_PAID`. Both routes are open to the contract's customer and admin only. `<InvoiceTable contractId today locale t />` (`src/components/invoice-table.tsx`) is the table for the contract page, with one line explaining a VAT change. `outstandingBalanceAfter` gives the D14 balance after n rents, row by row, for the early exit. Anything that emits an event imports `@/server/event-handlers` first.
+
 ### Pages
 
 `/[locale]` is the catalogue, `/[locale]/demo` the demo page (the clock and, from wave 1, one button per scenario card), `/[locale]/audit` the newest 50 audit rows. The header nav links all three, beside the "continue as" actor picker and the language switcher; it wraps on a phone. The layout reads the customers and the current actor once per request for the picker. Pages are built from the kit in `src/components/ui` (`PageHeader`, `Card`, `Button`, `LinkButton`, `Badge`, `DefinitionList`, `Field`, `Notice`, `Money`, `DateText`, `NavLinks`, one `index.ts`) and the team's design tokens in `src/app/globals.css` (D21): pages use the roles `brand`, `focus`, `success`, `warning`, `danger`, `info`, `neutral`, `surface`, `raised`, `muted`, `line`, `line-strong`, `ink`, `ink-muted` (e.g. `bg-brand`, `text-ink-muted`, `bg-success-soft`), never raw colour classes or the scales under them. Each token switches with the colour scheme, so no page needs a `dark:` class.

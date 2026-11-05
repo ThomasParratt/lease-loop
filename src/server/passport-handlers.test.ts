@@ -33,6 +33,7 @@ const signed: EventOf<'CONTRACT_SIGNED'> = {
   customerId: 'cust-c-1',
   assetId: 'ebike-008',
   quantity: 1,
+  signedOn: '2026-11-06',
   startDate: '2026-11-06',
   endDate: '2028-11-05',
   termMonths: 24,
