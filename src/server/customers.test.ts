@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import {
   getCustomer,
   listCustomers,
@@ -24,7 +25,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.customer.deleteMany();
+  await resetDb(db);
 });
 
 describe('seedCustomers', () => {

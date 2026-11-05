@@ -3,6 +3,7 @@
 // whole change back.
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import type { EventOf } from '@/domain/events';
 import { withAudit, type AuditEntry } from './audit';
 import { clearHandlers, emit, onEvent } from './events';
@@ -19,7 +20,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   clearHandlers();
-  await db.auditLog.deleteMany();
+  await resetDb(db);
 });
 
 const paid: EventOf<'INVOICE_PAID'> = {

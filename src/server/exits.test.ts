@@ -6,6 +6,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PricingData } from '@/domain/pricing';
 import { seedPack } from '../../tests/helpers/invoice-fixture';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
+import { withProductionHandlers } from '../../tests/helpers/with-handlers';
 import { listAssetEvents } from './asset-events';
 import { getAsset } from './assets';
 import { getContract, signContract } from './contracts';
@@ -21,24 +23,16 @@ let data: PricingData;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  await seedPack(db);
   data = await loadPricingData();
 });
 afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.invoice.deleteMany();
-  await db.assetEvent.deleteMany();
-  await db.contract.deleteMany();
-  await db.application.deleteMany();
-  await db.quote.deleteMany();
-  await db.auditLog.deleteMany();
-  await db.asset.update({
-    where: { id: 'ebike-003' },
-    data: { status: 'available', condition: 'new', usage_value: 0 },
-  });
+  await resetDb(db);
+  await seedPack(db);
 });
+withProductionHandlers();
 
 const MONTH_7 = '2027-06-05';
 const AINO_REPORTS = { condition: 'good' as const, usage: { unit: 'km' as const, value: 1_800 } };

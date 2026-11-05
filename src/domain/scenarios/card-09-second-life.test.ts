@@ -2,6 +2,9 @@
 // the waiting-list match are wave 3's; today the harness pins the facts the card rests on
 // and keeps the judged numbers as todos.
 import { describe, expect, it } from 'vitest';
+import refurbishmentJson from '../../../data/refurbishment-costs.json';
+import { refurbishmentCostsSchema } from '@/data/schemas';
+import { refurbishmentPlan } from '../refurbishment/plan';
 import { assetById, pack } from './fixtures';
 
 const entry = (id: string) => pack.demand.find((d) => d.id === id);
@@ -31,6 +34,27 @@ describe('card 9: second life (ebike-007, fair, 18 400 km)', () => {
     });
   });
 
+  it('the refurbishment plan to good: battery 35 000 (usage reset), inspection 4 500, 12 000 more', () => {
+    const plan = refurbishmentPlan(
+      {
+        category: 'e_bike',
+        condition: 'fair',
+        usage: { unit: 'km', value: 18_400 },
+        targetCondition: 'good',
+      },
+      refurbishmentCostsSchema.parse(refurbishmentJson)
+    );
+    expect(plan.steps.map((s) => [s.id, s.costCents])).toEqual([
+      ['battery_replacement', 35_000],
+      ['safety_inspection', 4_500],
+      ['fair->good', 12_000],
+    ]);
+    expect([plan.fixedCents, plan.upgradeCents, plan.totalCents]).toEqual([39_500, 12_000, 51_500]);
+    expect(plan.usageAfter).toEqual({ unit: 'km', value: 0 });
+    expect(plan.conditionAfter).toBe('good');
+  });
+
+  // The judged flow (assessment, the plan on the page, the match) is wave 3's.
   it.todo('the battery is replaced (35 000, over 15 000 km) and usage resets (wave 3)');
   it.todo('the safety inspection 4 500 is always charged (wave 3)');
   it.todo('fair to good costs 12 000 more (wave 3)');

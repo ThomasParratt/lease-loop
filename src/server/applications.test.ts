@@ -4,6 +4,7 @@ import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import { createApplication, decideApplication, flowSetupFor, getApplication } from './applications';
 import { seedAssets } from './assets';
 import { seedCustomers } from './customers';
@@ -16,16 +17,14 @@ let customers: Customer[];
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
   customers = await loadCustomers();
-  await seedAssets(db, await loadAssets());
-  await seedCustomers(db, customers);
 });
 afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.auditLog.deleteMany();
-  await db.application.deleteMany();
-  await db.quote.deleteMany();
+  await resetDb(db);
+  await seedAssets(db, await loadAssets());
+  await seedCustomers(db, customers);
 });
 
 const TODAY = '2026-11-05';

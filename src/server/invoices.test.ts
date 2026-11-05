@@ -5,8 +5,10 @@ import { loadVatRates } from '@/data/load';
 import { buildSchedule } from '@/domain/invoicing';
 import { insertContract, seedPack } from '../../tests/helpers/invoice-fixture';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
+import { withHandlers } from '../../tests/helpers/with-handlers';
 import { withAudit } from './audit';
-import { clearHandlers, onEvent } from './events';
+import { onEvent } from './events';
 import {
   contractCustomerId,
   invoiceCustomerId,
@@ -22,13 +24,14 @@ let contractId: string;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  await seedPack(db);
 });
 afterAll(async () => {
   await cleanup();
 });
+withHandlers();
 beforeEach(async () => {
-  clearHandlers();
+  await resetDb(db);
+  await seedPack(db);
   ({ contractId } = await insertContract(db));
   const schedule = buildSchedule({
     signedOn: '2026-11-05',

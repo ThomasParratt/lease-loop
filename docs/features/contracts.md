@@ -49,6 +49,7 @@ The race write is not a `CONTRACT_SIGNED` handler on the bus, though D22 says th
 
 - `src/domain/contracts/sign.test.ts`: card 1 (end 2029-11-04, the copied numbers, the event payload), card 2 (9 627 kept, the price lock with 8 857), card 4 (end 2029-01-30), a leap-day start, every refusal with its params, the 90-day boundary, quantity 4 carried unchanged, D23 throws.
 - `src/server/contracts.test.ts`: card 1 against the real database (36 invoices, 13 466 and 13 520, the passport entry, the asset `leased`, one audit row naming the actor), invoice 0 on the signing day before a later start, admin signing, card 2 end to end, the last-unit race sequential and simultaneous (`Promise.all`: one wins, the other writes nothing), `already_signed`, `not_allowed_to_sign`, and every refusal leaving the counts unchanged.
+- `src/server/scenarios/card-01-08.test.ts` and `card-02-07.test.ts` (wave 2 hardening): cards 1 to 4 signed after a real application through `createApplication`, the price lock of card 2 with both versions, card 3 dated 15 Sep 2026, card 4's end date and February due days, and `application_not_approved` for cards 5 (`rejected`), 6 (`awaiting_signatory`) and 7 (`manual_review`).
 
 ## Open questions
 

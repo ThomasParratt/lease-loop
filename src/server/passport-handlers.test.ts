@@ -4,9 +4,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { DomainEvent, EventOf } from '@/domain/events';
 import { createContractFixture } from '../../tests/helpers/contract-fixture';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
+import { dropAllHandlers, withHandlers } from '../../tests/helpers/with-handlers';
 import { listAssetEvents } from './asset-events';
 import { withAudit, type AuditEntry } from './audit';
-import { clearHandlers, emit, onEvent } from './events';
+import { emit, onEvent } from './events';
 import { registerPassportHandlers } from './passport-handlers';
 import type { PrismaClient } from './prisma-client';
 
@@ -15,16 +17,14 @@ let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  await createContractFixture(db, { assetId: 'ebike-008', contractId: 'c-1', previousLives: 2 });
 });
 afterAll(async () => {
   await cleanup();
 });
+withHandlers(registerPassportHandlers);
 beforeEach(async () => {
-  clearHandlers();
-  registerPassportHandlers();
-  await db.assetEvent.deleteMany();
-  await db.auditLog.deleteMany();
+  await resetDb(db);
+  await createContractFixture(db, { assetId: 'ebike-008', contractId: 'c-1', previousLives: 2 });
 });
 
 const signed: EventOf<'CONTRACT_SIGNED'> = {
@@ -108,7 +108,7 @@ describe('passport handlers', () => {
   });
 
   it('the remover unregisters every passport handler', async () => {
-    clearHandlers();
+    dropAllHandlers();
     const off = registerPassportHandlers();
     off();
     await emitInAudit(signed);

@@ -4,6 +4,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PricingData } from '@/domain/pricing';
 import { seedPack } from '../../tests/helpers/invoice-fixture';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
+import { withProductionHandlers } from '../../tests/helpers/with-handlers';
 import { listAssetEvents } from './asset-events';
 import { getAsset } from './assets';
 import { withAudit } from './audit';
@@ -25,21 +27,16 @@ let data: PricingData;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  await seedPack(db);
   data = await loadPricingData();
 });
 afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.invoice.deleteMany();
-  await db.assetEvent.deleteMany();
-  await db.contract.deleteMany();
-  await db.application.deleteMany();
-  await db.quote.deleteMany();
-  await db.auditLog.deleteMany();
-  await db.asset.updateMany({ where: { status: 'leased' }, data: { status: 'available' } });
+  await resetDb(db);
+  await seedPack(db);
 });
+withProductionHandlers();
 
 type QuoteTerms = { assetId: string; termMonths: number; downPaymentCents: number; today: string };
 

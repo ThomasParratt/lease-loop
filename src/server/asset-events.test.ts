@@ -1,8 +1,9 @@
 // The asset event log on a real, migrated SQLite database: validation, the order of the log
 // and the passport and impact read on top of it (card 10).
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createContractFixture } from '../../tests/helpers/contract-fixture';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import { appendAssetEvent, listAssetEvents, readFleetImpact, readPassport } from './asset-events';
 import { withAudit, type AuditEntry } from './audit';
 import type { PrismaClient } from './prisma-client';
@@ -12,6 +13,9 @@ let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
+});
+beforeEach(async () => {
+  await resetDb(db);
   await createContractFixture(db, {
     assetId: 'ebike-008',
     contractId: 'c-third',
@@ -78,7 +82,27 @@ describe('appendAssetEvent and listAssetEvents', () => {
   });
 });
 
+// ebike-008's third life as card 10 logs it: assessed, then leased on c-third on 2026-11-06.
+async function logThirdLife() {
+  await withAudit(db, entry, async (tx) => {
+    await appendAssetEvent(tx, {
+      assetId: 'ebike-008',
+      kind: 'assessed',
+      onDate: '2026-11-06',
+      details: { grade: 'good' },
+    });
+    await appendAssetEvent(tx, {
+      assetId: 'ebike-008',
+      contractId: 'c-third',
+      kind: 'leased',
+      onDate: '2026-11-06',
+    });
+  });
+}
+
 describe('readPassport', () => {
+  beforeEach(logThirdLife);
+
   it('card 10: ebike-008 has two past lives and its third, 58 kg saved after 24 months', async () => {
     const result = await readPassport(db, 'ebike-008', '2028-11-05');
     expect(result?.passport.lives.map((life) => [life.estimated, life.months])).toEqual([
@@ -109,6 +133,8 @@ describe('readPassport', () => {
 });
 
 describe('readFleetImpact', () => {
+  beforeEach(logThirdLife);
+
   it('totals the fleet from the past lives and the log', async () => {
     const { fleet, assets } = await readFleetImpact(db, '2028-11-05');
     expect(fleet.perCategory.find((row) => row.category === 'e_bike')).toEqual({

@@ -1,6 +1,7 @@
 // GET /api/audit-log/verify against a real, migrated SQLite database: the app's `db` module is
 // pointed at the test database, nothing else is replaced.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetDb } from '../../../../../tests/helpers/reset-db';
 import { createTestDb } from '../../../../../tests/helpers/test-db';
 import { GENESIS_HASH } from '@/domain/audit';
 import { auditChainVerdictSchema } from '@/server/audit-schemas';
@@ -25,7 +26,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await holder.db.auditLog.deleteMany();
+  await resetDb(holder.db);
 });
 
 const write = (minute: number) =>

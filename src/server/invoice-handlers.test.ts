@@ -1,11 +1,12 @@
 // CONTRACT_SIGNED → the schedule, inside the signing transaction, on a real migrated SQLite
 // database: the invoices commit with the signing and roll back with it.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CARD_1, insertContract, seedPack } from '../../tests/helpers/invoice-fixture';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
+import { withProductionHandlers } from '../../tests/helpers/with-handlers';
 import { withAudit, type AuditEntry } from './audit';
 import { emit, onEvent } from './events';
-import './event-handlers';
 import { listInvoices } from './invoices';
 import type { PrismaClient } from './prisma-client';
 
@@ -14,11 +15,15 @@ let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
   ({ db, cleanup } = await createTestDb());
-  await seedPack(db);
 });
 afterAll(async () => {
   await cleanup();
 });
+beforeEach(async () => {
+  await resetDb(db);
+  await seedPack(db);
+});
+withProductionHandlers();
 
 const signing = (contractId: string): AuditEntry => ({
   actor: 'cust-aino',

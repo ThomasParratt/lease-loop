@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import {
   changeAssetStatus,
   getAsset,
@@ -25,8 +26,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.auditLog.deleteMany();
-  await db.asset.deleteMany();
+  await resetDb(db);
 });
 
 describe('seedAssets', () => {

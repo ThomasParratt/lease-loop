@@ -136,6 +136,35 @@ const AUDIT_ROW_MUTATIONS: readonly Check[] = [
   },
 ];
 
+// docs/features/test-isolation.md (D37): one reset, one handler set-up, no concurrency.
+const RESET_HELPER = 'tests/helpers/reset-db.ts';
+const HANDLER_HELPER = 'tests/helpers/with-handlers.ts';
+const TABLE_CLEARING: readonly Check[] = [
+  {
+    pattern: /\.deleteMany\(/,
+    problem: 'clears a table itself; call resetDb() from ' + RESET_HELPER,
+  },
+];
+const HANDLER_SETUP: readonly Check[] = [
+  {
+    pattern: /['"](\.{1,2}\/|@\/server\/)[\w./-]*event-handlers['"]/,
+    problem: 'imports event-handlers; call withProductionHandlers() from ' + HANDLER_HELPER,
+  },
+  { pattern: /\bclearHandlers\(/, problem: 'clears the handler registry; use ' + HANDLER_HELPER },
+];
+const CONCURRENT_TESTS: readonly Check[] = [
+  {
+    pattern: /\b(describe|it|test)\.concurrent\b/,
+    problem: 'runs tests concurrently on one database and one handler registry',
+  },
+];
+
+/** Hand-written TypeScript under src/ and tests/: the generated Prisma client is left out. */
+const sourceAndTests = () =>
+  [...listFiles('src', /\.tsx?$/), ...listFiles('tests', /\.ts$/)].filter(
+    (file) => !file.startsWith('src/generated/')
+  );
+
 // ---------- the rules ----------
 
 describe('meta rules', () => {
@@ -198,6 +227,40 @@ describe('meta rules', () => {
       (file) => !isTest(file) && !file.startsWith('src/generated/')
     );
     const findings = files.flatMap((file) => scanLines(file, AUDIT_ROW_MUTATIONS));
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // docs/features/test-isolation.md (D37) rule 1: every test database is emptied one way.
+  it('no file clears a table except the resetDb helper', () => {
+    const files = sourceAndTests().filter(
+      (file) => file !== RESET_HELPER && file !== 'tests/meta-rules.test.ts'
+    );
+    const findings = files.flatMap((file) => scanLines(file, TABLE_CLEARING));
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // D37 rule 2: a test's handlers come from the helper, never from what its file imported.
+  it('no test imports event-handlers or clears the registry except through the helper', () => {
+    const files = sourceAndTests().filter(
+      (file) =>
+        (isTest(file) || file.startsWith('tests/')) &&
+        file !== HANDLER_HELPER &&
+        file !== 'src/server/events.test.ts' &&
+        file !== 'tests/meta-rules.test.ts'
+    );
+    const findings = files.flatMap((file) => scanLines(file, HANDLER_SETUP));
+    expect(findings, formatFindings(findings)).toEqual([]);
+  });
+
+  // D37 rule 3: tests that share a database file or the registry run one after another.
+  it('no server or scenario test runs concurrently', () => {
+    const files = [
+      ...listFiles('src/server', /\.test\.ts$/),
+      ...listFiles('src/domain/scenarios', /\.test\.ts$/),
+      ...listFiles('src/app', /\.test\.ts$/),
+      ...listFiles('tests/helpers', /\.ts$/),
+    ];
+    const findings = files.flatMap((file) => scanLines(file, CONCURRENT_TESTS));
     expect(findings, formatFindings(findings)).toEqual([]);
   });
 

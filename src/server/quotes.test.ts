@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import { quoteStatusOn, type PricingData } from '@/domain/pricing';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import { seedAssets } from './assets';
 import {
   createQuote,
@@ -25,10 +26,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.application.deleteMany();
-  await db.quote.deleteMany();
-  await db.auditLog.deleteMany();
-  await db.asset.deleteMany();
+  await resetDb(db);
   await seedAssets(db, await loadAssets());
 });
 

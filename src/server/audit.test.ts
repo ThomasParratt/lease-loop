@@ -1,6 +1,7 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '../../tests/helpers/test-db';
+import { resetDb } from '../../tests/helpers/reset-db';
 import { GENESIS_HASH, hashAuditEntry } from '@/domain/audit';
 import {
   auditChainHead,
@@ -22,8 +23,7 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  await db.auditLog.deleteMany();
-  await db.asset.deleteMany();
+  await resetDb(db);
   await db.asset.create({
     data: {
       id: 'ebike-001',
