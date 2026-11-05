@@ -10,6 +10,7 @@ import { useEffect, useId, useRef, useState, useTransition, type ReactNode } fro
 import type { QuoteBreakdown, QuoteRefusal, TermComparison } from '@/domain/pricing';
 import { getT } from '@/i18n/get-t';
 import { formatEuro } from '@/domain/money';
+import { parseEurosToCents } from '@/domain/question-flow/answers';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { formatBasisPoints, QuoteBreakdownList, refusalText } from './quote-breakdown';
 import { Button, Disclosure, Field, Money, Notice, PriceTag, inputClasses } from './ui';
@@ -44,6 +45,18 @@ const MAX_QUANTITY = 20;
  * whose 1 % step is 2 600 €), it moves in whole euros instead, so the slider can show the
  * preset exactly and get back to it.
  */
+/**
+ * Cents as an amount to edit in the down-payment box: whole euros ("10000"), or with the
+ * cents after the page language's decimal mark ("10000.50", "10000,50"). No grouping, so
+ * `parseEurosToCents` reads back exactly what it shows.
+ */
+function centsToInput(cents: number, locale: Locale): string {
+  const euros = Math.floor(cents / 100);
+  const rest = cents % 100;
+  if (rest === 0) return String(euros);
+  return `${euros}${locale === 'en' ? '.' : ','}${String(rest).padStart(2, '0')}`;
+}
+
 function downPaymentStep(totalCents: number, presetCents: number): number {
   const percent = Math.max(100, Math.round(totalCents / 100 / 100) * 100);
   return presetCents % percent === 0 ? percent : 100;
@@ -56,6 +69,11 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
   const ids = useId();
   const [termIndex, setTermIndex] = useState(Math.max(0, terms.indexOf(props.initial.termMonths)));
   const [downPaymentCents, setDownPaymentCents] = useState(props.initial.downPaymentCents);
+  // What the visitor is typing in the down-payment box. It drives the price whenever it reads
+  // as an amount; on leaving the box it is rewritten from the amount actually used.
+  const [downDraft, setDownDraft] = useState(() =>
+    centsToInput(props.initial.downPaymentCents, locale)
+  );
   const [quantity, setQuantity] = useState(props.initial.quantity);
   const [preview, setPreview] = useState(initialPreview);
   const [loading, setLoading] = useState(false);
@@ -102,10 +120,22 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
     };
   }, [assetId, quantity, termMonths, downPaymentCents]);
 
+  function setDown(cents: number) {
+    setDownPaymentCents(cents);
+    setDownDraft(centsToInput(cents, locale));
+  }
+
+  /** A typed amount above the price is held at the price, which the preview then refuses. */
+  function onDownTyped(value: string) {
+    setDownDraft(value);
+    const cents = parseEurosToCents(value);
+    if (cents !== null) setDownPaymentCents(Math.min(cents, totalPriceCents));
+  }
+
   function onQuantity(value: string) {
     const next = Math.min(MAX_QUANTITY, Math.max(1, Math.trunc(Number(value)) || 1));
     setQuantity(next);
-    setDownPaymentCents((down) => Math.min(down, unitPriceCents * next));
+    setDown(Math.min(downPaymentCents, unitPriceCents * next));
   }
 
   function apply() {
@@ -214,21 +244,32 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
             >
               {(control) => (
                 <div>
-                  <p
-                    className="mb-1 font-heading text-2xl font-semibold tabular-nums"
-                    aria-hidden="true"
-                  >
-                    {money(downPaymentCents)}
-                  </p>
+                  <div className="mb-1 flex max-w-60 items-center gap-2 rounded-md border-2 border-neutral-solid bg-raised px-3 focus-within:border-brand">
+                    {locale === 'en' ? <EuroSign /> : null}
+                    <input
+                      {...control}
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={downDraft}
+                      onChange={(e) => onDownTyped(e.target.value)}
+                      onBlur={() => setDownDraft(centsToInput(downPaymentCents, locale))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setDownDraft(centsToInput(downPaymentCents, locale));
+                      }}
+                      className="min-h-11 w-full min-w-0 bg-transparent py-1 font-heading text-2xl font-semibold tabular-nums outline-none"
+                    />
+                    {locale === 'en' ? null : <EuroSign />}
+                  </div>
                   <input
-                    {...control}
                     type="range"
                     min={0}
                     max={totalPriceCents}
                     step={step}
                     value={downPaymentCents}
+                    aria-label={t('pricing.calculator.downPaymentSlider')}
                     aria-valuetext={formatEuro(downPaymentCents, intlLocale[locale])}
-                    onChange={(e) => setDownPaymentCents(Number(e.target.value))}
+                    onChange={(e) => setDown(Number(e.target.value))}
                     className="h-11 w-full"
                   />
                 </div>
@@ -325,9 +366,8 @@ function TermTable({
   const cell = 'px-4 py-3 text-right sm:px-6';
   return (
     <>
-      <p className="px-4 pt-4 text-sm text-ink-muted sm:px-6">{t('pricing.compare.explain')}</p>
       <div className="overflow-x-auto">
-        <table className="mt-2 w-full text-sm">
+        <table className="w-full text-sm">
           <caption className="sr-only">{t('pricing.compare.title')}</caption>
           <thead className="text-ink-muted">
             <tr className="border-b-2 border-line">
@@ -384,5 +424,13 @@ function TermTable({
         </table>
       </div>
     </>
+  );
+}
+
+function EuroSign() {
+  return (
+    <span aria-hidden="true" className="font-heading text-2xl font-semibold text-ink-muted">
+      €
+    </span>
   );
 }

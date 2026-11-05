@@ -1,11 +1,12 @@
-// "Explain my price": the breakdown of one quote, line by line, in words a 17-year-old and a
+// "Explain my price": the breakdown of one quote in three short sums, in words a 17-year-old and a
 // 70-year-old can both follow. No hooks, so the price page (server) and the calculator
 // (client) render the same lines. The numbers come from the domain; this only writes them.
 import type { QuoteBreakdown, QuoteRefusal } from '@/domain/pricing';
 import { formatEuro } from '@/domain/money';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-import { DefinitionList, Money, type DefinitionItem } from './ui';
+import type { ReactNode } from 'react';
+import { Money, cx } from './ui';
 
 /** 27 584 millionths → "0.027584" in the page's language. */
 export function formatFactor(millionths: number, locale: Locale): string {
@@ -56,69 +57,73 @@ export function refusalText(
 
 type QuoteBreakdownListProps = { quote: QuoteBreakdown; locale: Locale; t: Translate };
 
+/** One line of a sum: an operator, a label (and a quiet hint), the amount. */
+type SumLine = {
+  op?: '−' | '×' | '+' | '=';
+  label: string;
+  hint?: string;
+  value: ReactNode;
+  /** The line the step arrives at: bold, above a rule. */
+  result?: boolean;
+};
+
+/**
+ * "Explain my price" as three short sums a 17-year-old and a 70-year-old can both follow:
+ * what we finance, what that costs a month, what it costs in total. Each step ends on the
+ * number the next one starts from. Every amount is the domain's; the only arithmetic here is
+ * the rents' share of the total (total if returned − the down payment with VAT), which is
+ * exact in integer cents.
+ */
 export function QuoteBreakdownList({ quote, locale, t }: QuoteBreakdownListProps) {
   const money = (cents: number) => <Money cents={cents} locale={locale} />;
-  const items: DefinitionItem[] = [
-    {
-      label: t('pricing.line.unitPrice'),
-      hint: t('pricing.hint.unitPrice', { version: quote.priceListVersion }),
-      value: money(quote.unitListPriceCents),
-      numeric: true,
-    },
+  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const rentsCents = quote.totalIfReturnCents - quote.downPaymentGrossCents;
+
+  const finance: SumLine[] = [
+    quote.quantity > 1
+      ? {
+          label: t('pricing.line.listPrice', { quantity: quote.quantity }),
+          hint: t('pricing.explain.each', { amount: euro(quote.unitListPriceCents) }),
+          value: money(quote.listPriceCents),
+        }
+      : { label: t('pricing.line.unitPrice'), value: money(quote.listPriceCents) },
   ];
-  if (quote.quantity > 1) {
-    items.push({
-      label: t('pricing.line.listPrice', { quantity: quote.quantity }),
-      value: money(quote.listPriceCents),
-      numeric: true,
+  if (quote.downPaymentCents > 0) {
+    finance.push({
+      op: '−',
+      label: t('pricing.line.downPayment'),
+      value: money(quote.downPaymentCents),
     });
   }
-  items.push(
+  finance.push({
+    op: '=',
+    label: t('pricing.line.financed'),
+    value: money(quote.financedCents),
+    result: true,
+  });
+
+  const monthly: SumLine[] = [
+    { label: t('pricing.line.financed'), value: money(quote.financedCents) },
     {
-      label: t('pricing.line.downPayment'),
-      hint: t('pricing.hint.downPayment', {
-        gross: formatEuro(quote.downPaymentGrossCents, intlLocale[locale]),
-      }),
-      value: money(quote.downPaymentCents),
-      numeric: true,
+      op: '×',
+      label: t('pricing.explain.factor'),
+      value: formatFactor(quote.factorMillionths, locale),
     },
+    { op: '=', label: t('pricing.line.net'), value: money(quote.monthlyNetCents) },
     {
-      label: t('pricing.line.financed'),
-      hint: t('pricing.hint.financed'),
-      value: money(quote.financedCents),
-      numeric: true,
-    },
-    {
-      label: t('pricing.line.band'),
-      hint: t('pricing.hint.band'),
-      value: t('pricing.value.band', {
-        band: quote.band,
-        factor: formatFactor(quote.factorMillionths, locale),
-      }),
-      numeric: true,
-    },
-    {
-      label: t('pricing.line.net'),
-      hint: t('pricing.hint.net'),
-      value: money(quote.monthlyNetCents),
-      numeric: true,
-    },
-    {
-      label: t('pricing.line.vat', {
-        rate: formatBasisPoints(quote.vatRateBasisPoints, locale),
-      }),
+      op: '+',
+      label: t('pricing.line.vat', { rate: formatBasisPoints(quote.vatRateBasisPoints, locale) }),
       value: money(quote.monthlyVatCents),
-      numeric: true,
     },
     {
+      op: '=',
       label: t('pricing.line.gross'),
       value: money(quote.monthlyGrossCents),
-      numeric: true,
-      total: true,
-    }
-  );
+      result: true,
+    },
+  ];
   if (quote.perUnit) {
-    items.push({
+    monthly.push({
       label: t('pricing.line.perUnit'),
       hint:
         quote.perUnit.monthlyGrossCents.remainderCents > 0
@@ -127,39 +132,114 @@ export function QuoteBreakdownList({ quote, locale, t }: QuoteBreakdownListProps
             })
           : undefined,
       value: money(quote.perUnit.monthlyGrossCents.shareCents),
-      numeric: true,
     });
   }
-  items.push(
+
+  const total: SumLine[] = [];
+  if (quote.downPaymentCents > 0) {
+    total.push({ label: t('pricing.explain.atStart'), value: money(quote.downPaymentGrossCents) });
+  }
+  total.push(
     {
-      label: t('pricing.line.buyout', { months: quote.termMonths }),
-      hint: t('pricing.hint.buyout', {
-        percent: formatBasisPoints(quote.buyoutPercentBasisPoints, locale),
-        gross: formatEuro(quote.buyoutGrossCents, intlLocale[locale]),
-      }),
-      value: money(quote.buyoutCents),
-      numeric: true,
+      op: total.length > 0 ? '+' : undefined,
+      label: t('pricing.explain.payments', { months: quote.termMonths }),
+      hint: `${quote.termMonths} × ${euro(quote.monthlyGrossCents)}`,
+      value: money(rentsCents),
     },
     {
+      op: '=',
       label: t('pricing.line.totalIfReturn'),
-      hint: t('pricing.hint.totalIfReturn', { months: quote.termMonths }),
       value: money(quote.totalIfReturnCents),
-      numeric: true,
-      total: true,
+      result: true,
     },
     {
+      op: '+',
+      label: t('pricing.explain.buyout'),
+      hint: t('pricing.explain.buyoutShare', {
+        percent: formatBasisPoints(quote.buyoutPercentBasisPoints, locale),
+      }),
+      value: money(quote.buyoutGrossCents),
+    },
+    {
+      op: '=',
       label: t('pricing.line.totalIfBuy'),
-      hint: t('pricing.hint.totalIfBuy'),
       value: money(quote.totalIfBuyCents),
-      numeric: true,
-      total: true,
+      result: true,
     }
   );
 
   return (
     <>
-      <DefinitionList items={items} />
-      <p className="mt-3 text-xs text-ink-muted">{t('pricing.vatEstimate')}</p>
+      <ol className="grid gap-4 xl:grid-cols-3">
+        <SumStep
+          n={1}
+          title={t('pricing.explain.step1')}
+          lines={finance}
+          note={t('pricing.explain.step1Note')}
+        />
+        <SumStep
+          n={2}
+          title={t('pricing.explain.step2')}
+          lines={monthly}
+          note={t('pricing.explain.step2Note')}
+        />
+        <SumStep
+          n={3}
+          title={t('pricing.explain.step3')}
+          lines={total}
+          note={t('pricing.explain.step3Note')}
+        />
+      </ol>
+      <p className="mt-4 text-xs text-ink-muted">{t('pricing.vatEstimate')}</p>
     </>
+  );
+}
+
+function SumStep({
+  n,
+  title,
+  lines,
+  note,
+}: {
+  n: number;
+  title: string;
+  lines: SumLine[];
+  note: string;
+}) {
+  return (
+    <li className="flex flex-col rounded-lg bg-muted p-4 sm:p-5">
+      <h3 className="flex items-center gap-3 text-lg">
+        <span
+          aria-hidden="true"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-brand font-heading text-base font-semibold text-brand-contrast"
+        >
+          {n}
+        </span>
+        {title}
+      </h3>
+      <dl className="mt-4 max-w-lg space-y-2 tabular-nums">
+        {lines.map((line, index) => (
+          <div
+            key={index}
+            className={cx(
+              'grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-baseline gap-x-2',
+              line.result && 'border-t-2 border-ink/70 pt-2 font-bold'
+            )}
+          >
+            <span aria-hidden="true" className="text-ink-muted">
+              {line.op ?? ''}
+            </span>
+            <dt>
+              {line.label}
+              {line.hint ? (
+                <span className="block text-xs font-normal text-ink-muted">{line.hint}</span>
+              ) : null}
+            </dt>
+            <dd className="text-right whitespace-nowrap">{line.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-auto max-w-lg pt-4 text-sm text-ink-muted">{note}</p>
+    </li>
   );
 }
