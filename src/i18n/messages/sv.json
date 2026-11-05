@@ -74,7 +74,7 @@
   "audit.col.entity": "Objekt",
   "audit.col.details": "Detaljer",
   "audit.noDetails": "Inga",
-  "footer.skeleton": "Startskelett — byt ut mig",
+  "footer.note": "En hackathondemo. Kunder och avtal är demodata.",
   "actor.label": "Fortsätt som",
   "actor.anonymous": "Ingen (tittar bara)",
   "actor.admin": "Administratör",

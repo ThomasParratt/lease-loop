@@ -244,6 +244,16 @@ function main() {
       return;
     }
     run('husky install', process.execPath, ['.husky/install.mjs'], TIMEOUTS.other);
+    // The desktop app writes the main checkout's absolute hooks path into each worktree's
+    // config.worktree, which overrides husky's shared setting; point this worktree at its own.
+    if (!isMain && !hooksActive(root)) {
+      run(
+        'git config --worktree',
+        'git',
+        ['config', '--worktree', 'core.hooksPath', '.husky/_'],
+        TIMEOUTS.other
+      );
+    }
     if (!hooksActive(root)) throw new Error('Git hooks are still not active after husky install.');
     console.log('🪝 Git hooks installed.');
   });

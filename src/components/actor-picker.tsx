@@ -5,6 +5,7 @@
 // The page passes in the customers, the current actor and the translated labels.
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, type FormEvent } from 'react';
+import { Button, cx, inputClasses } from '@/components/ui';
 
 export type ActorPickerLabels = {
   label: string;
@@ -51,8 +52,8 @@ export function ActorPicker({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex items-center gap-2 text-sm">
-      <label htmlFor="actor-picker" className="font-medium text-stone-700 dark:text-stone-300">
+    <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2 text-sm">
+      <label htmlFor="actor-picker" className="font-medium text-ink-muted">
         {labels.label}
       </label>
       <select
@@ -60,7 +61,7 @@ export function ActorPicker({
         name="actor"
         value={selected}
         onChange={(event) => setSelected(event.target.value)}
-        className="rounded-md border border-stone-300 bg-white px-2 py-1 dark:border-stone-700 dark:bg-stone-900"
+        className={cx(inputClasses, 'w-auto max-w-56 text-sm')}
       >
         <option value="">{labels.anonymous}</option>
         <option value="admin">{labels.admin}</option>
@@ -70,15 +71,11 @@ export function ActorPicker({
           </option>
         ))}
       </select>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-stone-900 px-3 py-1 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-stone-900"
-      >
+      <Button type="submit" variant="secondary" size="sm" pending={pending}>
         {selected === '' && current !== 'anonymous' ? labels.clear : labels.submit}
-      </button>
+      </Button>
       {failed ? (
-        <span role="alert" className="text-red-700 dark:text-red-400">
+        <span role="alert" className="text-danger-ink">
           {labels.error}
         </span>
       ) : null}

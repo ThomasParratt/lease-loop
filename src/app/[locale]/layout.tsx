@@ -4,10 +4,14 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ActorPicker } from '@/components/actor-picker';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { NavLinks } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { readActor } from '@/server/actor';
+import { listCustomers } from '@/server/customers';
+import { db } from '@/server/db';
 import '../globals.css';
 
 // The design tokens' fonts (D21). next/font downloads them at build time and serves them from
@@ -31,6 +35,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
+  // Read once per request here; pages that need the actor call readActor() themselves.
+  const [customers, actor] = await Promise.all([listCustomers(db), readActor(db)]);
 
   return (
     <html lang={locale} className={`${inter.variable} ${jakarta.variable}`}>
@@ -62,11 +68,18 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                   { href: `/${locale}/audit`, label: t('nav.audit') },
                 ]}
               />
-              {/*
-                The actor slot: wave 0a's <ActorPicker /> (src/components/actor-picker.tsx, the
-                "continue as" picker over customers.json) is mounted here, between the nav and
-                the language switcher, when it lands.
-              */}
+              <ActorPicker
+                customers={customers.map(({ id, name }) => ({ id, name }))}
+                current={actor}
+                labels={{
+                  label: t('actor.label'),
+                  anonymous: t('actor.anonymous'),
+                  admin: t('actor.admin'),
+                  submit: t('actor.submit'),
+                  clear: t('actor.clear'),
+                  error: t('actor.error'),
+                }}
+              />
               <LanguageSwitcher current={locale} label={t('nav.language')} />
             </div>
           </div>
@@ -78,7 +91,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
         <footer className="border-t border-line">
           <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-ink-muted sm:px-6">
-            {t('footer.skeleton')}
+            {t('footer.note')}
           </div>
         </footer>
       </body>

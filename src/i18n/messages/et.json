@@ -74,7 +74,7 @@
   "audit.col.entity": "Objekt",
   "audit.col.details": "Üksikasjad",
   "audit.noDetails": "Puuduvad",
-  "footer.skeleton": "Algmall — asenda mind",
+  "footer.note": "Häkatoni demo. Kliendid ja lepingud on demoandmed.",
   "actor.label": "Jätka kasutajana",
   "actor.anonymous": "Mitte keegi (ainult vaatan)",
   "actor.admin": "Administraator",

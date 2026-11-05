@@ -74,7 +74,7 @@
   "audit.col.entity": "Target",
   "audit.col.details": "Details",
   "audit.noDetails": "None",
-  "footer.skeleton": "Starter skeleton — replace me",
+  "footer.note": "A hackathon demo. Customers and contracts are demo data.",
   "actor.label": "Continue as",
   "actor.anonymous": "Nobody (just looking)",
   "actor.admin": "Admin",

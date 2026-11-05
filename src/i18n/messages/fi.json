@@ -74,7 +74,7 @@
   "audit.col.entity": "Kohde",
   "audit.col.details": "Tiedot",
   "audit.noDetails": "Ei tietoja",
-  "footer.skeleton": "Aloituspohja — korvaa minut",
+  "footer.note": "Hackathon-demo. Asiakkaat ja sopimukset ovat demodataa.",
   "actor.label": "Jatka käyttäjänä",
   "actor.anonymous": "Ei kukaan (vain selaan)",
   "actor.admin": "Ylläpitäjä",
