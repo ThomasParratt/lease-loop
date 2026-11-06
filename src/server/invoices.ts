@@ -11,7 +11,7 @@ import {
 } from '@/domain/statuses';
 import { invoiceRowSchema } from '@/domain/rows/invoice';
 import { withAudit, type TransactionClient } from './audit';
-import { contractCustomerId } from './contracts';
+import { contractCustomerId, listContracts } from './contracts';
 import { emit } from './events';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
@@ -172,4 +172,22 @@ export async function payInvoice(
     throw error;
   }
   return { ok: true, invoice: toInvoiceView(row) };
+}
+
+/**
+ * Every invoice of one customer across their contracts, newest due day first (then the higher
+ * sequence first), for the portal (D75). The contracts are the contract slice's
+ * `listContracts` (team rule 3); only the Invoice table is queried here.
+ */
+export async function listCustomerInvoices(
+  db: PrismaClient,
+  filter: { customerId: string }
+): Promise<InvoiceView[]> {
+  const contracts = await listContracts(db, { customerId: filter.customerId });
+  if (contracts.length === 0) return [];
+  const rows = await db.invoice.findMany({
+    where: { contract_id: { in: contracts.map((c) => c.id) } },
+    orderBy: [{ due_date: 'desc' }, { sequence: 'desc' }],
+  });
+  return rows.map(toInvoiceView);
 }

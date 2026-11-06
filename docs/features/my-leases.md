@@ -1,5 +1,7 @@
 # My leases
 
+> Grown into the [user portal](user-portal.md) (D75, issue #28): the customer's page now also shows the totals, each contract's ways out and every invoice, and the admin opens any customer's portal at `/customers/[id]`. This page keeps the list's original rule.
+
 ## What it does
 
 A "My leases" link in the top navigation, shown once someone is chosen in "Continue as", lists that customer's contracts (each opening its contract page, where the invoices are and the lease is ended) and their applications that are not signed yet (an approved one leads to its Sign button). Admin sees "All leases": every contract and application with the customer's name, so a demo reaches any contract in two clicks.
@@ -36,4 +38,4 @@ None new: the page reads through each table owner's function (team rule 3) and w
 ## Open questions
 
 - An approved application whose quote has expired or whose item was leased to someone else still shows the "Ready to sign" link; the Sign button then shows the refusal (`quote_expired`, `asset_not_available`).
-- The rest of #28 (invoices across contracts, a customer overview) is not built.
+- The rest of #28 (invoices across contracts, a customer overview) is built: see [user-portal.md](user-portal.md).

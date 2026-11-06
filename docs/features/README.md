@@ -15,6 +15,7 @@ One page per feature slice, shipped in the same pull request as its code (AGENTS
 - [audit-chain.md](audit-chain.md): the tamper-evident audit chain, its verifier, the badge with the head hash and the tamper demo (wave 2).
 - [test-isolation.md](test-isolation.md): how the tests stay independent: one reset, named handlers, no concurrency (D44, wave 2).
 - [my-leases.md](my-leases.md): "My leases" in the top navigation, a customer's contracts and unsigned applications (all of them for admin).
+- [user-portal.md](user-portal.md): My leases grown into the customer's portal (totals, each contract's ways out, every invoice across the contracts) and `/customers/[id]` for the admin (D75, #28).
 - [second-life.md](second-life.md): the assessment of a returned item, the D12 second-life price, the D13 waiting-list match and the third life (wave 3, cards 9 and 10).
 - [demo-cards.md](demo-cards.md): one Run button per scenario card on the demo page, through the real services on the card's days, and the demo tools in one place (wave 3).
 
