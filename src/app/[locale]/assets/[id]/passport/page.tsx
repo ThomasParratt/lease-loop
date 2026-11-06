@@ -9,6 +9,7 @@ import {
   Card,
   DateText,
   DefinitionList,
+  InfoPopover,
   LifeStamp,
   Notice,
   PageHeader,
@@ -101,6 +102,17 @@ export default async function PassportPage({
           <p className="mt-1 font-heading text-5xl font-semibold text-brand-text tabular-nums">
             {t('passport.kg', { kg: kg(co2.totalKg) })}
           </p>
+          {/* The method, as on the landing page: on hover, not under everything else. */}
+          <InfoPopover id="co2-method" label={t('impact.how.label')} className="mt-4">
+            <p>
+              {t('passport.method', {
+                footprint: kg(factors.manufacturing_new_kg[asset.category]),
+                share: formatNumber(Math.round(factors.refurbishment_share_of_new * 100), locale),
+                designLife: DESIGN_LIFE_MONTHS[asset.category],
+              })}
+            </p>
+            <p className="text-ink-muted">{t('passport.noMoney')}</p>
+          </InfoPopover>
         </div>
       </div>
 
@@ -190,17 +202,6 @@ export default async function PassportPage({
             })}
           </ol>
         )}
-      </section>
-
-      <section className="mt-10 space-y-3 text-sm text-ink-muted">
-        <p>
-          {t('passport.method', {
-            footprint: kg(factors.manufacturing_new_kg[asset.category]),
-            share: formatNumber(Math.round(factors.refurbishment_share_of_new * 100), locale),
-            designLife: DESIGN_LIFE_MONTHS[asset.category],
-          })}
-        </p>
-        <p>{t('passport.noMoney')}</p>
       </section>
     </div>
   );

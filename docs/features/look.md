@@ -26,7 +26,7 @@ D21 (revised): the palette, the type pair (Nunito, Fredoka), the roles and the s
 ## Files
 
 - `src/app/globals.css`: colours, roles, shadows, the tag and stamp styles, reduced motion.
-- `src/components/ui/price-tag.tsx`, `ui/life-stamp.tsx`, `ui/staff-note.tsx`, `ui/disclosure.tsx` (with the catalogue rework), `ui/hash-link.tsx`, `item-art.tsx`, `loop-mark.tsx`, `site-header.tsx`.
+- `src/components/ui/price-tag.tsx`, `ui/life-stamp.tsx`, `ui/staff-note.tsx`, `ui/disclosure.tsx` (with the catalogue rework), `ui/hash-link.tsx`, `ui/info-popover.tsx` (a note shown on hover, focus or tap, read as the button's description), `item-art.tsx`, `loop-mark.tsx`, `site-header.tsx`.
 - The kit restyled in place: `ui/button.tsx`, `ui/card.tsx`, `ui/field.tsx`, `ui/notice.tsx`, `ui/nav-links.tsx`, `ui/page-header.tsx`.
 
 ## Tests that pin the numbers

@@ -9,6 +9,7 @@ import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { readFleetImpact } from '@/server/asset-events';
 import { db } from '@/server/db';
+import { InfoPopover } from './ui';
 
 type ImpactStripProps = { today: string; locale: Locale; t: Translate };
 
@@ -41,52 +42,15 @@ export async function ImpactStrip({ today, locale, t }: ImpactStripProps) {
               </li>
             ))}
           </ul>
-          <Co2Method
-            label={t('impact.how.label')}
-            body={t('impact.how.body', {
-              share: formatNumber(factors.refurbishment_share_of_new * 100, locale),
-            })}
-          />
+          <InfoPopover id="co2-method" label={t('impact.how.label')} className="mt-6">
+            <p>
+              {t('impact.how.body', {
+                share: formatNumber(factors.refurbishment_share_of_new * 100, locale),
+              })}
+            </p>
+          </InfoPopover>
         </div>
       </div>
     </section>
-  );
-}
-
-/**
- * "How is this counted?": the CO2 method (D15) in a few sentences, shown on hover, on keyboard
- * focus and on a tap (a tap focuses the button). The text is the button's description, so a
- * screen reader reads it with the button; nothing is hidden from it.
- */
-function Co2Method({ label, body }: { label: string; body: string }) {
-  return (
-    <div className="group relative mt-6 inline-block">
-      <button
-        type="button"
-        aria-describedby="co2-method"
-        className="inline-flex items-center gap-2 rounded text-sm font-bold text-brand-text underline decoration-2 underline-offset-4"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="size-4 shrink-0"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 11v5M12 8h.01" />
-        </svg>
-        {label}
-      </button>
-      <p
-        id="co2-method"
-        role="tooltip"
-        className="invisible absolute bottom-full left-0 z-10 mb-3 w-80 max-w-[calc(100vw-4rem)] rounded-lg bg-raised p-4 text-sm text-ink opacity-0 shadow-panel transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
-      >
-        {body}
-      </p>
-    </div>
   );
 }
