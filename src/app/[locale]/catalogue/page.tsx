@@ -14,6 +14,7 @@ import {
   brandsIn,
   buildCatalogue,
   catalogueSorts,
+  DEFAULT_SORT,
   conditionFilters,
   parseCatalogueFilters,
   type CatalogueEntry,
@@ -34,7 +35,7 @@ const NO_FILTERS: CatalogueFilters = {
   category: null,
   condition: null,
   make: null,
-  sort: 'default',
+  sort: DEFAULT_SORT,
 };
 
 /** The plain monthly price a card shows: with the down payment it needs, or none at all. */
@@ -49,7 +50,7 @@ function catalogueHref(locale: Locale, filters: CatalogueFilters): string {
   if (filters.category) query.set('category', filters.category);
   if (filters.condition) query.set('condition', filters.condition);
   if (filters.category && filters.make) query.set('brand', filters.make);
-  if (filters.sort !== 'default') query.set('sort', filters.sort);
+  if (filters.sort !== DEFAULT_SORT) query.set('sort', filters.sort);
   const text = query.toString();
   return `/${locale}/catalogue${text ? `?${text}` : ''}`;
 }
@@ -104,7 +105,8 @@ export default async function CataloguePage({
       unavailableUnits(entries, { ...NO_FILTERS, category: c.key }).length,
   }));
   const brands = filters.category ? brandsIn(entries, filters.category) : [];
-  const refined = filters.condition !== null || filters.make !== null || filters.sort !== 'default';
+  const refined =
+    filters.condition !== null || filters.make !== null || filters.sort !== DEFAULT_SORT;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">

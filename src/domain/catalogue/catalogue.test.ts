@@ -3,6 +3,7 @@ import type { Asset } from '@/data/schemas';
 import {
   brandsIn,
   buildCatalogue,
+  DEFAULT_SORT,
   isListed,
   isUsed,
   modelVersions,
@@ -33,7 +34,7 @@ const entry = (a: Asset, monthlyCents: number | null): CatalogueEntry => ({
   monthlyCents,
 });
 
-const ALL: CatalogueFilters = { category: null, condition: null, make: null, sort: 'default' };
+const ALL: CatalogueFilters = { category: null, condition: null, make: null, sort: 'price_asc' };
 
 // The pack's shapes: two identical new Trail 500s, an Urban 1 new and on its third life,
 // a laptop, a reserved bike and a leased one.
@@ -90,9 +91,9 @@ describe('isListed and isUsed', () => {
 });
 
 describe('buildCatalogue', () => {
-  it('stacks the units of one model into one group, in the order the models first appear', () => {
+  it('stacks the units of one model into one group, lowest price first by default', () => {
     const groups = buildCatalogue(entries, ALL);
-    expect(groups.map((g) => g.model)).toEqual(['Urban 1', 'Trail 500', 'Air 13', 'Kids 20']);
+    expect(groups.map((g) => g.model)).toEqual(['Air 13', 'Urban 1', 'Trail 500', 'Kids 20']);
   });
 
   it('leaves out the reserved and the leased bikes (trap: reserved items)', () => {
@@ -102,7 +103,7 @@ describe('buildCatalogue', () => {
   });
 
   it('gives a model with a new and a used unit two versions, new first, and its price range', () => {
-    const urban = buildCatalogue(entries, ALL)[0]!;
+    const urban = buildCatalogue(entries, ALL).find((g) => g.model === 'Urban 1')!;
     expect(urban.versions.map((v) => v.asset.id)).toEqual(['ebike-001', 'ebike-008']);
     expect(urban).toMatchObject({
       count: 2,
@@ -114,7 +115,7 @@ describe('buildCatalogue', () => {
   });
 
   it('folds identical units into one version that counts them', () => {
-    const trail = buildCatalogue(entries, ALL)[1]!;
+    const trail = buildCatalogue(entries, ALL).find((g) => g.model === 'Trail 500')!;
     expect(trail.versions).toHaveLength(1);
     expect(trail.versions[0]!.assetIds).toEqual(['ebike-003', 'ebike-012']);
     expect(trail.count).toBe(2);
@@ -137,7 +138,7 @@ describe('buildCatalogue', () => {
     expect(used.map((g) => g.model)).toEqual(['Urban 1']);
     expect(used[0]).toMatchObject({ count: 1, hasNew: false, minMonthlyCents: 6_463 });
     const fresh = buildCatalogue(entries, { ...ALL, condition: 'new' });
-    expect(fresh[0]).toMatchObject({ model: 'Urban 1', count: 1, hasUsed: false });
+    expect(fresh.find((g) => g.model === 'Urban 1')).toMatchObject({ count: 1, hasUsed: false });
   });
 
   it('filters by brand only inside a category', () => {
@@ -152,6 +153,12 @@ describe('buildCatalogue', () => {
     expect(up).toEqual(['Air 13', 'Urban 1', 'Trail 500', 'Kids 20']);
     const down = buildCatalogue(entries, { ...ALL, sort: 'price_desc' }).map((g) => g.model);
     expect(down).toEqual(['Trail 500', 'Urban 1', 'Air 13', 'Kids 20']);
+  });
+
+  it('sorts lowest price first when the URL names no sort', () => {
+    expect(parseCatalogueFilters({}).sort).toBe(DEFAULT_SORT);
+    expect(DEFAULT_SORT).toBe('price_asc');
+    expect(parseCatalogueFilters({ sort: 'default' }).sort).toBe('price_asc');
   });
 
   it('gives an empty list for no entries', () => {

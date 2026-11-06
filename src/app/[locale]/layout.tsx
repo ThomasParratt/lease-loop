@@ -80,7 +80,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               </Link>
               <p className="mt-2 max-w-sm opacity-90">{t('brand.tagline')}</p>
             </div>
-            <p className="max-w-sm text-sm opacity-80">{t('footer.note')}</p>
+            <div className="flex max-w-sm flex-col items-start gap-4">
+              <Link
+                href={`/${locale}/catalogue`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-raised px-5 font-bold text-brand-text transition-colors hover:bg-brand-soft"
+              >
+                {t('home.cta.catalogue')} <span aria-hidden="true">→</span>
+              </Link>
+              <p className="text-sm opacity-80">{t('footer.note')}</p>
+            </div>
           </div>
         </footer>
       </body>

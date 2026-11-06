@@ -12,6 +12,15 @@ import { readFleetImpact } from '@/server/asset-events';
 import { db } from '@/server/db';
 import { InfoPopover } from './ui';
 
+/** The method, one step per bullet. */
+const CO2_POINTS = [
+  'impact.how.points.1',
+  'impact.how.points.2',
+  'impact.how.points.3',
+  'impact.how.points.4',
+] as const;
+const MONEY_POINTS = ['impact.how.money.1', 'impact.how.money.2'] as const;
+
 type ImpactStripProps = { today: string; locale: Locale; t: Translate };
 
 export async function ImpactStrip({ today, locale, t }: ImpactStripProps) {
@@ -62,12 +71,19 @@ export async function ImpactStrip({ today, locale, t }: ImpactStripProps) {
             ))}
           </ul>
           <InfoPopover id="co2-method" label={t('impact.how.label')} className="mt-6">
-            <p>
-              {t('impact.how.body', {
-                share,
-              })}
-            </p>
-            <p>{t('impact.how.money')}</p>
+            <p className="font-bold">{t('impact.how.co2Heading')}</p>
+            <ul className="list-disc space-y-1 pl-5">
+              {CO2_POINTS.map((key) => (
+                <li key={key}>{t(key, { share })}</li>
+              ))}
+            </ul>
+            <p className="font-bold">{t('impact.how.moneyHeading')}</p>
+            <ul className="list-disc space-y-1 pl-5">
+              {MONEY_POINTS.map((key) => (
+                <li key={key}>{t(key)}</li>
+              ))}
+            </ul>
+            <p className="text-ink-muted">{t('impact.how.passport')}</p>
           </InfoPopover>
         </div>
       </div>
