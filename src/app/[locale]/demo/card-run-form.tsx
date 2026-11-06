@@ -5,7 +5,7 @@
 // took (codes written from the message files) and links the page where the numbers are compared.
 // A second click is refused by the server and links what the first run made (D70).
 import { useRouter } from 'next/navigation';
-import { useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { Button, LinkButton, Notice } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
@@ -45,8 +45,12 @@ export function CardRunForm({ cardId, locale }: { cardId: number; locale: Locale
   const t = getT(locale);
   const [pending, setPending] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // Two clicks in one frame both fire before `pending` disables the button (review finding 13).
+  const running = useRef(false);
 
   async function run() {
+    if (running.current) return;
+    running.current = true;
     setPending(true);
     try {
       setOutcome(await runCard(cardId));
@@ -55,6 +59,7 @@ export function CardRunForm({ cardId, locale }: { cardId: number; locale: Locale
     } catch {
       setOutcome({ kind: 'error' });
     } finally {
+      running.current = false;
       setPending(false);
     }
   }

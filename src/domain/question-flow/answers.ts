@@ -22,6 +22,21 @@ export function parseEurosToCents(input: string): number | null {
 }
 
 /**
+ * Cents as an amount to edit: whole euros ("3200"), or with the cents after `decimalMark`
+ * ("3200.50" in English, "3200,50" in Finnish, Swedish and Estonian). No grouping, so
+ * `parseEurosToCents` reads back exactly what it shows. One formatter for the question flow
+ * and the price page (review finding 14: the flow wrote "," in English too).
+ */
+export function centsToEuroInput(cents: number, decimalMark: '.' | ','): string {
+  if (!Number.isSafeInteger(cents) || cents < 0) {
+    throw new RangeError(`cents must be a whole number ≥ 0, got ${cents}`);
+  }
+  const euros = Math.floor(cents / 100);
+  const rest = cents % 100;
+  return rest === 0 ? String(euros) : `${euros}${decimalMark}${String(rest).padStart(2, '0')}`;
+}
+
+/**
  * Whether an answer has the shape its question type needs. Choice: one of the options;
  * date: an ISO day; money: integer cents as digits; email: something@something; list: at
  * least one non-blank item; text: not blank. The business-id check digit is an eligibility
@@ -132,6 +147,12 @@ export type InputFromAnswers = {
   recordMismatches?: readonly string[];
   /** The quote's quantity, for the consumer cap. */
   quantity?: number;
+  /**
+   * The customer record's country: residency is checked on it when the flow did not ask (only
+   * people are asked), so a company on record outside FI, SE and EE is refused too (review
+   * finding 12). An answered country wins.
+   */
+  recordCountry?: string;
   /** The team's consumer limits; without them the consumer caps are not applied. */
   consumerLimits?: ConsumerLimits;
 };
@@ -144,7 +165,7 @@ export function eligibilityInputFromAnswers(args: InputFromAnswers): Eligibility
     customerType: text(answers.q_customer_type) ?? context.customerType,
     startDate: args.startDate,
     birthDate: text(answers.q_birth_date),
-    country: text(answers.q_country),
+    country: text(answers.q_country) ?? args.recordCountry,
     monthlyNetIncomeCents: cents(answers.q_monthly_income),
     grossMonthlyRentCents: args.grossMonthlyRentCents,
     businessId: text(answers.q_business_id),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatIsoDate, formatNumber, formatTimestamp } from './format';
 import { getT, type MessageKey } from './get-t';
-import { defaultLocale, isLocale, locales } from './locales';
+import { defaultLocale, isLocale, localeHref, locales } from './locales';
 
 const plain = (text: string) => text.replace(/\s/g, ' ');
 
@@ -16,6 +16,22 @@ describe('isLocale', () => {
     expect(isLocale('EN')).toBe(false);
     expect(isLocale('fi-FI')).toBe(false);
     expect(isLocale('')).toBe(false);
+  });
+});
+
+describe('localeHref (review finding 14)', () => {
+  it('swaps the language and keeps the path and the query', () => {
+    expect(localeHref('/fi/assets/ebike-003', 'en', '?quote=q-1&down=1000')).toBe(
+      '/en/assets/ebike-003?quote=q-1&down=1000'
+    );
+    expect(localeHref('/fi/catalogue', 'sv', 'category=e_bike')).toBe(
+      '/sv/catalogue?category=e_bike'
+    );
+  });
+
+  it('the home page, and no query or a bare ?', () => {
+    expect(localeHref('/fi', 'et')).toBe('/et');
+    expect(localeHref('/fi/catalogue', 'en', '?')).toBe('/en/catalogue');
   });
 });
 

@@ -312,6 +312,17 @@ describe('createApplication', () => {
     expect(await db.application.count()).toBe(0);
   });
 
+  it('a company on record outside FI, SE and EE is rejected on residency (review finding 12)', async () => {
+    await db.customer.update({ where: { id: 'cust-norvi' }, data: { country: 'DE' } });
+    const result = await apply(await card6(), 'cust-norvi');
+    expect(result.ok && result.application).toMatchObject({
+      decision: 'rejected',
+      reasons: expect.arrayContaining([
+        { code: 'residency_not_allowed', params: { country: 'DE' } },
+      ]),
+    });
+  });
+
   it('unknown quote, unknown customer and an expired quote', async () => {
     expect(await apply('nope', 'cust-aino')).toEqual({ ok: false, reason: 'quote_not_found' });
     const quoteId = await card1();

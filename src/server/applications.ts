@@ -236,6 +236,7 @@ export async function createApplication(
       knownPep: customerIsPep,
       recordMismatches: recordMismatches(found.customer, answers),
       quantity: found.quote.quantity,
+      recordCountry: found.customer.country,
       consumerLimits,
     })
   );
