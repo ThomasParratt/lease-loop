@@ -1,6 +1,5 @@
 // The passport: an item's lives as a timeline (the past lives the data pack counts, then the
-// event log), what happened between them, and the CO2 and money each later life saved (decisions
-// D15, D80).
+// event log), what happened between them, and the CO2 each later life saved (decision D15).
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -16,12 +15,11 @@ import {
   PageHeader,
 } from '@/components/ui';
 import { loadCo2Factors } from '@/data/load';
-import { formatEuro } from '@/domain/money';
 import type { PassportEvent } from '@/domain/passport';
 import { DESIGN_LIFE_MONTHS } from '@/domain/second-life/co2';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
-import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
+import { isLocale, type Locale } from '@/i18n/locales';
 import { readPassport } from '@/server/asset-events';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
@@ -74,9 +72,8 @@ export default async function PassportPage({
   const today = await todayForRequest();
   const [result, factors] = await Promise.all([readPassport(db, id, today), loadCo2Factors()]);
   if (!result) notFound();
-  const { asset, passport, co2, money } = result;
+  const { asset, passport, co2 } = result;
   const kg = (value: number) => formatNumber(value, locale);
-  const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   // A leased item's open life counts only its months so far: the total at the end of the
   // current lease is the same read on the contract's last day.
   const open = passport.lives.at(-1);
@@ -122,18 +119,6 @@ export default async function PassportPage({
               })}
             </p>
           ) : null}
-          <p className="mt-4 font-bold text-success-ink">{t('passport.moneyTotal')}</p>
-          <p className="mt-1 font-heading text-3xl font-semibold text-brand-text tabular-nums">
-            {euro(money.totalCents)}
-          </p>
-          {lease && atLeaseEnd && atLeaseEnd.money.totalCents !== money.totalCents ? (
-            <p className="mt-1 text-sm text-ink-muted">
-              {t('passport.moneyAtLeaseEnd', {
-                amount: euro(atLeaseEnd.money.totalCents),
-                date: formatIsoDate(lease.endDate, locale),
-              })}
-            </p>
-          ) : null}
           {/* The method, as on the landing page: on hover, not under everything else. */}
           <InfoPopover id="co2-method" label={t('impact.how.label')} className="mt-4">
             <p>
@@ -143,12 +128,7 @@ export default async function PassportPage({
                 designLife: DESIGN_LIFE_MONTHS[asset.category],
               })}
             </p>
-            <p>
-              {t('passport.moneyMethod', {
-                share: formatNumber(Math.round(factors.refurbishment_share_of_new * 100), locale),
-                designLife: DESIGN_LIFE_MONTHS[asset.category],
-              })}
-            </p>
+            <p className="text-ink-muted">{t('passport.noMoney')}</p>
           </InfoPopover>
         </div>
       </div>
@@ -169,7 +149,6 @@ export default async function PassportPage({
             />
             {passport.lives.map((life) => {
               const saved = co2.perLifeKg[life.index] ?? 0;
-              const savedCents = money.perLifeCents[life.index] ?? 0;
               const months =
                 life.months === null
                   ? null
@@ -225,7 +204,7 @@ export default async function PassportPage({
                     <p className="mt-3 border-t border-line pt-3 text-sm font-medium">
                       {life.index === 0
                         ? t('passport.co2FirstLife')
-                        : t('passport.savedLife', { kg: kg(saved), amount: euro(savedCents) })}
+                        : t('passport.co2Life', { kg: kg(saved) })}
                     </p>
                   </Card>
                 </li>,

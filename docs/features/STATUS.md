@@ -65,4 +65,4 @@ One row per feature of the plan (`docs/kickoff-brief.md` sections 4 and 9), kept
 | 4   | The smart question flow     | verified (cards 5, 6, 7)                                                                                                                                                   |
 | 5   | Money that adds up          | verified (property tests, the quote total equals the invoice sum)                                                                                                          |
 | 6   | Explain my price            | verified (the breakdown and the term comparison)                                                                                                                           |
-| 7   | Circular impact             | verified (CO₂ and money saved by one method, D15 and D80; passport and fleet counter; card 10 end to end; `money-saved.test.ts`, `asset-events.test.ts`)                   |
+| 7   | Circular impact             | done for CO₂ (method, passport, fleet counter, card 10 end to end and from the demo page); money saved missing, issue #40                                                  |
