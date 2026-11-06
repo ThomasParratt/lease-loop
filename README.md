@@ -103,6 +103,7 @@ One page per slice under `docs/features/` ([template](docs/features/README.md));
 - [Row schemas](docs/features/row-schemas.md)
 - [The look: tokens, the price tag, life stamps and drawings](docs/features/look.md)
 - [The tamper-evident audit chain](docs/features/audit-chain.md)
+- [Company signatories and the signing link](docs/features/signatories.md)
 - [Test isolation](docs/features/test-isolation.md)
 - [My leases](docs/features/my-leases.md)
 

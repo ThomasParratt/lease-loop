@@ -29,6 +29,7 @@ const QUOTE_REFUSALS = [
   'below_minimum',
   'above_maximum',
   'no_vat_rate_on_date',
+  'term_over_category_max', // D43, the longest term per category (#33)
 ];
 
 const dictionaries = { en, fi, sv, et } as Record<string, Record<string, string>>;

@@ -6,12 +6,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
-import { createTestDb } from '../../tests/helpers/test-db';
 import { resetDb } from '../../tests/helpers/reset-db';
+import { createTestDb } from '../../tests/helpers/test-db';
 import { createApplication, decideApplication, getApplication } from './applications';
 import { seedAssets } from './assets';
 import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
+import { decideByToken } from './signatories';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -92,17 +93,26 @@ const sign = (
   decision: 'approved' | 'rejected' = 'approved'
 ) => decideApplication(db, { id, decision, reviewedBy, today: TODAY, actor });
 
+/** The signatory answers through the link sent for the case (D46): the only way to sign. */
+async function byLink(applicationId: string, action: 'sign' | 'decline' = 'sign') {
+  const request = await db.signatureRequest.findFirstOrThrow({
+    where: { application_id: applicationId },
+    orderBy: { sent_on: 'desc' },
+  });
+  return decideByToken(db, { token: request.token, action, today: TODAY });
+}
+
 const nothingWritten = async () => {
   expect(await db.application.count()).toBe(0);
   expect(await db.auditLog.count()).toBe(0);
 };
 
 describe('who applies (D40)', () => {
-  it('the admin applying as "admin" finds no such customer, and writes nothing', async () => {
+  it('the admin applying as "admin" without onBehalfOf is not the applicant, and writes nothing (D47)', async () => {
     expect(await apply(await card1(), 'admin', answersOf('cust-aino'), { actor: 'admin' })).toEqual(
       {
         ok: false,
-        reason: 'customer_not_found',
+        reason: 'not_applicant',
       }
     );
     await nothingWritten();
@@ -148,19 +158,20 @@ describe('who applies (D40)', () => {
   );
 });
 
-describe('the signatory (D39)', () => {
+describe('the signatory (D39, D46)', () => {
   const SIGNATORY = 'signatory@norvi.example.com';
 
   it('declining is final: the signatory cannot sign afterwards, nor decline again', async () => {
     const created = await apply(await insertQuote(), 'cust-norvi');
     if (!created.ok) throw new Error('setup');
-    const declined = await sign(created.application.id, SIGNATORY, 'cust-norvi', 'rejected');
+    const declined = await byLink(created.application.id, 'decline');
     expect(declined.ok && declined.application.decision).toBe('rejected');
-    expect(await sign(created.application.id, SIGNATORY, 'cust-norvi')).toEqual({
+    expect(await byLink(created.application.id)).toEqual({ ok: false, reason: 'already_used' });
+    expect(await byLink(created.application.id, 'decline')).toEqual({
       ok: false,
-      reason: 'not_pending',
+      reason: 'already_used',
     });
-    expect(await sign(created.application.id, SIGNATORY, 'cust-norvi', 'rejected')).toEqual({
+    expect(await sign(created.application.id, SIGNATORY, 'cust-norvi')).toEqual({
       ok: false,
       reason: 'not_pending',
     });
@@ -170,26 +181,38 @@ describe('the signatory (D39)', () => {
   it('signing twice: the second signature changes nothing and writes no second audit row', async () => {
     const created = await apply(await insertQuote(), 'cust-norvi');
     if (!created.ok) throw new Error('setup');
-    expect((await sign(created.application.id, SIGNATORY, 'cust-norvi')).ok).toBe(true);
-    expect(await sign(created.application.id, SIGNATORY, 'cust-norvi')).toEqual({
-      ok: false,
-      reason: 'not_pending',
-    });
+    expect((await byLink(created.application.id)).ok).toBe(true);
+    expect(await byLink(created.application.id)).toEqual({ ok: false, reason: 'already_used' });
     expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(1);
     const stored = await getApplication(db, created.application.id);
     expect(stored?.reasons.filter((r) => r.code === 'signatory_decided')).toHaveLength(1);
   });
 
   it('the named e-mail in another case or with spaces around it is the same signatory', async () => {
+    const first = await apply(await insertQuote(), 'cust-norvi');
+    const second = await apply(await insertQuote(), 'cust-norvi', {
+      ...answersOf('cust-norvi'),
+      q_signatory_email: '  SIGNATORY@Norvi.example.com ',
+    });
+    if (!first.ok || !second.ok) throw new Error('setup');
+    const signed = await byLink(second.application.id);
+    expect(signed.ok && signed.application.decision).toBe('approved');
+    expect(signed.ok && signed.application.reviewedBy).toBe(SIGNATORY); // stored trimmed, lower case
+    const signatories = await db.companySignatory.findMany({
+      where: { customer_id: 'cust-norvi' },
+    });
+    expect(signatories.map((row) => row.email)).toEqual([SIGNATORY]);
+  });
+
+  it('nobody signs on the decision page, not the company account, the admin or anonymous', async () => {
     const created = await apply(await insertQuote(), 'cust-norvi');
     if (!created.ok) throw new Error('setup');
-    const signed = await sign(
-      created.application.id,
-      '  SIGNATORY@Norvi.example.com ',
-      'cust-norvi'
-    );
-    expect(signed.ok && signed.application.decision).toBe('approved');
-    expect(signed.ok && signed.application.reviewedBy).toBe('SIGNATORY@Norvi.example.com'); // trimmed, case kept
+    for (const actor of ['cust-norvi', 'admin']) {
+      expect(await sign(created.application.id, SIGNATORY, actor), actor).toEqual({
+        ok: false,
+        reason: 'not_signatory',
+      });
+    }
   });
 
   it('anonymous cannot sign, even with the right e-mail', async () => {
@@ -255,7 +278,7 @@ describe('a case that is held, reviewed and signed keeps every reason in order',
       actor: 'admin',
     });
     expect(reviewed.ok && reviewed.application.decision).toBe('awaiting_signatory');
-    const signed = await sign(created.application.id, 'jussi@haapala.example.com', 'cust-haapala');
+    const signed = await byLink(created.application.id);
     expect(signed.ok && signed.application.decision).toBe('approved');
     expect(signed.ok && signed.application.reasons.map((r) => r.code)).toEqual([
       'pep',

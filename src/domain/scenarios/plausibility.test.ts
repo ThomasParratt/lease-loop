@@ -139,8 +139,22 @@ describe('term', () => {
 describe('affordability: gross rent × 100 ≤ net income × 30', () => {
   // card 1: ebike-003, 36 months, 10 730 net → 13 466 gross; the income that just carries it
   // is ceil(13 466 × 100 / 30) = 44 887
+  // The record carries the same income: an income other than the record holds the case for a
+  // person (D38), so the rule under test is reached only with a record that agrees.
   const withIncome = (q_monthly_income: string, deal = bikes(1)) =>
-    applyFor(aino, deal, { answers: { q_monthly_income } });
+    applyFor(
+      /^\d+$/.test(q_monthly_income)
+        ? ({ ...aino, monthly_net_income_cents: Number(q_monthly_income) } as typeof aino)
+        : aino,
+      deal,
+      { answers: { q_monthly_income } }
+    );
+
+  it('D38: an income other than the record is held for a person, never approved', () => {
+    expect(
+      outcome(applyFor(aino, bikes(1), { answers: { q_monthly_income: '9999999999999' } }))
+    ).toBe('manual_review:answer_differs_from_record');
+  });
 
   it('an income of 44 887 passes exactly; 44 886 is one cent short', () => {
     expect(outcome(withIncome('44887'))).toBe('approved:all_checks_passed');

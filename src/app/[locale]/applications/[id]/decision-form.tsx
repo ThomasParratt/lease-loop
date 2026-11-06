@@ -1,22 +1,20 @@
 'use client';
 
-// Approve or reject a pending application: POST /api/applications/:id/decision, then re-render.
+// The admin approves or rejects a manual review: POST /api/applications/:id/decision, then
+// re-render. A case waiting for the signatory is signed through the signing link (D46).
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Button, Field, Notice, inputClasses } from '@/components/ui';
+import { Button, Notice } from '@/components/ui';
 
 type DecisionFormProps = {
   applicationId: string;
-  /** Who decides. Editable when `askWho` is given: the signatory names themself. */
+  /** Who decides: the admin. */
   reviewer: string;
-  askWho?: string;
-  /** `forbidden` is shown when the server answers 403 (D39: not the named signatory). */
-  labels: { approve: string; reject: string; error: string; forbidden?: string };
+  labels: { approve: string; reject: string; error: string };
 };
 
-export function DecisionForm({ applicationId, reviewer, askWho, labels }: DecisionFormProps) {
+export function DecisionForm({ applicationId, reviewer, labels }: DecisionFormProps) {
   const router = useRouter();
-  const [who, setWho] = useState(reviewer);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
@@ -27,12 +25,8 @@ export function DecisionForm({ applicationId, reviewer, askWho, labels }: Decisi
       const response = await fetch(`/api/applications/${applicationId}/decision`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ decision, reviewedBy: who }),
+        body: JSON.stringify({ decision, reviewedBy: reviewer }),
       });
-      if (response.status === 403 && labels.forbidden) {
-        setFailed(labels.forbidden);
-        return;
-      }
       if (!response.ok) throw new Error(`status ${response.status}`);
       router.refresh();
     } catch {
@@ -42,21 +36,9 @@ export function DecisionForm({ applicationId, reviewer, askWho, labels }: Decisi
     }
   }
 
-  const blocked = pending !== null || who.trim() === '';
+  const blocked = pending !== null;
   return (
     <div className="space-y-4">
-      {askWho ? (
-        <Field id="decision-who" label={askWho}>
-          {(control) => (
-            <input
-              {...control}
-              value={who}
-              onChange={(e) => setWho(e.target.value)}
-              className={inputClasses}
-            />
-          )}
-        </Field>
-      ) : null}
       {failed ? (
         <Notice tone="error" live>
           {failed}

@@ -2,8 +2,8 @@
 // module is pointed at the test database and `next/headers` cookies at a map, nothing else
 // is replaced. Every refusal is a `fail()` envelope with a code; never a 500, never a stack.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createTestDb } from '../../../../tests/helpers/test-db';
 import { resetDb } from '../../../../tests/helpers/reset-db';
+import { createTestDb } from '../../../../tests/helpers/test-db';
 import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
@@ -35,6 +35,7 @@ vi.mock('next/headers', () => ({
 const { POST: create } = await import('./route');
 const { GET: read } = await import('./[id]/route');
 const { POST: decide } = await import('./[id]/decision/route');
+const signRoute = await import('../sign/[token]/route');
 
 let cleanup: () => Promise<void>;
 let customers: Customer[];
@@ -246,7 +247,12 @@ describe('POST /api/applications', () => {
     );
     actAs('admin');
     expectRefusal(
-      await post({ quoteId: await insertQuote(), customerId: 'admin', answers: {} }),
+      await post({
+        quoteId: await insertQuote(),
+        customerId: 'admin',
+        onBehalfOf: 'admin',
+        answers: {},
+      }),
       404,
       'CUSTOMER_NOT_FOUND'
     );
@@ -331,7 +337,7 @@ describe('POST /api/applications/[id]/decision', () => {
     );
   });
 
-  it('awaiting the signatory: the admin, another customer and a wrong name are 403 NOT_SIGNATORY', async () => {
+  it('awaiting the signatory: nobody signs on the decision page, 403 NOT_SIGNATORY; the link signs (D46)', async () => {
     const id = await pending('cust-norvi', {
       ...answersOf('cust-norvi'),
       q_customer_type: 'company',
@@ -340,6 +346,7 @@ describe('POST /api/applications/[id]/decision', () => {
       ['admin', 'signatory@norvi.example.com'],
       ['cust-aino', 'signatory@norvi.example.com'],
       ['cust-norvi', 'fleet@norvi.example.com'],
+      ['cust-norvi', 'Signatory@norvi.example.com'],
       [undefined, 'signatory@norvi.example.com'],
     ];
     for (const [actor, reviewedBy] of attempts) {
@@ -350,12 +357,28 @@ describe('POST /api/applications/[id]/decision', () => {
         'NOT_SIGNATORY'
       );
     }
-    actAs('cust-norvi');
-    const signed = await postDecision(id, {
-      decision: 'approved',
-      reviewedBy: 'Signatory@norvi.example.com',
+    const { token } = await holder.db.signatureRequest.findFirstOrThrow({
+      where: { application_id: id },
     });
+    const context = { params: Promise.resolve({ token }) };
+    const state = await signRoute.GET(new Request('http://test/api/sign'), context);
+    expect(state.status).toBe(200);
+    const signed = await signRoute.POST(json({ action: 'sign' }), context);
     expect(signed.status).toBe(200);
-    expect(signed.body.data?.decision).toBe('approved');
+    expect(((await signed.json()) as Envelope).data?.decision).toBe('approved');
+    const again = await signRoute.POST(json({ action: 'decline' }), context);
+    expectRefusal(
+      { status: again.status, body: (await again.json()) as Envelope },
+      409,
+      'SIGNING_LINK_USED'
+    );
+    const unknown = await signRoute.POST(json({ action: 'sign' }), {
+      params: Promise.resolve({ token: 'x'.repeat(32) }),
+    });
+    expectRefusal(
+      { status: unknown.status, body: (await unknown.json()) as Envelope },
+      404,
+      'SIGNING_LINK_NOT_FOUND'
+    );
   });
 });

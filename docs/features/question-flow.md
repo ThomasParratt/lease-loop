@@ -54,7 +54,7 @@ The request body is parsed before anything is read (`createApplicationBodySchema
 
 ### Answers against the customer record (D38, D40)
 
-The applicant is a customer we know, and only that customer applies in their own name: the `customerId` of `POST /api/applications` must be the actor (D17), else 403 `NOT_APPLICANT` (D40). Without it, Mikko could send Aino's id with her answers and be approved in her name. `recordMismatches` compares five answers with the record: customer type, birth date, country (a country outside FI, SE, EE on record is answered "other"), business id (spaces ignored) and, for a company, whether the applicant may sign (`applicant_can_sign`: card 6's coordinator answering "yes" would otherwise be approved and sign the contract himself). A difference is not refused, but the case is never approved by a rule: it goes to `manual_review` with `answer_differs_from_record { question }` for each, after `pep`; the decision page names the question in the visitor's language. A failed rule still rejects first.
+The applicant is a customer we know, and only that customer applies in their own name: the `customerId` of `POST /api/applications` must be the actor (D17), else 403 `NOT_APPLICANT` (D40); the admin applies for a customer only with `onBehalfOf` naming them, which the audit records (D47). Without it, Mikko could send Aino's id with her answers and be approved in her name. `recordMismatches` compares eight answers with the record: customer type, birth date, e-mail (case ignored), country (a country outside FI, SE, EE on record is answered "other"), monthly net income, business id (spaces ignored), whether the applicant may sign (`applicant_can_sign`: card 6's coordinator answering "yes" would otherwise be approved and sign the contract himself) and annual revenue; amounts compare as cents, so `0320000` is Aino's 320 000. Aino typing 5 000 000 a month for the farm machine of card 7 is held, not approved (review finding 4). A difference is not refused, but the case is never approved by a rule: it goes to `manual_review` with `answer_differs_from_record { question }` for each, after `pep`; the decision page names the question in the visitor's language. A failed rule still rejects first.
 
 **The trap**: Mikko (`cust-mikko`, a consumer born 2009-03-10) answers "Who is leasing?" with **company** and a valid business id. The age question is not asked any more, so the rules alone would approve him; with the record check he goes to `manual_review` with `answer_differs_from_record { question: q_customer_type }`.
 
@@ -82,7 +82,7 @@ Order: any failed rule → `rejected`, with **every** failure listed; else PEP �
 
 At 36 and 48 months the age is the only reason; at 24 both reasons are listed. On 2027-03-10 the age rule passes, on 2027-03-09 it does not. Someone born on 29 February turns 18 on 1 March in a year without one.
 
-**Card 6**: Norvi answers can-sign **no**: `awaiting_signatory` with `signatory_needed { signatoryEmail }`. The named signatory signs (approved) or declines (rejected) on the decision page (D39): on Norvi's own account, giving `signatory@norvi.example.com`. Any other name, another customer, anonymous or the admin gets 403 `NOT_SIGNATORY` and nothing is written; the sign form is shown on the company's account only.
+**Card 6**: Norvi answers can-sign **no**: `awaiting_signatory` with `signatory_needed { signatoryEmail }`, and in the same transaction a signing link goes to `signatory@norvi.example.com` (D46, [signatories.md](signatories.md)). The signatory signs (approved) or declines (rejected) through that link only (D39); on the decision page everyone, Norvi's own account and the admin included, gets 403 `NOT_SIGNATORY` and nothing is written. The page shows the demo outbox with the link instead of a sign form.
 
 **Card 7**: Haapala's owner is a PEP: `manual_review` with `pep`, never approved by a rule. An admin decides on the decision page; the decision and the reviewer are kept as a `reviewed` reason. A PEP case that also needs a signatory goes to `awaiting_signatory` once the admin approves.
 
@@ -101,11 +101,13 @@ Typo Trading Oy (`cust-broken-id`) has **1234567-8**: 1·7 + 2·9 + 3·10 + 4·5
 ## Decisions
 
 - **D9** eligibility: the rules above, every check a code with params.
-- **D10** manual review and the signatory: the four statuses; the admin decides a manual review, the named signatory signs.
+- **D10** manual review and the signatory: the four statuses; the admin decides a manual review, the named signatory signs (through the link, D39 and D46).
 - **D37** birth dates from 120 years ago up to today; under 18 stays a reason.
 - **D38** an answer that differs from the customer record holds the case for a person.
-- **D39** only the named signatory signs, on the company's account; the applicant cannot name themself.
-- **D40** only the acting customer applies, in their own name.
+- **D39** (narrows D10) only the signing link signs an `awaiting_signatory` case; the applicant cannot name themself, answered or on record.
+- **D40** (narrows D17) only the acting customer applies, in their own name.
+- **D46** the company's signatory list and the signing link ([signatories.md](signatories.md)).
+- **D47** the admin applies on a customer's behalf with `onBehalfOf`, recorded in the audit.
 - Inside the slice (see `docs/log/wave1-questions.md`): `customer_type` follows the applicant's answer; a PEP known from the record counts below 10 000 EUR; affordability only where the bank asks for income; a failed rule always rejects.
 
 ## Pure functions
@@ -142,15 +144,17 @@ grossFromNetCents(netCents: number, vatRateBp: number): number;
 answersFromCustomer(customer: Customer): Record<string, Answer>;
 
 // record-check.ts
-recordMismatches(record: Customer, answers: Answers): string[]; // question ids, the bank's order (type, birth date, country, business id, can sign)
+recordMismatches(record: Customer, answers: Answers): string[]; // question ids, the bank's order (type, birth date, e-mail, country, income, business id, can sign, revenue)
 
 // signatory.ts
 sameEmail(a?: string, b?: string): boolean;
-mayDecideAsSignatory({ actor, applicantId, signatoryEmail, claimedBy }): boolean;
+sameEmail(a?: string, b?: string): boolean; // case and spaces ignored, blank is never the same
+whoDecides(decision): 'admin' | 'signing_link' | 'final'; // manual_review, awaiting_signatory, the rest
 
 // src/server/applications.ts
-createApplication(db, { quoteId, customerId, answers, today, actor }); // not_applicant unless actor = customerId (D40) // → { ok, application } | { ok: false, reason }
-decideApplication(db, { id, decision, reviewedBy, today, actor }); // not_signatory (D39)
+createApplication(db, { quoteId, customerId, answers, today, actor, onBehalfOf? }); // not_applicant unless actor = customerId, or admin with onBehalfOf = customerId (D40, D47); makes the signing link on awaiting_signatory // → { ok, application } | { ok: false, reason }
+decideApplication(db, { id, decision, reviewedBy, today, actor }); // the admin's review; awaiting_signatory → not_signatory for everyone (D39)
+recordSignatoryDecision(tx, { id, decision, by, today }); // inside decideByToken (signatories.md)
 getApplication(db, id): Promise<ApplicationView | null>;
 ```
 
@@ -177,7 +181,7 @@ getApplication(db, id): Promise<ApplicationView | null>;
 | Birth date range 1906-11-05 to 2026-11-05; 2030 and 1800 refused                                                                                         | `answers.test.ts` "birthDateRange", "answerProblem"; `applications.test.ts` "a birth date in the future …"                          |
 | Mikko answering "company" → `manual_review`, not approved                                                                                                | `record-check.test.ts`, `eligibility.test.ts` "answers that differ …"; `applications.test.ts` "card 5 Mikko answering …"            |
 | Mikko cannot apply in Aino's name; nor the admin or anonymous                                                                                            | `applications.test.ts` "card 5 Mikko cannot apply in Aino's name …"                                                                 |
-| Only the named signatory signs, on the company's account; not oneself                                                                                    | `signatory.test.ts`; `applications.test.ts` "card 6 cannot be signed by …", "cannot name themself …"                                |
+| Only the signing link signs; the company account and the admin get NOT_SIGNATORY; not oneself                                                            | `signatory.test.ts`; `applications.test.ts` "card 6 cannot be signed by …", "cannot name themself …"                                |
 | Two decisions at the same instant: one wins, the other writes nothing                                                                                    | `applications.test.ts` "two decisions at the same instant …"                                                                        |
 | Cards 5, 6, 7 and every customer × category on the data pack (scenario harness)                                                                          | `src/domain/scenarios/card-05-too-young.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `customers.test.ts` |
 | Birth dates at the edges: today, tomorrow, 1906-11-05 and the day before, 29 Feb → 1 Mar, the start day vs the quote day, one day off the record         | `src/domain/scenarios/answers-hardening.test.ts` "birth dates"                                                                      |
@@ -190,7 +194,7 @@ getApplication(db, id): Promise<ApplicationView | null>;
 
 ## Open questions
 
-- The signatory signs by giving the named e-mail on the company's account (no login, D17, D39); the actor is audited. Anyone at the company's account who knows that address can still sign: a real flow would e-mail the signatory a one-time link.
+- The signatory signs through the signing link (D46); no e-mail is sent in the demo, the decision page shows the link in a demo outbox. See [signatories.md](signatories.md) for what production replaces.
 - Quantity is not limited by customer type: a consumer can lease 20 e-bikes "for commuting" (with D8, issue #13).
 - Should a PEP below 10 000 EUR (not asked by the bank, known from the record) go to manual review? We say yes; the bank's targeting suggests the question only matters from 10 000 EUR.
 - Affordability uses the chosen term's gross rent; the page could suggest the shortest term that passes (Mikko's 36 months).

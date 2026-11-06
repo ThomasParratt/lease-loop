@@ -39,6 +39,12 @@ export type QuestionFlowLabels = {
   /** Raw, with {earliest} and {latest}. */
   birthDateRange: string;
   signatoryIsApplicant: string;
+  /** 403 NOT_APPLICANT: the actor is not the customer applying (D40). */
+  notApplicant: string;
+  /** 403 NOT_SIGNATORY: only the signing link signs (D46). */
+  notSignatory: string;
+  /** Raw, with {question} and {problem}: the server refused one answer (400 with a `problem`). */
+  answerRefused: string;
   pruned: string;
   moneyHint: string;
   listHint: string;
@@ -60,6 +66,12 @@ type QuestionFlowProps = {
   labels: QuestionFlowLabels;
   /** The acting customer's details from the data pack, for a quick demo. */
   prefill?: Record<string, Answer>;
+  /** The e-mail on the customer record: the applicant cannot name it as the signatory (D39). */
+  applicantEmail?: string;
+};
+
+type FailureBody = {
+  error?: { code?: string; details?: { questionId?: string; problem?: AnswerProblem } };
 };
 
 const REVIEW = 'review';
@@ -71,7 +83,7 @@ export function QuestionFlow(props: QuestionFlowProps) {
   const [cursor, setCursor] = useState<string>(() => nextQuestion(bank, context, {})?.id ?? REVIEW);
   const [removed, setRemoved] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -106,20 +118,39 @@ export function QuestionFlow(props: QuestionFlowProps) {
     setCursor(nextQuestion(bank, context, filled)?.id ?? REVIEW);
   }
 
+  /** The sentence for a refused submit: the code the server sent, else the generic error. */
+  function failureText(body: FailureBody): string {
+    const code = body.error?.code;
+    if (code === 'NOT_APPLICANT') return labels.notApplicant;
+    if (code === 'NOT_SIGNATORY') return labels.notSignatory;
+    const { questionId, problem } = body.error?.details ?? {};
+    if (problem && questionId) {
+      return labels.answerRefused
+        .replace('{question}', texts[questionId]?.text ?? questionId)
+        .replace('{problem}', problemText(problem, labels, props.locale));
+    }
+    return labels.error;
+  }
+
   async function submit() {
     setSending(true);
-    setFailed(false);
+    setFailed(null);
     try {
       const response = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ quoteId: props.quoteId, customerId: props.customerId, answers }),
       });
-      if (!response.ok) throw new Error(`status ${response.status}`);
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as FailureBody;
+        setFailed(failureText(body));
+        setSending(false);
+        return;
+      }
       const body = (await response.json()) as { data: { id: string } };
       router.push(`/${props.locale}/applications/${body.data.id}`);
     } catch {
-      setFailed(true);
+      setFailed(labels.error);
       setSending(false);
     }
   }
@@ -178,6 +209,7 @@ export function QuestionFlow(props: QuestionFlowProps) {
           options={props.options}
           initial={answers[question.id]}
           answers={answers}
+          applicantEmail={props.applicantEmail}
           today={props.today}
           locale={props.locale}
           labels={labels}
@@ -211,7 +243,7 @@ export function QuestionFlow(props: QuestionFlowProps) {
           </dl>
           {failed ? (
             <Notice tone="error" live className="mt-4">
-              {labels.error}
+              {failed}
             </Notice>
           ) : null}
           <div className="mt-6 flex flex-wrap gap-3">
@@ -257,6 +289,7 @@ type StepProps = {
   initial: Answer | undefined;
   /** The other answers so far, for the checks across answers (D39). */
   answers: Record<string, Answer>;
+  applicantEmail?: string;
   today: string;
   locale: Locale;
   labels: QuestionFlowLabels;
@@ -297,7 +330,11 @@ function QuestionStep(props: StepProps) {
         .map((line) => line.trim())
         .filter(Boolean);
     }
-    const problem = answerProblem(question, value, { today: props.today, answers: props.answers });
+    const problem = answerProblem(question, value, {
+      today: props.today,
+      answers: props.answers,
+      applicantEmail: props.applicantEmail,
+    });
     if (problem) return setError(problemText(problem, labels, props.locale));
     onSave(value);
   }

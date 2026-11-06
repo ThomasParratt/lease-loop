@@ -68,4 +68,49 @@ describe('recordMismatches (D38)', () => {
     // a consumer record has no business id
     expect(recordMismatches(customer('cust-aino'), { q_business_id: '0737546-2' })).toEqual([]);
   });
+  it('review finding 2, card 6: Norvi answering "yes, I can sign" differs from the record', () => {
+    const { q_signatory_email: _named, ...norvi } = answersFromCustomer(customer('cust-norvi'));
+    const answers = { ...norvi, q_can_sign: 'yes' };
+    expect(recordMismatches(customer('cust-norvi'), answers)).toEqual(['q_can_sign']);
+    // and a company that can sign, answering "no", is named too
+    const kettu = { ...answersFromCustomer(customer('cust-kettukoodi')), q_can_sign: 'no' };
+    expect(recordMismatches(customer('cust-kettukoodi'), kettu)).toEqual(['q_can_sign']);
+  });
+
+  it('review finding 4: an income other than the record is named; leading zeros are not', () => {
+    const aino = customer('cust-aino');
+    const answers = answersFromCustomer(aino);
+    expect(recordMismatches(aino, { ...answers, q_monthly_income: '0320000' })).toEqual([]);
+    expect(recordMismatches(aino, { ...answers, q_monthly_income: '900000' })).toEqual([
+      'q_monthly_income',
+    ]);
+  });
+
+  it('a company revenue other than the record is named', () => {
+    const kettu = customer('cust-kettukoodi');
+    const answers = { ...answersFromCustomer(kettu), q_annual_revenue: '999900000' };
+    expect(recordMismatches(kettu, answers)).toEqual(['q_annual_revenue']);
+  });
+
+  it('the applicant e-mail is compared with the record, case and spaces ignored', () => {
+    const norvi = customer('cust-norvi');
+    const answers = answersFromCustomer(norvi);
+    expect(recordMismatches(norvi, { ...answers, q_email: ' FLEET@norvi.example.com ' })).toEqual(
+      []
+    );
+    expect(recordMismatches(norvi, { ...answers, q_email: 'boss@norvi.example.com' })).toEqual([
+      'q_email',
+    ]);
+  });
+
+  it('every new field at once comes back in the bank order', () => {
+    const kettu = customer('cust-kettukoodi');
+    const answers = {
+      ...answersFromCustomer(kettu),
+      q_annual_revenue: '1',
+      q_can_sign: 'no',
+      q_email: 'x@example.com',
+    };
+    expect(recordMismatches(kettu, answers)).toEqual(['q_email', 'q_can_sign', 'q_annual_revenue']);
+  });
 });

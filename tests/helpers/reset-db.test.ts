@@ -21,6 +21,8 @@ afterAll(async () => {
 });
 
 const countAll = async () => ({
+  signatureRequest: await db.signatureRequest.count(),
+  companySignatory: await db.companySignatory.count(),
   returnAssessment: await db.returnAssessment.count(),
   invoice: await db.invoice.count(),
   assetEvent: await db.assetEvent.count(),

@@ -15,6 +15,7 @@ import {
 import { seedAssets } from './assets';
 import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
+import { decideByToken, seedSignatories } from './signatories';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -218,6 +219,94 @@ describe('createApplication', () => {
     expect(await db.auditLog.count()).toBe(0);
   });
 
+  it('review finding 3: the applicant cannot name the record e-mail, though another was typed', async () => {
+    const answers = {
+      ...answersOf('cust-norvi'),
+      q_email: 'fleet@norvi.example.com',
+      q_signatory_email: ' Fleet@Norvi.example.com',
+    };
+    expect(await apply(await card6(), 'cust-norvi', answers)).toMatchObject({
+      ok: false,
+      reason: 'invalid_answer',
+      problem: { code: 'signatory_is_applicant' },
+    });
+  });
+
+  it.each([
+    ['cust-norvi', 'q_can_sign', 'yes'],
+    ['cust-aino', 'q_monthly_income', '900000'],
+    ['cust-kettukoodi', 'q_annual_revenue', '999900000'],
+    ['cust-aino', 'q_email', 'someone.else@example.com'],
+  ])(
+    'D38: %s answering %s other than the record is held for a person',
+    async (id, question, value) => {
+      // revenue is asked from 50 000 EUR financed: the farm machine of card 7
+      const quote =
+        id === 'cust-norvi'
+          ? await card6()
+          : question === 'q_annual_revenue'
+            ? await card7()
+            : await card1();
+      const { q_signatory_email: _named, ...own } = answersOf(id);
+      const answers = { ...(question === 'q_can_sign' ? own : answersOf(id)), [question]: value };
+      const result = await apply(quote, id, answers);
+      expect(result.ok && result.application).toMatchObject({
+        decision: 'manual_review',
+        reasons: [{ code: 'answer_differs_from_record', params: { question } }],
+      });
+    }
+  );
+
+  it('review finding 4: Aino on farm-002 typing a bigger income goes to manual review, not approved', async () => {
+    const quoteId = await card7();
+    const honest = await apply(quoteId, 'cust-aino');
+    expect(honest.ok && honest.application.decision).toBe('rejected');
+    const inflated = await apply(quoteId, 'cust-aino', {
+      ...answersOf('cust-aino'),
+      q_monthly_income: '5000000',
+    });
+    expect(inflated.ok && inflated.application.decision).not.toBe('approved');
+    expect(inflated.ok && inflated.application.reasons).toContainEqual({
+      code: 'answer_differs_from_record',
+      params: { question: 'q_monthly_income' },
+    });
+  });
+
+  it('D47: the admin applies for Aino with onBehalfOf, and the audit says so', async () => {
+    const result = await createApplication(db, {
+      quoteId: await card1(),
+      customerId: 'cust-aino',
+      answers: answersOf('cust-aino'),
+      today: TODAY,
+      actor: 'admin',
+      onBehalfOf: 'cust-aino',
+    });
+    expect(result.ok && result.application).toMatchObject({
+      customerId: 'cust-aino',
+      decision: 'approved',
+    });
+    const [audit] = await db.auditLog.findMany();
+    expect(audit?.actor).toBe('admin');
+    expect(JSON.parse(audit?.details_json ?? '{}')).toMatchObject({ onBehalfOf: 'cust-aino' });
+  });
+
+  it('D47: onBehalfOf must name the customer, and a customer cannot use it', async () => {
+    const quoteId = await card1();
+    const base = {
+      quoteId,
+      customerId: 'cust-aino',
+      answers: answersOf('cust-aino'),
+      today: TODAY,
+    };
+    expect(
+      await createApplication(db, { ...base, actor: 'admin', onBehalfOf: 'cust-mikko' })
+    ).toEqual({ ok: false, reason: 'not_applicant' });
+    expect(
+      await createApplication(db, { ...base, actor: 'cust-mikko', onBehalfOf: 'cust-aino' })
+    ).toEqual({ ok: false, reason: 'not_applicant' });
+    expect(await db.application.count()).toBe(0);
+  });
+
   it('unknown quote, unknown customer and an expired quote', async () => {
     expect(await apply('nope', 'cust-aino')).toEqual({ ok: false, reason: 'quote_not_found' });
     const quoteId = await card1();
@@ -265,48 +354,7 @@ describe('decideApplication (D10)', () => {
     });
   });
 
-  it('card 6: the named signatory signs and the application is approved', async () => {
-    const created = await apply(await card6(), 'cust-norvi');
-    if (!created.ok) throw new Error('setup');
-    const result = await decideApplication(db, {
-      id: created.application.id,
-      decision: 'approved',
-      reviewedBy: 'signatory@norvi.example.com',
-      today: TODAY,
-      actor: 'cust-norvi',
-    });
-    expect(result.ok && result.application.decision).toBe('approved');
-    expect(result.ok && result.application.reasons.at(-1)?.code).toBe('signatory_decided');
-  });
-
-  it('the trap: card 6 cannot be signed by a name other than the named signatory', async () => {
-    const created = await apply(await card6(), 'cust-norvi');
-    if (!created.ok) throw new Error('setup');
-    const sign = (reviewedBy: string, actor: string) =>
-      decideApplication(db, {
-        id: created.application.id,
-        decision: 'approved',
-        reviewedBy,
-        today: TODAY,
-        actor,
-      });
-    expect(await sign('fleet@norvi.example.com', 'cust-norvi')).toEqual({
-      ok: false,
-      reason: 'not_signatory',
-    });
-    expect(await sign('signatory@norvi.example.com', 'cust-aino')).toEqual({
-      ok: false,
-      reason: 'not_signatory',
-    });
-    expect(await sign('signatory@norvi.example.com', 'admin')).toEqual({
-      ok: false,
-      reason: 'not_signatory',
-    });
-    expect((await getApplication(db, created.application.id))?.decision).toBe('awaiting_signatory');
-    expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(0);
-  });
-
-  it('a PEP case that also needs a signatory waits for the signatory after the review', async () => {
+  it('a PEP case that also needs a signatory waits for the signing link after the review', async () => {
     const answers = {
       ...answersOf('cust-haapala'),
       q_can_sign: 'no',
@@ -317,13 +365,12 @@ describe('decideApplication (D10)', () => {
     expect(created.application.decision).toBe('manual_review');
     const result = await decide(created.application.id, 'approved');
     expect(result.ok && result.application.decision).toBe('awaiting_signatory');
-    const signed = await decideApplication(db, {
-      id: created.application.id,
-      decision: 'approved',
-      reviewedBy: 'jussi@haapala.example.com',
-      today: TODAY,
-      actor: 'cust-haapala',
+    const request = await db.signatureRequest.findFirstOrThrow({
+      where: { application_id: created.application.id },
+      include: { signatory: true },
     });
+    expect(request.signatory.email).toBe('jussi@haapala.example.com');
+    const signed = await decideByToken(db, { token: request.token, action: 'sign', today: TODAY });
     expect(signed.ok && signed.application.decision).toBe('approved');
   });
 
@@ -359,6 +406,145 @@ describe('getApplication', () => {
     if (!created.ok) throw new Error('setup');
     expect(await getApplication(db, created.application.id)).toEqual(created.application);
     expect(await getApplication(db, 'nope')).toBeNull();
+  });
+});
+
+describe('the signing link (D39, D46), card 6', () => {
+  beforeEach(async () => {
+    await seedSignatories(db, customers, TODAY);
+  });
+
+  async function norviWaits() {
+    const created = await apply(await card6(), 'cust-norvi');
+    if (!created.ok) throw new Error('setup');
+    const request = await db.signatureRequest.findFirstOrThrow({
+      where: { application_id: created.application.id },
+      include: { signatory: true },
+    });
+    return { id: created.application.id, request };
+  }
+
+  it('card 6: Norvi waits, and a link goes to the named signatory, not yet in force', async () => {
+    const { id, request } = await norviWaits();
+    expect((await getApplication(db, id))?.decision).toBe('awaiting_signatory');
+    expect(request).toMatchObject({
+      sent_on: TODAY,
+      expires_on: '2026-11-19',
+      signed_on: null,
+      signatory: {
+        customer_id: 'cust-norvi',
+        email: 'signatory@norvi.example.com',
+        granted_by: 'register_check_simulated',
+        valid_from: null,
+      },
+    });
+    expect(request.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    const [audit] = await db.auditLog.findMany();
+    expect(JSON.parse(audit?.details_json ?? '{}')).toMatchObject({
+      signingLinkTo: 'signatory@norvi.example.com',
+    });
+  });
+
+  it('card 6: signing through the link approves, registers the signatory and names them in the audit', async () => {
+    const { id, request } = await norviWaits();
+    const result = await decideByToken(db, {
+      token: request.token,
+      action: 'sign',
+      today: '2026-11-06',
+    });
+    expect(result).toMatchObject({ ok: true, registered: true });
+    expect(result.ok && result.application).toMatchObject({
+      decision: 'approved',
+      reviewedBy: 'signatory@norvi.example.com',
+      decidedOn: '2026-11-06',
+    });
+    expect(result.ok && result.application.reasons.at(-1)).toEqual({
+      code: 'signatory_decided',
+      params: { by: 'signatory@norvi.example.com', decision: 'approved', on: '2026-11-06' },
+    });
+    const signatory = await db.companySignatory.findUniqueOrThrow({
+      where: { id: request.signatory_id },
+    });
+    expect(signatory.valid_from).toBe('2026-11-06');
+    const audit = await db.auditLog.findFirstOrThrow({
+      where: { action: 'application.decided', entity_id: id },
+    });
+    expect(audit.actor).toBe('signatory:signatory@norvi.example.com');
+    expect(JSON.parse(audit.details_json ?? '{}')).toMatchObject({
+      via: 'signing_link',
+      signatoryRegistered: true,
+    });
+  });
+
+  it('review finding 1: the company account posting a decision gets not_signatory; the admin too', async () => {
+    const { id } = await norviWaits();
+    for (const actor of ['cust-norvi', 'admin']) {
+      const result = await decideApplication(db, {
+        id,
+        decision: 'approved',
+        reviewedBy: 'signatory@norvi.example.com',
+        today: TODAY,
+        actor,
+      });
+      expect(result, actor).toEqual({ ok: false, reason: 'not_signatory' });
+    }
+    expect((await getApplication(db, id))?.decision).toBe('awaiting_signatory');
+    expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(0);
+  });
+
+  it('the trap: a second use of the link answers already_used and writes nothing', async () => {
+    const { request } = await norviWaits();
+    await decideByToken(db, { token: request.token, action: 'sign', today: TODAY });
+    const again = await decideByToken(db, {
+      token: request.token,
+      action: 'decline',
+      today: TODAY,
+    });
+    expect(again).toEqual({ ok: false, reason: 'already_used' });
+    expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(1);
+  });
+
+  it('two uses at the same instant: exactly one wins', async () => {
+    const { id, request } = await norviWaits();
+    const results = await Promise.all([
+      decideByToken(db, { token: request.token, action: 'sign', today: TODAY }),
+      decideByToken(db, { token: request.token, action: 'decline', today: TODAY }),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.find((r) => !r.ok)).toEqual({ ok: false, reason: 'already_used' });
+    expect(
+      await db.auditLog.count({ where: { action: 'application.decided', entity_id: id } })
+    ).toBe(1);
+  });
+
+  it('declining rejects the case with the signatory’s reason', async () => {
+    const { request } = await norviWaits();
+    const result = await decideByToken(db, {
+      token: request.token,
+      action: 'decline',
+      today: TODAY,
+    });
+    expect(result.ok && result.application).toMatchObject({ decision: 'rejected' });
+    expect(result.ok && result.application.reasons.at(-1)).toEqual({
+      code: 'signatory_decided',
+      params: { by: 'signatory@norvi.example.com', decision: 'rejected', on: TODAY },
+    });
+    const signatory = await db.companySignatory.findUniqueOrThrow({
+      where: { id: request.signatory_id },
+    });
+    // declining is still the signatory acting: the link identified them
+    expect(signatory.valid_from).toBe(TODAY);
+  });
+
+  it('an expired link and an unknown token sign nothing', async () => {
+    const { id, request } = await norviWaits();
+    expect(
+      await decideByToken(db, { token: request.token, action: 'sign', today: '2026-11-19' })
+    ).toEqual({ ok: false, reason: 'expired' });
+    expect(
+      await decideByToken(db, { token: 'x'.repeat(32), action: 'sign', today: TODAY })
+    ).toEqual({ ok: false, reason: 'not_found' });
+    expect((await getApplication(db, id))?.decision).toBe('awaiting_signatory');
   });
 });
 

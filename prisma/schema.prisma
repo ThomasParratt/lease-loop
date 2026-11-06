@@ -68,6 +68,7 @@ model Customer {
 
   applications Application[]
   contracts    Contract[]
+  signatories  CompanySignatory[]
 }
 
 // A priced offer for an asset on a date, frozen so a later price list does not change it.
@@ -111,6 +112,8 @@ model Application {
   customer Customer  @relation(fields: [customer_id], references: [id])
   quote    Quote     @relation(fields: [quote_id], references: [id])
   contract Contract?
+
+  signature_requests SignatureRequest[]
 
   @@index([customer_id])
   @@index([quote_id])
@@ -240,4 +243,45 @@ model AuditLog {
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+}
+
+// Who may sign for a company (D46): the company's own list of authorised signatories, as the
+// trade register and Suomi.fi e-Authorizations would give it in production. Owned by
+// src/server/signatories.ts. Days are ISO strings: valid from `valid_from` (null while the
+// entry waits for its signing link to be opened) up to, not including, `valid_to`.
+model CompanySignatory {
+  id          String   @id @default(cuid())
+  customer_id String
+  name        String
+  email       String // stored trimmed and lower case
+  granted_by  String // the granting signatory's id, or register_check_simulated
+  granted_on  String
+  valid_from  String?
+  valid_to    String?
+  created_at  DateTime @default(now())
+
+  customer           Customer           @relation(fields: [customer_id], references: [id])
+  signature_requests SignatureRequest[]
+
+  @@index([customer_id])
+}
+
+// The signing link sent to a signatory when a case waits for them (D46). The token is made
+// server-side with node:crypto; the link works up to, not including, `expires_on`.
+model SignatureRequest {
+  id             String  @id @default(cuid())
+  application_id String
+  signatory_id   String
+  token          String  @unique
+  sent_on        String
+  opened_on      String?
+  signed_on      String?
+  declined_on    String?
+  expires_on     String
+
+  application Application      @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  signatory   CompanySignatory @relation(fields: [signatory_id], references: [id])
+
+  @@index([application_id])
+  @@index([signatory_id])
 }
