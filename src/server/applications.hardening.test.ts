@@ -150,12 +150,67 @@ describe('who applies (D40)', () => {
     await nothingWritten();
   });
 
-  it.todo(
-    'a quote asked for by another customer: today any customer applies on any quote in their own name (quotes have no owner); candidates: bind the quote to the actor who asked, keep quotes anonymous (the applicant’s rules apply anyway)'
+  it('quotes are anonymous: any customer applies on a quote in their own name, and their own rules apply', async () => {
+    const quoteId = await card1();
+    const olavi = await apply(quoteId, 'cust-olavi');
+    expect(olavi.ok && olavi.application).toMatchObject({
+      customerId: 'cust-olavi',
+      decision: 'approved',
+    });
+  });
+});
+
+describe('one pending or approved application per quote', () => {
+  const holds = async (quoteId: string, firstCustomer: string, decision: string) => {
+    const first = await apply(quoteId, firstCustomer);
+    if (!first.ok) throw new Error('setup');
+    expect(first.application.decision).toBe(decision);
+    return first.application.id;
+  };
+
+  it.each([
+    ['approved', card1, 'cust-aino', 'cust-olavi'],
+    ['manual_review', card7, 'cust-haapala', 'cust-haapala'],
+    ['awaiting_signatory', () => insertQuote(), 'cust-norvi', 'cust-norvi'],
+  ] as const)(
+    'a %s application holds the quote: the next is quote_in_use and writes nothing',
+    async (decision, quote, first, second) => {
+      const quoteId = await quote();
+      const applicationId = await holds(quoteId, first, decision);
+      expect(await apply(quoteId, second)).toEqual({
+        ok: false,
+        reason: 'quote_in_use',
+        applicationId,
+      });
+      expect(await db.application.count()).toBe(1);
+      expect(await db.auditLog.count()).toBe(1);
+    }
   );
-  it.todo(
-    'a quote already used by an application: today a second application is created (a rejected customer may reapply); candidates: one open or approved application per quote, allow and let the contract take the first, refuse while one is pending'
-  );
+
+  it('a rejected application does not hold it: the customer may correct the answers and apply again', async () => {
+    const quoteId = await card1();
+    const rejected = await apply(quoteId, 'cust-aino', {
+      ...answersOf('cust-aino'),
+      q_monthly_income: '1',
+    });
+    expect(rejected.ok && rejected.application.decision).toBe('rejected');
+    const again = await apply(quoteId, 'cust-aino');
+    expect(again.ok && again.application.decision).toBe('approved');
+  });
+
+  it('a manual review rejected by the admin frees the quote', async () => {
+    const quoteId = await card7();
+    const id = await holds(quoteId, 'cust-haapala', 'manual_review');
+    const decided = await decideApplication(db, {
+      id,
+      decision: 'rejected',
+      reviewedBy: 'admin',
+      today: TODAY,
+      actor: 'admin',
+    });
+    expect(decided.ok).toBe(true);
+    expect((await apply(quoteId, 'cust-haapala')).ok).toBe(true);
+  });
 });
 
 describe('the signatory (D39, D46)', () => {

@@ -3,7 +3,7 @@
 // sign-off goes through the signing link (src/server/signatories.ts, D46).
 import { randomUUID } from 'node:crypto';
 import type { Application as ApplicationRow } from '@/generated/prisma/client';
-import { loadCoefficientTable, loadQuestions } from '@/data/load';
+import { loadCoefficientTable, loadConsumerLimits, loadQuestions } from '@/data/load';
 import { applicationDecisionSchema, type ApplicationDecision } from '@/domain/statuses';
 import type { Customer } from '@/data/schemas';
 import {
@@ -79,7 +79,7 @@ export async function flowSetupFor(
   | {
       ok: true;
       setup: FlowSetup;
-      quote: { monthlyNetCents: number; vatRateBp: number };
+      quote: { monthlyNetCents: number; vatRateBp: number; quantity: number };
       customer: Customer;
     }
   | { ok: false; reason: 'quote_not_found' | 'customer_not_found' }
@@ -103,7 +103,11 @@ export async function flowSetupFor(
       quoteValidUntil: quote.validUntil,
       customerIsPep: customer.is_pep,
     },
-    quote: { monthlyNetCents: deal.monthlyNetCents, vatRateBp: deal.vatRateBasisPoints },
+    quote: {
+      monthlyNetCents: deal.monthlyNetCents,
+      vatRateBp: deal.vatRateBasisPoints,
+      quantity: deal.quantity,
+    },
     customer,
   };
 }
@@ -129,8 +133,11 @@ export type CreateApplicationResult =
         | 'quote_expired'
         | 'not_applicant'
         | 'incomplete_answers'
-        | 'invalid_answer';
+        | 'invalid_answer'
+        | 'quote_in_use';
       questionId?: string;
+      /** `quote_in_use`: the pending or approved application that holds the quote. */
+      applicationId?: string;
       /** Why the answer of `questionId` was refused, for the page to write. */
       problem?: AnswerProblem;
     };
@@ -142,11 +149,29 @@ function mayApply(input: CreateApplicationInput): boolean {
 }
 
 /**
+ * The decisions that hold a quote: one pending or approved application per quote. A rejected
+ * one does not, so a rejected customer may change the answers and apply again.
+ */
+export const QUOTE_HOLDING_DECISIONS: readonly ApplicationDecision[] = [
+  'manual_review',
+  'awaiting_signatory',
+  'approved',
+];
+
+/** Thrown inside the transaction when the quote is already held, so nothing is written. */
+class QuoteInUse extends Error {
+  constructor(readonly applicationId: string) {
+    super('quote in use');
+  }
+}
+
+/**
  * Only the customer who is acting applies, in their own name (D40): not another customer, not
  * anonymous; the admin only with `onBehalfOf` naming the customer, written into the audit
  * (D47). Then it prunes the answers to the questions that apply, checks that every one is answered and
  * valid on the day (D37, D39), compares them with the customer record (D38), evaluates the
- * eligibility rules and writes the application with its audit row.
+ * eligibility rules and writes the application with its audit row, unless the quote is already
+ * held by a pending or approved application (`quote_in_use`, checked inside the transaction).
  */
 export async function createApplication(
   db: PrismaClient,
@@ -175,7 +200,7 @@ export async function createApplication(
   const missing = nextQuestion(questions, context, answers);
   if (missing) return { ok: false, reason: 'incomplete_answers', questionId: missing.id };
 
-  const table = await loadCoefficientTable();
+  const [table, consumerLimits] = await Promise.all([loadCoefficientTable(), loadConsumerLimits()]);
   const result = evaluate(
     rules,
     eligibilityInputFromAnswers({
@@ -189,52 +214,68 @@ export async function createApplication(
       },
       knownPep: customerIsPep,
       recordMismatches: recordMismatches(found.customer, answers),
+      quantity: found.quote.quantity,
+      consumerLimits,
     })
   );
 
   const id = randomUUID();
   const signatoryEmail = stringAnswer(answers.q_signatory_email);
-  const row = await withAudit(
-    db,
-    {
-      actor: input.actor,
-      action: 'application.created',
-      entityType: 'application',
-      entityId: id,
-      details: {
-        quoteId: input.quoteId,
-        customerId: input.customerId,
-        decision: result.decision,
-        reasons: result.reasons,
-        ...(input.onBehalfOf === undefined ? {} : { onBehalfOf: input.onBehalfOf }),
-        ...(result.decision === 'awaiting_signatory' && signatoryEmail
-          ? { signingLinkTo: signatoryEmail }
-          : {}),
-      },
-    },
-    async (tx) => {
-      const created = await tx.application.create({
-        data: parseRow('application', applicationRowSchema, {
-          id,
-          customer_id: input.customerId,
-          quote_id: input.quoteId,
-          answers_json: JSON.stringify(answers),
-          decision: result.decision,
-          reasons_json: JSON.stringify(result.reasons),
-          decided_on: input.today,
-        }),
-      });
-      if (result.decision === 'awaiting_signatory' && signatoryEmail) {
-        await createSignatureRequest(tx, {
-          applicationId: id,
+  let row: ApplicationRow;
+  try {
+    row = await withAudit(
+      db,
+      {
+        actor: input.actor,
+        action: 'application.created',
+        entityType: 'application',
+        entityId: id,
+        details: {
+          quoteId: input.quoteId,
           customerId: input.customerId,
-          email: signatoryEmail,
-          today: input.today,
+          decision: result.decision,
+          reasons: result.reasons,
+          ...(input.onBehalfOf === undefined ? {} : { onBehalfOf: input.onBehalfOf }),
+          ...(result.decision === 'awaiting_signatory' && signatoryEmail
+            ? { signingLinkTo: signatoryEmail }
+            : {}),
+        },
+      },
+      async (tx) => {
+        // Inside the transaction, so two applications at the same instant cannot both pass.
+        const holder = await tx.application.findFirst({
+          where: { quote_id: input.quoteId, decision: { in: [...QUOTE_HOLDING_DECISIONS] } },
+          select: { id: true },
         });
+        if (holder) throw new QuoteInUse(holder.id);
+        const created = await tx.application.create({
+          data: parseRow('application', applicationRowSchema, {
+            id,
+            customer_id: input.customerId,
+            quote_id: input.quoteId,
+            answers_json: JSON.stringify(answers),
+            decision: result.decision,
+            reasons_json: JSON.stringify(result.reasons),
+            decided_on: input.today,
+          }),
+        });
+        if (result.decision === 'awaiting_signatory' && signatoryEmail) {
+          await createSignatureRequest(tx, {
+            applicationId: id,
+            customerId: input.customerId,
+            email: signatoryEmail,
+            today: input.today,
+          });
+        }
+        return created;
       }
-      return created;
+    );
+  } catch (error) {
+    if (error instanceof QuoteInUse) {
+      return { ok: false, reason: 'quote_in_use', applicationId: error.applicationId };
     }
-  );
+    throw error;
+  }
   return { ok: true, application: toApplicationView(row) };
 }
 
@@ -259,6 +300,14 @@ export async function listApplications(
     orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
   });
   return rows.map(toApplicationView);
+}
+
+/** Who may read an application: the applicant customer and the admin, nobody else. */
+export function mayReadApplication(
+  actor: string,
+  application: Pick<ApplicationView, 'customerId'>
+) {
+  return actor === ADMIN_ACTOR || actor === application.customerId;
 }
 
 export type DecideApplicationInput = {

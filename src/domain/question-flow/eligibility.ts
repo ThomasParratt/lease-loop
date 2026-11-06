@@ -1,8 +1,9 @@
 // The eligibility rules of data/questions.json and decision D9, as a pure function that
 // returns a decision and its reasons as codes with params (team rule 6): the page writes the
 // sentence in the visitor's language.
-import type { EligibilityRule } from '@/data/schemas';
+import type { ConsumerLimits, EligibilityRule } from '@/data/schemas';
 import { isValidBusinessId } from './business-id';
+import { plausibilityHolds } from './plausibility';
 
 export type EligibilityDecision = 'approved' | 'rejected' | 'manual_review' | 'awaiting_signatory';
 
@@ -15,6 +16,11 @@ export type ReasonCode =
   | 'missing_answer'
   | 'pep'
   | 'answer_differs_from_record'
+  | 'quantity_over_consumer_cap'
+  | 'category_needs_review'
+  | 'income_implausible'
+  | 'revenue_below_financed'
+  | 'owners_implausible'
   | 'signatory_needed'
   | 'all_checks_passed';
 
@@ -41,6 +47,14 @@ export type EligibilityInput = {
   financedLimits?: { minCents: number; maxCents: number };
   /** Question ids answered other than the customer record (D38): each holds the case. */
   recordMismatches?: readonly string[];
+  /** The asset's category and the quote's quantity, for the consumer caps. */
+  category?: string;
+  quantity?: number;
+  /** Companies: not asked → undefined; asked but not a number → null. */
+  annualRevenueCents?: number | null;
+  beneficialOwners?: readonly string[];
+  /** The team's consumer limits (`data/consumer-limits.json`); without them those rules are off. */
+  consumerLimits?: ConsumerLimits;
 };
 
 export const MIN_AGE_YEARS = 18;
@@ -138,9 +152,9 @@ function rejections(ruleIds: ReadonlySet<string>, input: EligibilityInput): Reas
 }
 
 /**
- * The decision, in this order: any failed rule → rejected (every failure listed); else a PEP
- * or an answer that differs from the customer record (D38) → manual_review (never
- * auto-approved, every reason listed); else a company applicant who cannot sign →
+ * The decision, in this order: any failed rule → rejected (every failure listed); else a PEP,
+ * an answer that differs from the customer record (D38) or a plausibility hold
+ * (`plausibilityHolds`) → manual_review (never auto-approved, every reason listed); else a company applicant who cannot sign →
  * awaiting_signatory (the named signatory signs); else approved. Rules not listed in
  * `rules` (by id) are not checked; unknown ids are ignored.
  */
@@ -158,6 +172,7 @@ export function evaluate(
   for (const question of input.recordMismatches ?? []) {
     held.push({ code: 'answer_differs_from_record', params: { question } });
   }
+  held.push(...plausibilityHolds(input.consumerLimits, input));
   const cannotSign = input.customerType === 'company' && input.applicantCanSign === false;
   const signatory: Reason = {
     code: 'signatory_needed',

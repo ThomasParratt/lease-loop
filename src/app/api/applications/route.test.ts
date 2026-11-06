@@ -270,6 +270,23 @@ describe('POST /api/applications', () => {
   });
 });
 
+describe('one pending or approved application per quote', () => {
+  it('a second application on a quote held by an approved one is 409 QUOTE_IN_USE with its id', async () => {
+    actAs('cust-aino');
+    const quoteId = await insertQuote();
+    const first = await post({ quoteId, customerId: 'cust-aino', answers: answersOf('cust-aino') });
+    expect(first.status).toBe(201);
+    actAs('cust-olavi');
+    const second = await post({
+      quoteId,
+      customerId: 'cust-olavi',
+      answers: answersOf('cust-olavi'),
+    });
+    expectRefusal(second, 409, 'QUOTE_IN_USE');
+    expect(second.body.error?.details).toEqual({ applicationId: first.body.data?.id });
+  });
+});
+
 describe('GET /api/applications/[id]', () => {
   it('returns the stored application; an unknown id is 404', async () => {
     const created = await applyAs('cust-aino');
@@ -280,9 +297,20 @@ describe('GET /api/applications/[id]', () => {
     expectRefusal(await get('nope'), 404, 'APPLICATION_NOT_FOUND');
   });
 
-  it.todo(
-    'another customer, anonymous or no actor reading an application: today 200 with every answer (birth date, income, business id); candidates: 404 unless the actor is the applicant or the admin, 403, keep open (D17 has no login anyway)'
-  );
+  it('the admin reads it; another customer, anonymous or no actor get the same 404 as an unknown id', async () => {
+    const created = await applyAs('cust-aino');
+    const id = created.body.data?.id as string;
+    actAs('admin');
+    expect((await get(id)).status).toBe(200);
+    for (const actor of ['cust-mikko', 'anonymous', 'someone-unknown', undefined]) {
+      actAs(actor);
+      const refused = await get(id);
+      expectRefusal(refused, 404, 'APPLICATION_NOT_FOUND');
+      actAs(actor);
+      const missing = await get('nope');
+      expect(refused.body.error).toEqual(missing.body.error);
+    }
+  });
 });
 
 describe('POST /api/applications/[id]/decision', () => {

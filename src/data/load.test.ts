@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   loadAssets,
   loadCo2Factors,
+  loadConsumerLimits,
   loadCoefficientTable,
   loadCustomers,
   loadDataFile,
@@ -14,7 +15,12 @@ import {
   loadTermLimits,
   loadVatRates,
 } from './load';
-import { coefficientTableSchema, priceListsFileSchema, termLimitsSchema } from './schemas';
+import {
+  coefficientTableSchema,
+  consumerLimitsSchema,
+  priceListsFileSchema,
+  termLimitsSchema,
+} from './schemas';
 
 describe('data pack', () => {
   it('every file in data/ parses against its schema', async () => {
@@ -104,6 +110,35 @@ describe("the team's term limits beside the pack (D43)", () => {
         String(bad)
       ).toBe(false);
     }
+  });
+});
+
+describe("the team's consumer limits beside the pack", () => {
+  it("parses, says it is the team's rule and holds the decided numbers", async () => {
+    const limits = await loadConsumerLimits();
+    expect(limits.note).toMatch(/team/i);
+    expect(limits.max_consumer_quantity).toEqual({ e_bike: 2, laptop: 2, farm_machine: 1 });
+    expect(limits.consumer_manual_review.farm_machine).toBe(true);
+    expect(limits.income_ceiling_cents).toBe(10_000_000);
+  });
+
+  it('rejects a missing or unknown category, a cap that is not a positive whole number and a zero ceiling', () => {
+    const good = {
+      note: 'team rule',
+      max_consumer_quantity: { e_bike: 2, laptop: 2, farm_machine: 1 },
+      consumer_manual_review: { e_bike: false, laptop: false, farm_machine: true },
+      income_ceiling_cents: 10_000_000,
+    };
+    expect(consumerLimitsSchema.safeParse(good).success).toBe(true);
+    const bad = [
+      { ...good, max_consumer_quantity: { e_bike: 2, laptop: 2 } },
+      { ...good, max_consumer_quantity: { ...good.max_consumer_quantity, boat: 1 } },
+      { ...good, max_consumer_quantity: { ...good.max_consumer_quantity, laptop: 0 } },
+      { ...good, max_consumer_quantity: { ...good.max_consumer_quantity, laptop: 1.5 } },
+      { ...good, income_ceiling_cents: 0 },
+      { ...good, extra: true },
+    ];
+    for (const value of bad) expect(consumerLimitsSchema.safeParse(value).success).toBe(false);
   });
 });
 

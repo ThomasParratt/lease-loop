@@ -63,6 +63,15 @@ describe('recordMismatches (D38)', () => {
     expect(recordMismatches(customer('cust-aino'), { q_can_sign: 'yes' })).toEqual([]);
   });
 
+  it('a PEP on record who answers "no" is named; a "yes" without a record PEP is not (it holds as pep)', () => {
+    const haapala = customer('cust-haapala');
+    expect(recordMismatches(haapala, { ...answersFromCustomer(haapala), q_pep: 'no' })).toEqual([
+      'q_pep',
+    ]);
+    const aino = customer('cust-aino');
+    expect(recordMismatches(aino, { ...answersFromCustomer(aino), q_pep: 'yes' })).toEqual([]);
+  });
+
   it('a question not answered is not compared, nor one the record does not know', () => {
     expect(recordMismatches(customer('cust-aino'), {})).toEqual([]);
     // a consumer record has no business id

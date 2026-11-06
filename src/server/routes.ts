@@ -326,7 +326,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/applications',
     summary:
-      'Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9); the admin only with onBehalfOf (D47)',
+      'Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9); the admin only with onBehalfOf (D47); 409 QUOTE_IN_USE while another application holds the quote (D56)',
     tag: 'applications',
     body: createApplicationBodySchema,
     response: applicationSchema,
@@ -335,7 +335,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'GET',
     path: '/api/applications/[id]',
-    summary: 'An application with its decision and reasons as codes with params',
+    summary:
+      'An application with its decision and reasons as codes with params (the applicant or admin; 404 for anyone else)',
     tag: 'applications',
     params: applicationIdParamsSchema,
     response: applicationSchema,

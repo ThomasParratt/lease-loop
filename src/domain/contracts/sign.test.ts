@@ -329,3 +329,47 @@ describe('planContract parses what it is given (D23)', () => {
     expect(() => planContract(input({ signedOn: '5.11.2026' }))).toThrow();
   });
 });
+
+describe('planContract re-checks the age on the start day (D9 at signing)', () => {
+  // born 2008-12-01: 18 on 2026-12-01. The quote is made 2026-11-05, before the birthday.
+  const quote = { ...card1Quote, validUntil: '2026-12-31' };
+  const at = (signedOn: string, startDate: string, birthDate?: string) =>
+    planContract(
+      input({
+        quote,
+        quoteStatus: statusOn(quote, signedOn, { version: 1, unitPriceCents: 389_000 }),
+        signedOn,
+        startDate,
+        birthDate,
+      })
+    );
+
+  it('too_young_at_start with adultFrom when the start is the day before the 18th birthday', () => {
+    const plan = at('2026-11-05', '2026-11-30', '2008-12-01');
+    expect(plan.ok ? null : plan.reason).toEqual({
+      code: 'too_young_at_start',
+      params: { adultFrom: '2026-12-01' },
+    });
+  });
+
+  it('a quote made before the 18th birthday signs with a start on or after it', () => {
+    expect(at('2026-11-05', '2026-12-01', '2008-12-01').ok).toBe(true);
+    expect(at('2026-11-20', '2026-12-15', '2008-12-01').ok).toBe(true);
+  });
+
+  it('born on 29 February: 18 on 1 March in a year without one', () => {
+    const plan = at('2026-01-10', '2026-02-28', '2008-02-29');
+    expect(plan.ok ? null : plan.reason).toEqual({
+      code: 'too_young_at_start',
+      params: { adultFrom: '2026-03-01' },
+    });
+  });
+
+  it('a company has no birth date: no age check', () => {
+    expect(at('2026-11-05', '2026-11-05', undefined).ok).toBe(true);
+  });
+
+  it('throws on a birth date that is not a real ISO day (D23)', () => {
+    expect(() => at('2026-11-05', '2026-11-05', '2008-02-30')).toThrow();
+  });
+});

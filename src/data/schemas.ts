@@ -410,3 +410,18 @@ export const termLimitsSchema = z.strictObject({
   max_term_months: z.record(assetCategorySchema, z.number().int().positive()),
 });
 export type TermLimits = z.infer<typeof termLimitsSchema>;
+
+// ---------------------------------------------------------------------------
+// data/consumer-limits.json: the team's plausibility limits for consumers, beside the pack.
+// ---------------------------------------------------------------------------
+
+export const consumerLimitsSchema = z.strictObject({
+  note: z.string(),
+  /** Units of one category a consumer may lease in one application before a person checks. */
+  max_consumer_quantity: z.record(assetCategorySchema, z.number().int().positive()),
+  /** True: a consumer's application for this category always goes to a person. */
+  consumer_manual_review: z.record(assetCategorySchema, z.boolean()),
+  /** A monthly net income above this many cents is checked by a person. */
+  income_ceiling_cents: z.number().int().positive(),
+});
+export type ConsumerLimits = z.infer<typeof consumerLimitsSchema>;

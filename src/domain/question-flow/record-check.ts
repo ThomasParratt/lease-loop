@@ -21,7 +21,7 @@ type Recorded = { value: string | undefined; same?: (answer: string, recorded: s
  * The question ids whose answer differs from the record, in the bank's order: the customer
  * type, the birth date, the e-mail (case ignored), the country (a country outside FI, SE and
  * EE is answered "other"), the monthly net income, the business id, whether the applicant can
- * sign, and the annual revenue. A question not answered, or a field the record does not have,
+ * sign, the annual revenue, and a PEP on record who answers "no" (D58). A question not answered, or a field the record does not have,
  * is not compared.
  */
 export function recordMismatches(record: Customer, answers: Answers): string[] {
@@ -44,6 +44,8 @@ export function recordMismatches(record: Customer, answers: Answers): string[] {
       value: 'annual_revenue_cents' in record ? String(record.annual_revenue_cents) : undefined,
       same: sameCents,
     },
+    // a PEP on record who answers "no" is held; a "yes" the record lacks holds as `pep` anyway
+    q_pep: { value: record.is_pep ? 'yes' : undefined },
   };
   return Object.entries(recorded)
     .filter(([id, { value, same }]) => {
