@@ -1,6 +1,6 @@
 # Questions for the mentors
 
-Three readings of the brief we took in code and want confirmed on Friday morning. For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
+Two readings of the brief we took in code and want confirmed on Friday morning (issues #13 and #54); the third, D31, is now a stated assumption (below). For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
 
 Not a question here: Thomas's question-flow validation (#25, merged) added four rules (D37 to D40: the birth-date range, answers checked against the customer record, only the named signatory signs, only the acting customer applies). They are listed for information; the scenario suite on `main` passes with them.
 
@@ -12,7 +12,7 @@ Not a question here: Thomas's question-flow validation (#25, merged) added four 
 
 **If the answer differs.** If the mentors mean four separate items, signing must lock N available rows of the same model (Thomas's grouping of identical units in the schema, issue #13, additive) and refuse when fewer are free; D28 (one next lease per lease) waits on this answer, since a fleet passed on to two people would have two successors. If they mean one item only, the quantity input goes and card 6 is priced for one bike.
 
-## 2. Pass on: is the next user a named person? (D16)
+## 2. Pass on: is the next user a named person? (D16, issue #54)
 
 **Our reading.** "Pass it on" names the next person (a friend, a colleague), who then applies in the normal way with a fresh quote at the second-life price. "Give it back" is the other exit, where matchmaking on the waiting list (D13, wave 3) finds the next customer.
 
@@ -20,9 +20,11 @@ Not a question here: Thomas's question-flow validation (#25, merged) added four 
 
 **If the answer differs.** If passing on means "back to the waiting list", `pass_on` and `return` become one flow: the person picker and its three refusals go, and the next customer comes from D13's matchmaking. The billing (D14) and the passport entry stay as they are.
 
-## 3. Card 8: how old is a first-life item on the residual curve? (D31, provisional; D11)
+## Not a question any more: card 8's curve age (D31)
 
-**Our reading.** The pack has no first-lease date. Every pack item is new on the shelf, so a first life is counted from its lease start; an item with previous lives keeps D11 (whole months from 1 January of the model year). Johannes chose this provisionally because it gives the brief's number.
+Decided by Johannes on 2026-11-06 as an assumption and stated in the README "Status" section: the pack has no first-lease date, so a first life is aged from its lease start and an item with previous lives from 1 January of its model year (D11). It is not asked as a question, but it may not hold for a real item, so the other reading stays pinned in the tests and the switch is one line.
+
+**The reading.** The pack has no first-lease date. Every pack item is new on the shelf, so a first life is counted from its lease start; an item with previous lives keeps D11 (whole months from 1 January of the model year). It gives the brief's number.
 
 **What the code does today.** Card 8's `ebike-003`, valued on 2027-06-05, is 7 months into its lease: 80 % on the curve, **311 200** as new (the brief's number), 259 230 as good with 1 800 km. The return costs 330 675 − 311 200 + 4 500 = **23 975** as new, 75 945 as good. `curveAgeInMonths` in `src/domain/residual/age.ts` picks the rule.
 

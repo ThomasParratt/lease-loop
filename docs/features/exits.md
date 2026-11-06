@@ -15,7 +15,7 @@ A customer (or admin) ends an active contract by buying the item, giving it back
 
 **Market value** (`data/residual-curves.json`, read exactly as its `how_to_use` says): net list price at the first lease × curve(age) × condition multiplier × usage adjustment.
 
-- Age (D31, provisional; refines D11): a first-life item (no previous lives) counts the whole months since its lease started; an item with previous lives keeps D11, whole months from 1 January of the model year to the valuation day.
+- Age (D31, an assumption; refines D11): a first-life item (no previous lives) counts the whole months since its lease started; an item with previous lives keeps D11, whole months from 1 January of the model year to the valuation day.
 - Curve: linear interpolation between the two points around the age; the last value is held beyond the last point.
 - Usage: `percent_per_step` for each whole `step` of usage, never beyond `max_total_percent` (e-bike: −2 % per 1 000 km, at most −20 %).
 - Rounding (D1): each factor becomes an exact integer (the curve as a fraction of basis points, the condition in millionths, the usage in basis points). The product is taken in BigInt and rounded half up to the cent once.
@@ -63,7 +63,7 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 
 ## Decisions
 
-- **D31** (provisional, 2026-11-06, to be confirmed with the mentors in the morning): the curve age of a first-life item from its lease start; **D11** (`ageInMonths`, from the model year) for an item with previous lives. `curveAgeInMonths` picks the rule.
+- **D31** (decided 2026-11-06 as an assumption, stated in the README): the curve age of a first-life item from its lease start; **D11** (`ageInMonths`, from the model year) for an item with previous lives. `curveAgeInMonths` picks the rule.
 - **D14**: the balance by amortisation, buy = balance, return = max(0, balance − market value) + refurbishment, shown line by line.
 - **D16**: pass on names the next person (a picker of the customers, the leaving customer left out). It is assessed and costed like a return. The next person's application and the new contract with `previous_contract_id` are wave 3.
 - **D22**: `CONTRACT_BOUGHT_OUT` sets the asset `sold`; `UNIT_RETURNED` and `UNIT_PASSED_ON` set it `returned`, on the bus (`src/server/catalogue-handlers.ts`), each a conditional write on `leased`.
@@ -99,9 +99,9 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 
 ## Open questions
 
-Written up in `docs/decisions.md`: D31 (card 8's curve age, provisional) and D32 to D35 (decided: `ended_early`, the cancelled rents, the end-of-term return, what a cancelled invoice owes). The three mentor questions, card 8 among them, are in [mentor-questions.md](../mentor-questions.md).
+Written up in `docs/decisions.md`: D31 (card 8's curve age, an assumption) and D32 to D35 (decided: `ended_early`, the cancelled rents, the end-of-term return, what a cancelled invoice owes). The two mentor questions are in [mentor-questions.md](../mentor-questions.md).
 
-- **Card 8: yes, provisional: market value by months since lease start (D31), mentor question open.** Decided by Johannes on 2026-11-06, to be confirmed with the mentors in the morning. If they answer D11 for every item, `curveAgeInMonths` returns `ageInMonths` for every item: a one-line change, and card 8 is 202 523 as good with 1 800 km.
+- **Card 8: the market value by months since lease start (D31) is an assumption, not a confirmed reading.** Decided by Johannes on 2026-11-06 and stated in the README; the pack has no first-lease date. If the mentors answer D11 for every item, `curveAgeInMonths` returns `ageInMonths` for every item: a one-line change, and card 8 is 202 523 as good with 1 800 km.
 - **The condition and usage are self-reported** until the assessment (wave 3). The exit bills on what the customer says. The assessment may find another condition, and nothing re-bills yet.
 - **A return at the end of the term issues no invoice.** The cost shown is the refurbishment, but the invoice kinds (`down_payment`, `rent`, `buyout`, `early_exit`) have no refurbishment charge, so nothing is billed and the page says the lessor bears it. Options: add a `refurbishment` kind (a text column, no migration), or decide that normal wear at the end is the lessor's.
 - **`cancelled`** was added to `invoiceStatuses` (a text column, no migration). `contractBalanceOn` in invoicing skips a `cancelled` invoice (D35, wave 2 upkeep), so a cancelled rent is never counted as open.
