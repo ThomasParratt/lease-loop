@@ -7,6 +7,7 @@ import {
   birthDateRange,
   eligibilityInputFromAnswers,
   grossFromNetCents,
+  centsToEuroInput,
   parseEurosToCents,
   validateAnswer,
 } from './answers';
@@ -32,6 +33,24 @@ describe('parseEurosToCents', () => {
     for (const bad of ['', 'abc', '-5', '1.234', '1,2,3', '.5']) {
       expect(parseEurosToCents(bad)).toBeNull();
     }
+  });
+});
+
+describe('centsToEuroInput (review finding 14)', () => {
+  it("writes cents to edit with the page's decimal mark, and parseEurosToCents reads it back", () => {
+    expect(centsToEuroInput(320_050, '.')).toBe('3200.50');
+    expect(centsToEuroInput(320_050, ',')).toBe('3200,50');
+    expect(centsToEuroInput(320_000, '.')).toBe('3200');
+    expect(centsToEuroInput(7, ',')).toBe('0,07');
+    for (const cents of [0, 7, 99, 100, 320_050, 1_000_001]) {
+      expect(parseEurosToCents(centsToEuroInput(cents, '.'))).toBe(cents);
+      expect(parseEurosToCents(centsToEuroInput(cents, ','))).toBe(cents);
+    }
+  });
+
+  it('throws on cents that are not a whole number at least 0', () => {
+    expect(() => centsToEuroInput(-1, '.')).toThrow();
+    expect(() => centsToEuroInput(1.5, '.')).toThrow();
   });
 });
 
@@ -92,6 +111,30 @@ describe('eligibilityInputFromAnswers', () => {
     expect(input.customerType).toBe('consumer');
     expect(input.isPep).toBe(true);
     expect(input.applicantCanSign).toBeUndefined();
+  });
+});
+
+describe('eligibilityInputFromAnswers: the record country (review finding 12)', () => {
+  const company: FlowContext = {
+    customerType: 'company',
+    category: 'e_bike',
+    financedCents: 2_196_000,
+    termMonths: 36,
+  };
+  const base = { context: company, startDate: '2026-11-05', grossMonthlyRentCents: 74_036 };
+
+  it('a company is not asked its country: the record country is checked (DE is out)', () => {
+    const input = eligibilityInputFromAnswers({ ...base, answers: {}, recordCountry: 'DE' });
+    expect(input.country).toBe('DE');
+  });
+
+  it('an answered country wins over the record', () => {
+    const input = eligibilityInputFromAnswers({
+      ...base,
+      answers: { q_country: 'FI' },
+      recordCountry: 'DE',
+    });
+    expect(input.country).toBe('FI');
   });
 });
 

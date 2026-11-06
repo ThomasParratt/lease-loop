@@ -13,6 +13,7 @@ import {
   birthDateRange,
   parseEurosToCents,
   type AnswerProblem,
+  centsToEuroInput,
 } from '@/domain/question-flow/answers';
 import {
   nextQuestion,
@@ -281,14 +282,6 @@ function problemText(problem: AnswerProblem, labels: QuestionFlowLabels, locale:
   }
 }
 
-/** Cents as digits → "3200,50" for editing. */
-function centsToEuroInput(cents: string): string {
-  const n = Number(cents);
-  const whole = Math.floor(n / 100);
-  const rest = n % 100;
-  return rest === 0 ? String(whole) : `${whole},${String(rest).padStart(2, '0')}`;
-}
-
 type StepProps = {
   question: Question;
   text: { text: string; why: string } | undefined;
@@ -314,7 +307,7 @@ function QuestionStep(props: StepProps) {
       : Array.isArray(initial)
         ? initial.join('\n')
         : question.type === 'money'
-          ? centsToEuroInput(initial as string)
+          ? centsToEuroInput(Number(initial), props.locale === 'en' ? '.' : ',')
           : String(initial);
   const [draft, setDraft] = useState(initialDraft);
   const [error, setError] = useState<string | null>(null);

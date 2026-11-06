@@ -63,7 +63,7 @@ The applicant is a customer we know, and only that customer applies in their own
 | Rule (id in `questions.json`) | Check                                                                          | Reason code                                 |
 | ----------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------- |
 | `min_age`                     | consumers and sole traders are 18 on the start date                            | `too_young` { birthDate, eighteenOn }       |
-| `residency`                   | country FI, SE or EE (when asked)                                              | `residency_not_allowed` { country }         |
+| `residency`                   | country FI, SE or EE: the answer, else the record's country (a company)        | `residency_not_allowed` { country }         |
 | `affordability`               | consumers: gross rent × 100 ≤ net income × 30 (when the income was asked)      | `unaffordable` { gross, max, income cents } |
 | `business_id`                 | sole traders and companies: the Y-tunnus check digit                           | `invalid_business_id` { businessId }        |
 | `financed_limits`             | financed within the coefficient table, 30 000 to 25 000 000                    | `financed_out_of_range` { … }               |

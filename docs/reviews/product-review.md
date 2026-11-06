@@ -118,7 +118,7 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 12. low: smaller gaps from the data-pack walk
 
-**Status:** partly fixed in `fix/product-review`: the waiting-list tie-break compares ids by number; one `MAX_QUANTITY` (100) for the page and the API. Not fixed: the application's age on today (D45 already says the start is re-checked at signing), the company residency check (needs the record's country in the flow, more than a small change), signatory dates, the fleet quote on a relisted item (D8's open question, issue #13).
+**Status:** partly fixed in `fix/product-review`: the waiting-list tie-break compares ids by number; one `MAX_QUANTITY` (100) for the page and the API. In `fix/review-followups`: a company's residency is checked on its record country (`recordCountry`; DE is refused). Not fixed: the application's age on today (signing re-checks the start day, D45, so nobody under 18 signs; the only cost is that Mikko cannot apply early for a lease starting on his birthday), signatory date bounds (only an admin or an active signatory can add one), the fleet quote on a relisted item (needs issue #13; D76 refuses signing more than one unit, so it never reaches a contract).
 
 - **Application age on today, not the start** (`src/server/applications.ts:209`, `startDate: input.today`): Mikko (card 5) cannot apply for a lease that starts on his 18th birthday, although signing allows a start up to 12 months ahead and re-checks the age on it. Fix: take the planned start into the application, or say in D45 that the application is on today's age.
 - **No residency check for a company** (`src/domain/question-flow/eligibility.ts:108`, `answers.ts:147`): the country question is asked only of people and the company record's country is not passed in; a surprise company in `DE` is approved. Signatories have no birth date, so a 17-year-old signatory is not detectable from the pack. Fix: pass the record's country for every customer type.
@@ -129,7 +129,7 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 13. low: rules the meta tests do not see
 
-**Status:** partly fixed in `fix/product-review`: `resolveActor` reads through `listCustomers`; the reviewer is the cookie actor (the body's `reviewedBy` is ignored). Not fixed: the demo card double click (a read before the work; money is safe, the message is only confusing).
+**Status:** fixed in `fix/product-review`: `resolveActor` reads through `listCustomers`; the reviewer is the cookie actor (the body's `reviewedBy` is ignored). In `fix/review-followups`: the Run button ignores a second click while its run is in flight. Not fixed: two tabs clicking at once (a server-side guard belongs in `src/server/demo-cards.ts`, which `fix/single-units` is editing).
 
 - **A direct read of another slice's table:** `src/server/actor.ts:41` reads `db.customer.findMany` instead of the customers slice's read function (team rule 3). Every other access in the grep is in its owner's file.
 - **`reviewedBy` from the browser:** `decision-form.tsx:28` sends it and `src/server/applications.ts:364` stores it after checking the cookie actor is admin. Fix: set it from the actor on the server.
@@ -137,7 +137,7 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 14. low: pages
 
-**Status:** partly fixed in `fix/product-review`: refusal params on the exit form, the contract's exit card and the second-life page; `SIGNATORY_NOT_FOUND` labelled; the seven unused keys removed. Not fixed: the page sizes (under 600), the client-side formatters, "Ready to sign" on the portal (not this PR's files), the language switcher's query string (`useSearchParams` needs a Suspense boundary in the layout).
+**Status:** partly fixed in `fix/product-review`: refusal params on the exit form, the contract's exit card and the second-life page; `SIGNATORY_NOT_FOUND` labelled; the seven unused keys removed; in `fix/review-followups`: `centsToEuroInput` in the domain for the question flow (English now writes ".") and the language switcher keeps the query string. Not fixed: the price page's own copy of the formatter (`quote-calculator.tsx` is `fix/single-units`' file; it already writes the right mark), the page sizes (all under 600; a refactor with no behaviour change, left to avoid conflicts before the freeze), "Ready to sign" on the portal (`src/app/[locale]/leases/*` is the portal's files).
 
 - **Over 400 lines:** `src/components/question-flow.tsx` 465, `src/app/[locale]/assets/[id]/second-life/page.tsx` 461, `src/components/quote-calculator.tsx` 455, `src/app/[locale]/assets/[id]/page.tsx` 406 (under the 600 rule; split the step, the tables and the stored-quote section).
 - **Logic in client components:** `quote-calculator.tsx:61-71` (`centsToInput`, `downPaymentStep`) and a duplicate `centsToEuroInput` in `question-flow.tsx:278-283` that writes "," even in English. Fix: one domain formatter with tests.

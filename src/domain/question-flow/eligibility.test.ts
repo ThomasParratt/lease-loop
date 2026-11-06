@@ -150,6 +150,19 @@ describe('evaluate: the other rules', () => {
     });
   });
 
+  it('a company in DE (its record country, review finding 12) is rejected on residency', () => {
+    const company = {
+      ...base,
+      customerType: 'company' as const,
+      birthDate: undefined,
+      country: 'DE',
+    };
+    expect(evaluate(rules, company).reasons).toContainEqual({
+      code: 'residency_not_allowed',
+      params: { country: 'DE' },
+    });
+  });
+
   it('residency outside FI, SE and EE is rejected', () => {
     expect(evaluate(rules, { ...base, country: 'other' }).reasons).toEqual([
       { code: 'residency_not_allowed', params: { country: 'other' } },
