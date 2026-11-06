@@ -205,7 +205,7 @@ const lifeSchema = z.object({
   between: z.array(passportEventSchema),
 });
 
-/** `GET /api/assets/[id]/passport`: the asset, its lives as of today and the CO2 they saved. */
+/** `GET /api/assets/[id]/passport`: the asset, its lives as of today and the CO2 and money they saved. */
 export const passportResponseSchema = z.object({
   asset: assetSchema,
   asOf: isoDateSchema,
@@ -216,6 +216,12 @@ export const passportResponseSchema = z.object({
     perLifeKg: z.array(z.number().int().nonnegative()),
     /** Rounded once from the unrounded grams, so not always the sum of `perLifeKg`. */
     totalKg: z.number().int().nonnegative(),
+  }),
+  money: z.object({
+    /** Per life, cents at the list price as new on `asOf` (D80); the first life is always 0. */
+    perLifeCents: z.array(z.number().int().nonnegative()),
+    /** Rounded once from the exact sum, so not always the sum of `perLifeCents`. */
+    totalCents: z.number().int().nonnegative(),
   }),
 });
 
@@ -258,7 +264,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'GET',
     path: '/api/assets/[id]/passport',
-    summary: "An asset's passport: its lives across leases and the CO2 its later lives saved (D15)",
+    summary:
+      "An asset's passport: its lives across leases and the CO2 and money its later lives saved (D15, D80)",
     tag: 'passport',
     params: assetIdParamsSchema,
     response: passportResponseSchema,

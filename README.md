@@ -86,7 +86,10 @@ The pure card files are in `src/domain/scenarios/`, the end-to-end ones in `src/
 **Smart problems** (order from `docs/kickoff-brief.md` section 4):
 
 - 4 The smart question flow: done ([docs/features/question-flow.md](docs/features/question-flow.md)).
-- 7 Circular impact: done for CO₂ (the method, the passport across lives, the fleet counter, card 10's third life from the demo page); money saved missing, issue #40 ([docs/features/circular-impact.md](docs/features/circular-impact.md)).
+- 7 Circular impact: done; CO₂ (D15) and money saved in euros (D80: a new item's list price for the months used, minus the real refurbishment cost), per item on the passport and for the fleet on the landing page, card 10's third life from the demo page (58 kg and 665,60 € after it) ([docs/features/circular-impact.md](docs/features/circular-impact.md)).
+
+**Estimate (D80):** for lives before our records we have no record of the exact refurbishment costs, so we count only the costs we know were there, the steps the cost table does on every relisting (e-bike safety inspection 45 €, laptop data wipe 25 €, farm machine safety inspection 400 €), and the pages call that money saved estimated.
+
 - 1 Lock the price, not the tax: done; the quote freezes the list version and the net rent, and each invoice takes the VAT of its own date ([docs/features/pricing.md](docs/features/pricing.md), [docs/features/invoicing.md](docs/features/invoicing.md)).
 - 5 Money that adds up: done for the schedule and the balance (property tests in `src/domain/invoicing/schedule.property.test.ts` and `src/domain/scenarios/quote-schedule.property.test.ts`) ([docs/features/invoicing.md](docs/features/invoicing.md)).
 - 6 Explain my price: done; the breakdown line by line and the term comparison ([docs/features/pricing.md](docs/features/pricing.md)).

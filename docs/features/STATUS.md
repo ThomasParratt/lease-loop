@@ -57,12 +57,12 @@ One row per feature of the plan (`docs/kickoff-brief.md` sections 4 and 9), kept
 
 ## Smart problems (CHALLENGE.md order)
 
-| #   | Problem                     | State                                                                                                                                                                      |
-| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Lock the price, not the tax | verified (pricing + invoicing, cards 2 and 3)                                                                                                                              |
-| 2   | Fair early exit             | verified (D14 line by line; card 8 end to end in `src/server/scenarios/card-01-08.test.ts` and from the demo page; the market value by D31, a stated assumption)           |
-| 3   | Second-life matchmaking     | verified (D12 options, D13 ranking with every step, D61 refurbish or not; cards 9 and 10 end to end and from the demo page; the twin pairs in `traps.test.ts`; the drills) |
-| 4   | The smart question flow     | verified (cards 5, 6, 7)                                                                                                                                                   |
-| 5   | Money that adds up          | verified (property tests, the quote total equals the invoice sum)                                                                                                          |
-| 6   | Explain my price            | verified (the breakdown and the term comparison)                                                                                                                           |
-| 7   | Circular impact             | done for CO₂ (method, passport, fleet counter, card 10 end to end and from the demo page); money saved missing, issue #40                                                  |
+| #   | Problem                     | State                                                                                                                                                                                              |
+| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Lock the price, not the tax | verified (pricing + invoicing, cards 2 and 3)                                                                                                                                                      |
+| 2   | Fair early exit             | verified (D14 line by line; card 8 end to end in `src/server/scenarios/card-01-08.test.ts` and from the demo page; the market value by D31, a stated assumption)                                   |
+| 3   | Second-life matchmaking     | verified (D12 options, D13 ranking with every step, D61 refurbish or not; cards 9 and 10 end to end and from the demo page; the twin pairs in `traps.test.ts`; the drills)                         |
+| 4   | The smart question flow     | verified (cards 5, 6, 7)                                                                                                                                                                           |
+| 5   | Money that adds up          | verified (property tests, the quote total equals the invoice sum)                                                                                                                                  |
+| 6   | Explain my price            | verified (the breakdown and the term comparison)                                                                                                                                                   |
+| 7   | Circular impact             | verified (CO₂ by D15, money in euros by D80 from the real refurbishment cost, past lives estimated; passport and fleet counter; card 10 end to end; `money-saved.test.ts`, `asset-events.test.ts`) |

@@ -1,6 +1,6 @@
 // GET /api/assets/:id/passport
 // The asset, its lives (the past lives the data pack counts, then the event log) as of the
-// demo clock's day, and the CO2 its later lives saved (decision D15).
+// demo clock's day, and the CO2 and money its later lives saved (decisions D15, D80).
 import { fail, handleRoute, ok } from '@/server/api-response';
 import { readPassport } from '@/server/asset-events';
 import { db } from '@/server/db';
@@ -21,6 +21,7 @@ export const GET = handleRoute(
         before: result.passport.before,
         lives: result.passport.lives,
         co2: { perLifeKg: result.co2.perLifeKg, totalKg: result.co2.totalKg },
+        money: result.money,
       })
     );
   }

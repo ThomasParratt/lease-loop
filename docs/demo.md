@@ -33,12 +33,14 @@ Click **Run** on each card, in card order; the page lands where the judges compa
 | 5:30 | 7 Big ticket       | the application, manual review                   | `farm-002`, 20 000 € down: 272 037.5 → **272 038** a month, one rounding; PEP sends it to a person                                                                              |
 | 6:15 | 8 Early exit       | card 1's contract and its exit block, 2027-06-05 | 7 rents paid; **buy 330 675**, return 75 945, the D14 balance line by line (the market value by months since lease, D31)                                                        |
 | 7:00 | 9 Second life      | see the note below                               | `ebike-007` back fair: no refurbishment beyond the battery and inspection (39 500), **`wait-02` at 7 411** a month for 12 m                                                     |
-| 7:45 | 10 Third life      | the passport (`/en/assets/ebike-008/passport`)   | three lives, relisted at 37 101, leased again at 1 359 a month, **58 kg** CO₂ saved                                                                                             |
+| 7:45 | 10 Third life      | the passport (`/en/assets/ebike-008/passport`)   | three lives, relisted at 37 101, leased again at 1 359 a month, **58 kg** CO₂ and **665,60 €** saved by the end of the third lease (29 kg and 332,80 € so far, estimated)       |
 
 **Cards 9 and 10.** Once the wave 3 hardening PR (#57) is merged, the Run buttons do all of it ([the wave 3 review](reviews/wave-3.md), finding 2): card 9 assesses `ebike-007` and lands on `/en/assets/ebike-007/second-life` (the options, the waiting list with each verdict, `wait-02` first and `wait-13` second because it needs 12 000 more work), card 10 assesses `ebike-008`, leases it a third time and lands on its passport. Without #57 they stop at the returned asset; show them by hand:
 
 - Card 9: pick "Admin" in "Continue as", open `/en/assets/ebike-007/second-life` and click "Assess and relist".
 - Card 10: as "Admin", open `/en/assets/ebike-008/second-life` and click "Assess and relist"; pick `cust-olavi`, quote `ebike-008` for 24 months, apply and sign; open `/en/assets/ebike-008/passport`.
+
+**The money saved is estimated and moves with the clock.** Life 2 of `ebike-008` is from before our records, so it counts only the 45 € inspection we know every relisting pays, and the passport says estimated. It uses today's price list (D80), so 314,80 € on 5 Nov becomes 332,80 € on 6 Nov, when v2 raises e-bikes by 5 %.
 
 For card 6, if there is time: open the decision page's demo outbox and follow the signing link. Only the holder of the one-time link signs; the demo outbox stands in for the e-mail the named signatory would get.
 
