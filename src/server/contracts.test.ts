@@ -12,6 +12,7 @@ import { withAudit } from './audit';
 import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handlers';
 import {
   contractCustomerId,
+  contractIdOfApplication,
   endContract,
   getContract,
   getContractDetails,
@@ -306,6 +307,20 @@ describe('the owner reads', () => {
     expect(await contractCustomerId(db, id)).toBe('cust-aino');
     expect(await getContract(db, 'nope')).toBeNull();
     expect(await contractCustomerId(db, 'nope')).toBeNull();
+  });
+
+  it('contractIdOfApplication is null until signed, then the contract id (the Sign button, issue 39)', async () => {
+    const applicationId = await application();
+    expect(await contractIdOfApplication(db, applicationId)).toBeNull();
+    const result = await signContract(
+      db,
+      { applicationId, actor: 'cust-aino' },
+      '2026-11-05',
+      data
+    );
+    if (!result.ok) throw new Error(result.reason.code);
+    expect(await contractIdOfApplication(db, applicationId)).toBe(result.details.contract.id);
+    expect(await contractIdOfApplication(db, 'nope')).toBeNull();
   });
 });
 

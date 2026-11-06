@@ -2,7 +2,7 @@
 
 ## What it does
 
-The applicant (or admin) signs an approved application: the contract copies the stored quote's frozen numbers, takes the asset out of the catalogue and emits `CONTRACT_SIGNED`, so the invoices and the passport entry are written in the same transaction. The contract page shows the lease, the locked price with the reason it holds when a newer price list is live, and the invoices with their VAT-change line.
+The applicant (or admin) signs an approved application: the contract copies the stored quote's frozen numbers, takes the asset out of the catalogue and emits `CONTRACT_SIGNED`, so the invoices and the passport entry are written in the same transaction. The approved application page has the **Sign** form (issue 39): the applicant or admin picks a start day (the signing day by default, at most 90 days on) and signs, and lands on the contract; once signed, the page links to the contract instead. The contract page shows the lease, the locked price with the reason it holds when a newer price list is live, and the invoices with their VAT-change line.
 
 ## The rule
 
@@ -41,6 +41,7 @@ The server (`signContract`) adds: the signer must be the application's customer 
 - `src/app/api/contracts/route.ts` (`POST`, 201; 404 unknown application, 403 not the applicant, 409 already signed or asset taken, 422 the other refusals, all with the code and params in `details`)
 - `src/app/api/contracts/[id]/route.ts` (`GET`, the contract's customer or admin)
 - `src/app/[locale]/contracts/[id]/page.tsx`, `src/components/contract-summary.tsx`
+- The Sign form on `src/app/[locale]/applications/[id]/page.tsx` (issue 39): `src/components/sign-contract-form.tsx` posts `{ applicationId, startDate? }` and goes to `/[locale]/contracts/[id]`; `src/components/sign-refusal.ts` writes a refusal from `contract.refusal.<code>` with its days as dates and a decision as its status text. The page reads the signing day once (`todayForRequest()`), uses it only for the date field's bounds (`addDays(today, START_DAYS_MAX)`), and finds an existing contract with the owner's read `contractIdOfApplication(db, applicationId)`. The button shows only to the applicant customer or admin; the server checks again
 - The `contract.*` keys in the four message files
 
 The race write is not a `CONTRACT_SIGNED` handler on the bus, though D22 says the event sets `leased`: the invoicing and passport tests emit `CONTRACT_SIGNED` for `ebike-003` several times on one database, and a registered handler would make their second emit fail. `signContract` calls the catalogue's function on its own `tx` before it emits, which is the same transaction and the same rollback, and a lost race stops before the other handlers write.
@@ -48,12 +49,12 @@ The race write is not a `CONTRACT_SIGNED` handler on the bus, though D22 says th
 ## Tests that pin the numbers
 
 - `src/domain/contracts/sign.test.ts`: card 1 (end 2029-11-04, the copied numbers, the event payload), card 2 (9 627 kept, the price lock with 8 857), card 4 (end 2029-01-30), a leap-day start, every refusal with its params, the 90-day boundary, quantity 4 carried unchanged, D23 throws.
-- `src/server/contracts.test.ts`: card 1 against the real database (36 invoices, 13 466 and 13 520, the passport entry, the asset `leased`, one audit row naming the actor), invoice 0 on the signing day before a later start, admin signing, card 2 end to end, the last-unit race sequential and simultaneous (`Promise.all`: one wins, the other writes nothing), `already_signed`, `not_allowed_to_sign`, and every refusal leaving the counts unchanged.
+- `src/components/sign-refusal.test.ts`: every refusal code the route returns has its own message in all four languages, `start_too_far` reads "by 3 February 2027", a decision is written as its status text, an unknown code falls back to `contract.sign.error`.
+- `src/server/contracts.test.ts`: `contractIdOfApplication` is null until signed, then the contract's id; card 1 against the real database (36 invoices, 13 466 and 13 520, the passport entry, the asset `leased`, one audit row naming the actor), invoice 0 on the signing day before a later start, admin signing, card 2 end to end, the last-unit race sequential and simultaneous (`Promise.all`: one wins, the other writes nothing), `already_signed`, `not_allowed_to_sign`, and every refusal leaving the counts unchanged.
 - `src/server/scenarios/card-01-08.test.ts` and `card-02-07.test.ts` (wave 2 hardening): cards 1 to 4 signed after a real application through `createApplication`, the price lock of card 2 with both versions, card 3 dated 15 Sep 2026, card 4's end date and February due days, and `application_not_approved` for cards 5 (`rejected`), 6 (`awaiting_signatory`) and 7 (`manual_review`).
 
 ## Open questions
 
 - **D8, quantity (issue #13).** The contract carries the quote's quantity into the row and the event unchanged and locks only the one asset row named by the quote. N units on one row are locked as one row until D8 is decided: a fleet of four `ebike-004` takes the single `ebike-004` out of the catalogue and the other three are "to be delivered".
-- **Who signs an `awaiting_signatory` application.** Signing refuses everything but `approved`; the application slice's decision route lets the named signatory approve first (D10). Whether the signatory should then also be allowed to sign the contract (today only the applicant customer or admin may) is open: the signatory is not a customer in the data pack.
+- **Who signs an `awaiting_signatory` application.** Signing refuses everything but `approved`; the application slice's decision route lets the named signatory approve first (D10). Whether the signatory should then also be allowed to sign the contract (today only the applicant customer or admin may, and the Sign form follows that) is open: the signatory is not a customer in the data pack.
 - **The 90-day start limit** is ours, not the organiser's; nothing in `CHALLENGE.md` bounds it. To be confirmed and written into `docs/decisions.md`.
-- **No "Sign" button yet.** The application page belongs to the application slice and the demo page has no actions list, so signing is the API (`POST /api/contracts`) and the tests for now; the refusal messages are in the message files as `contract.refusal.<code>` for the button.

@@ -254,6 +254,18 @@ export async function contractCustomerId(db: PrismaClient, id: string): Promise<
   return row?.customer_id ?? null;
 }
 
+/** The id of the contract signed from `applicationId`, or null while it is unsigned. */
+export async function contractIdOfApplication(
+  db: PrismaClient,
+  applicationId: string
+): Promise<string | null> {
+  const row = await db.contract.findUnique({
+    where: { application_id: applicationId },
+    select: { id: true },
+  });
+  return row?.id ?? null;
+}
+
 /** One contract with its quote day and price-lock explanation on `today`, or null. */
 export async function getContractDetails(
   db: PrismaClient,

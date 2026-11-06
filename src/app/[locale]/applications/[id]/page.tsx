@@ -1,18 +1,24 @@
 // The decision on an application: a clear yes, no or "a person will check", and every reason
 // written from its code in the visitor's language (team rule 6). An admin decides a manual
-// review here, and the named signatory signs an awaiting_signatory case (D10).
+// review here, the named signatory signs an awaiting_signatory case (D10), and the applicant
+// signs an approved one into a contract (issue 39), or follows the link to the contract.
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { SignContractForm } from '@/components/sign-contract-form';
 import { Card, LinkButton, Notice, PageHeader } from '@/components/ui';
 import { loadQuestions } from '@/data/load';
+import { addDays } from '@/domain/civil-days';
+import { START_DAYS_MAX } from '@/domain/contracts';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, messages, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { ADMIN_ACTOR, readActor } from '@/server/actor';
 import { getApplication, type StoredReason } from '@/server/applications';
+import { contractIdOfApplication } from '@/server/contracts';
 import { db } from '@/server/db';
+import { todayForRequest } from '@/server/demo-clock';
 import { DecisionForm } from './decision-form';
 
 export async function generateMetadata({
@@ -99,6 +105,9 @@ export default async function ApplicationPage({
       : t('decision.reason.unknown', { code: reason.code });
   };
   const { decision } = application;
+  // Read once here and passed down (team rule 4); the server signs on its own today anyway.
+  const today = await todayForRequest();
+  const contractId = decision === 'approved' ? await contractIdOfApplication(db, id) : null;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
@@ -134,6 +143,32 @@ export default async function ApplicationPage({
           </ul>
         </Card>
       )}
+
+      {decision === 'approved' ? (
+        <Card as="section" title={t('contract.sign.title')} titleId="contract-sign">
+          {contractId ? (
+            <div className="space-y-4">
+              <p>{t('contract.sign.done')}</p>
+              <LinkButton href={`/${locale}/contracts/${contractId}`}>
+                {t('contract.sign.open')}
+              </LinkButton>
+            </div>
+          ) : actor === application.customerId || actor === ADMIN_ACTOR ? (
+            <div className="space-y-4">
+              <p>{t('contract.sign.intro')}</p>
+              <SignContractForm
+                applicationId={application.id}
+                locale={locale}
+                today={today}
+                latestStartDate={addDays(today, START_DAYS_MAX)}
+                maxDays={START_DAYS_MAX}
+              />
+            </div>
+          ) : (
+            <Notice tone="info">{t('contract.sign.applicantOnly')}</Notice>
+          )}
+        </Card>
+      ) : null}
 
       {decision === 'manual_review' ? (
         <Card
