@@ -149,13 +149,12 @@ describe('signContract, card 1 (the happy path)', () => {
     expect(second).toMatchObject({ sequence: 1, kind: 'rent', dueDate: '2026-11-15' });
   });
 
-  it('lets admin sign for the customer, and the audit row names admin', async () => {
+  it('refuses the admin: the customer signs the lease themselves (D88), and nothing is written', async () => {
     const applicationId = await application();
     const result = await signContract(db, { applicationId, actor: 'admin' }, '2026-11-05', data);
-    expect(result.ok).toBe(true);
-    expect(await db.auditLog.findFirst({ where: { action: 'contract.signed' } })).toMatchObject({
-      actor: 'admin',
-    });
+    expect(result).toMatchObject({ ok: false, reason: { code: 'customer_signs' } });
+    expect(await db.contract.count()).toBe(0);
+    expect(await db.auditLog.findFirst({ where: { action: 'contract.signed' } })).toBeNull();
   });
 });
 

@@ -3,12 +3,14 @@
 // The lists come from docs/kickoff-brief.md section 6 and D10.
 import { z } from 'zod';
 
-/** What the question flow decided about an application. */
+/** What the question flow decided about an application, or that the applicant withdrew it. */
 export const applicationDecisions = [
   'approved',
   'rejected',
   'manual_review',
   'awaiting_signatory',
+  /** The applicant stepped back before signing (D87). Final. */
+  'withdrawn',
 ] as const;
 export const applicationDecisionSchema = z.enum(applicationDecisions);
 export type ApplicationDecision = z.infer<typeof applicationDecisionSchema>;

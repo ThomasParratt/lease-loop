@@ -15,11 +15,26 @@ const text = (answer: Answer | undefined): string | undefined =>
 const sameCents = (answer: string, recorded: string) =>
   /^\d+$/.test(answer) ? Number(answer) === Number(recorded) : answer === recorded;
 
+/**
+ * A person's name as words to compare: case, extra spaces, accents and word order ignored, so
+ * "mäkelä sanna" and "Sanna Makela" are the record's "Sanna Mäkelä". A different name is not.
+ */
+export function nameWords(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((word) => word !== '')
+    .sort()
+    .join(' ');
+}
+
 type Recorded = { value: string | undefined; same?: (answer: string, recorded: string) => boolean };
 
 /**
  * The question ids whose answer differs from the record, in the bank's order: the customer
- * type, the birth date, the e-mail (case ignored), the country (a country outside FI, SE and
+ * type, the full name (a person's, not a company's; see `nameWords`), the birth date, the e-mail (case ignored), the country (a country outside FI, SE and
  * EE is answered "other"), the monthly net income, the business id, whether the applicant can
  * sign, the annual revenue, and a PEP on record who answers "no" (D58). A question not answered, or a field the record does not have,
  * is not compared.
@@ -27,6 +42,11 @@ type Recorded = { value: string | undefined; same?: (answer: string, recorded: s
 export function recordMismatches(record: Customer, answers: Answers): string[] {
   const recorded: Record<string, Recorded> = {
     q_customer_type: { value: record.type },
+    // Asked of consumers and sole traders; a company's record name is the company's.
+    q_full_name: {
+      value: record.type === 'company' ? undefined : record.name,
+      same: (a, r) => nameWords(a) === nameWords(r),
+    },
     q_birth_date: { value: 'birth_date' in record ? record.birth_date : undefined },
     q_email: { value: record.email, same: (a, r) => a.toLowerCase() === r.toLowerCase() },
     q_country: { value: ALLOWED_COUNTRIES.includes(record.country) ? record.country : 'other' },

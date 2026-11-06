@@ -41,6 +41,8 @@ HTTP (D74): `not_signed_in` → 401, every other refusal → 403, both `FORBIDDE
 
 Public, with no `authorize`: the catalogue, the price preview and the stored quotes, the passport, the audit log and its check, the actor picker, the demo clock and the signing link (the token is the signatory's authority). `tests/meta-rules.test.ts` lists them and fails on any other `route.ts` that never calls `authorize(`.
 
+**Since D87 and D88:** `withdraw_application` (the owner and the admin) and `sign_contract` refused to the admin with the code `customer_signs`: the customer signs their own lease.
+
 ## Decisions
 
 - D73: one pure policy, checked before the action in the route and again at the service's top.

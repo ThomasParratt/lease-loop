@@ -21,6 +21,7 @@ export const statusTone = {
   rejected: 'danger',
   manual_review: 'warning',
   awaiting_signatory: 'warning',
+  withdrawn: 'neutral',
   // quotes and contracts
   quoted: 'info',
   expired: 'neutral',

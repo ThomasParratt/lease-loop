@@ -13,6 +13,7 @@ export const AUTHZ_ACTIONS = [
   'apply',
   'decide_application',
   'sign_contract',
+  'withdraw_application',
   'read_contract',
   'pay_invoice',
   'exit_contract',
@@ -40,7 +41,8 @@ export type AuthzSubject = {
   onDate?: string;
 };
 
-export type AuthzRefusalCode = 'not_signed_in' | 'not_owner' | 'admin_only' | 'signatory_required';
+export type AuthzRefusalCode =
+  'not_signed_in' | 'not_owner' | 'admin_only' | 'signatory_required' | 'customer_signs';
 export type AuthzRefusal = { code: AuthzRefusalCode; params: { action: AuthzAction } };
 export type AuthzDecision = { ok: true } | { ok: false; reason: AuthzRefusal };
 
@@ -49,6 +51,7 @@ export const AUTHZ_REFUSAL_CODES: readonly AuthzRefusalCode[] = [
   'not_owner',
   'admin_only',
   'signatory_required',
+  'customer_signs',
 ];
 
 /** Whether a service's refusal is one of ours (the routes map it with `forbiddenResponse`). */
@@ -91,8 +94,10 @@ function signerHoldsMandate(subject: AuthzSubject): boolean {
  * 3. Anonymous: `not_signed_in`.
  * 4. Changing a company's signatory list takes an account that is itself an active signatory
  *    when the subject carries the list (the admin checks the register instead).
- * 5. The admin does everything else; a customer never takes an admin action (`admin_only`).
- * 6. A customer acts on its own records only (`not_owner`).
+ * 5. The customer signs their own lease: the admin reviews applications and may apply on a
+ *    customer's behalf (D47), but never signs for them (`customer_signs`, D88).
+ * 6. The admin does everything else; a customer never takes an admin action (`admin_only`).
+ * 7. A customer acts on its own records only (`not_owner`).
  */
 export function can(actor: string, action: AuthzAction, subject: AuthzSubject): AuthzDecision {
   if (action === 'run_demo_card') return ALLOW;
@@ -101,7 +106,7 @@ export function can(actor: string, action: AuthzAction, subject: AuthzSubject): 
     return signerHoldsMandate(subject) ? ALLOW : refuse('signatory_required', action);
   }
   if (actor === ANONYMOUS || actor === '') return refuse('not_signed_in', action);
-  if (actor === ADMIN) return ALLOW;
+  if (actor === ADMIN) return action === 'sign_contract' ? refuse('customer_signs', action) : ALLOW;
   if (ADMIN_ONLY.includes(action)) return refuse('admin_only', action);
   if (subject.customerId === null || subject.customerId !== actor) {
     return refuse('not_owner', action);

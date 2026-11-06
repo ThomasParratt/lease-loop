@@ -1,7 +1,10 @@
 'use client';
 
-// Ending a lease: choose buy, return or pass on, report the condition and the usage, and for a
-// pass-on name the next person (D16). Each change asks GET /api/contracts/[id]/exit-preview
+// Ending a lease: choose buy, return or pass on, and for a pass-on name the next person (D16).
+// Giving the item back or passing it on asks the customer for its condition and usage, empty
+// until answered: they set what returning costs (the market value and the refurbishment).
+// Buying asks for neither: the buy price is the D14 balance (or the frozen buyout), which they
+// do not change, so the item's last known condition and usage are sent as they are. Each change asks GET /api/contracts/[id]/exit-preview
 // (debounced, the previous request aborted) and shows both exits line by line as the server
 // planned them; the browser never computes a price or sends a date. "End the lease" posts to
 // /api/contracts/[id]/exit and refreshes the page, which then shows the final invoice.
@@ -40,8 +43,9 @@ export function ExitForm(props: ExitFormProps) {
   const router = useRouter();
   const ids = useId();
   const [mode, setMode] = useState<ExitMode>(props.initialPreview.mode);
-  const [condition, setCondition] = useState<AssetCondition>(props.initial.condition);
-  const [usageText, setUsageText] = useState(String(props.initial.usageValue));
+  // Empty until the customer answers; a buy never asks (see the comment at the top).
+  const [condition, setCondition] = useState<AssetCondition | ''>('');
+  const [usageText, setUsageText] = useState('');
   const [nextCustomerId, setNextCustomerId] = useState('');
   const [preview, setPreview] = useState(props.initialPreview);
   const [loading, setLoading] = useState(false);
@@ -50,17 +54,27 @@ export function ExitForm(props: ExitFormProps) {
   const firstRun = useRef(true);
 
   const usageValue = /^\d{1,8}$/.test(usageText) ? Number(usageText) : null;
+  const asks = mode !== 'buy';
+  const answered = condition !== '' && usageValue !== null;
+  /** What the preview and the exit use: the answers, or the last known values until then. */
+  const reported =
+    asks && answered
+      ? { condition, usageValue }
+      : { condition: props.initial.condition, usageValue: props.initial.usageValue };
 
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
       return;
     }
-    if (usageValue === null) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
-      const query = new URLSearchParams({ mode, condition, usageValue: String(usageValue) });
+      const query = new URLSearchParams({
+        mode,
+        condition: reported.condition,
+        usageValue: String(reported.usageValue),
+      });
       try {
         const response = await fetch(`/api/contracts/${contractId}/exit-preview?${query}`, {
           signal: controller.signal,
@@ -82,7 +96,7 @@ export function ExitForm(props: ExitFormProps) {
     };
     // `t` and `refusalText` follow `locale`, which does not change on this page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractId, mode, condition, usageValue]);
+  }, [contractId, mode, reported.condition, reported.usageValue]);
 
   /** The refusal `{ code, params }` from the error details, with its params (review finding 14). */
   function refusalText(details?: { code?: unknown; params?: Record<string, string | number> }) {
@@ -96,15 +110,15 @@ export function ExitForm(props: ExitFormProps) {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (usageValue === null) return;
+    if (asks && !answered) return;
     setError(null);
     const response = await fetch(`/api/contracts/${contractId}/exit`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         mode,
-        condition,
-        usage: { unit: usageUnit, value: usageValue },
+        condition: reported.condition,
+        usage: { unit: usageUnit, value: reported.usageValue },
         ...(mode === 'pass_on' && nextCustomerId ? { nextCustomerId } : {}),
       }),
     }).catch(() => null);
@@ -150,40 +164,51 @@ export function ExitForm(props: ExitFormProps) {
         </div>
       </fieldset>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={`${ids}-condition`} label={t('exit.condition')} hint={t('exit.conditionHint')}>
-          {(control) => (
-            <select
-              className={inputClasses}
-              value={condition}
-              onChange={(e) => setCondition(e.target.value as AssetCondition)}
-              {...control}
+      {asks ? (
+        <fieldset className="space-y-3">
+          <legend className="font-medium">{t('exit.report.title')}</legend>
+          <p className="text-sm text-ink-muted">{t('exit.report.why')}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id={`${ids}-condition`} label={t('exit.condition')}>
+              {(control) => (
+                <select
+                  className={inputClasses}
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value as AssetCondition | '')}
+                  required
+                  {...control}
+                >
+                  <option value="">{t('exit.conditionChoose')}</option>
+                  {conditions.map((value) => (
+                    <option key={value} value={value}>
+                      {t(`condition.${value}`)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <Field
+              id={`${ids}-usage`}
+              label={t(`exit.usage.${usageUnit}`)}
+              error={usageText !== '' && usageValue === null ? t('exit.usageInvalid') : undefined}
             >
-              {conditions.map((value) => (
-                <option key={value} value={value}>
-                  {t(`condition.${value}`)}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field
-          id={`${ids}-usage`}
-          label={t(`exit.usage.${usageUnit}`)}
-          error={usageValue === null ? t('exit.usageInvalid') : undefined}
-        >
-          {(control) => (
-            <input
-              className={inputClasses}
-              inputMode="numeric"
-              value={usageText}
-              onChange={(e) => setUsageText(e.target.value.trim())}
-              {...control}
-              aria-invalid={usageValue === null ? true : undefined}
-            />
-          )}
-        </Field>
-      </div>
+              {(control) => (
+                <input
+                  className={inputClasses}
+                  inputMode="numeric"
+                  value={usageText}
+                  onChange={(e) => setUsageText(e.target.value.trim())}
+                  required
+                  {...control}
+                  aria-invalid={usageText !== '' && usageValue === null ? true : undefined}
+                />
+              )}
+            </Field>
+          </div>
+        </fieldset>
+      ) : (
+        <p className="text-sm text-ink-muted">{t('exit.buyNoCheck')}</p>
+      )}
 
       {mode === 'pass_on' ? (
         <Field id={`${ids}-next`} label={t('exit.next')} hint={t('exit.nextHint')}>
@@ -219,6 +244,15 @@ export function ExitForm(props: ExitFormProps) {
           locale={locale}
           t={t}
           chosen={mode !== 'buy'}
+          note={
+            asks && answered
+              ? undefined
+              : t('exit.estimateNote', {
+                  condition: t(`condition.${props.initial.condition}`),
+                  usage: formatNumber(props.initial.usageValue, locale),
+                  unit: t(`exit.unit.${usageUnit}`),
+                })
+          }
         />
       </div>
 
@@ -248,7 +282,7 @@ export function ExitForm(props: ExitFormProps) {
         type="submit"
         variant={mode === 'buy' ? 'primary' : 'secondary'}
         disabled={
-          pending || loading || usageValue === null || (mode === 'pass_on' && !nextCustomerId)
+          pending || loading || (asks && !answered) || (mode === 'pass_on' && !nextCustomerId)
         }
       >
         {pending ? t('exit.pending') : t(`exit.submit.${mode}`)}

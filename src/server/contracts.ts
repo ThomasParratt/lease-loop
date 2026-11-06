@@ -54,6 +54,13 @@ export type SignContractRefusal =
   | AuthzRefusal
   | { code: 'already_signed'; params: { applicationId: string } };
 
+/** Thrown inside the signing transaction when the application is no longer approved (D87). */
+class ApplicationMovedOn extends Error {
+  constructor(readonly decision: string) {
+    super(`application is ${decision}`);
+  }
+}
+
 export type SignContractResult =
   { ok: true; details: ContractDetails } | { ok: false; reason: SignContractRefusal };
 
@@ -199,6 +206,10 @@ export async function signContract(
         },
       },
       async (tx) => {
+        // D87: the applicant may have withdrawn it since it was read; re-read in this
+        // transaction so a withdrawal and a signing at the same instant leave one winner.
+        const still = await getApplication(tx, applicationId);
+        if (still?.decision !== 'approved') throw new ApplicationMovedOn(still?.decision ?? '');
         await leaseAvailableAsset(tx, contract.assetId);
         // The row's own rules (D27): the frozen price, the term's last day, the status.
         const created = await tx.contract.create({
@@ -228,6 +239,12 @@ export async function signContract(
       };
     }
     if (isUniqueViolation(error)) return alreadySigned;
+    if (error instanceof ApplicationMovedOn) {
+      return {
+        ok: false,
+        reason: { code: 'application_not_approved', params: { decision: error.decision } },
+      };
+    }
     throw error;
   }
 }
@@ -292,7 +309,7 @@ export async function contractCustomerId(
 
 /** The id of the contract signed from `applicationId`, or null while it is unsigned. */
 export async function contractIdOfApplication(
-  db: PrismaClient,
+  db: PrismaClient | TransactionClient,
   applicationId: string
 ): Promise<string | null> {
   const row = await db.contract.findUnique({

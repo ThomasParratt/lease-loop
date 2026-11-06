@@ -197,7 +197,7 @@ function EntryCard({
       id={`audit-entry-${row.id}`}
       data-entry={row.id}
       aria-labelledby={`audit-entry-${row.id}-title`}
-      className="audit-card flex max-h-[34vh] w-[min(20rem,85vw)] shrink-0 snap-end flex-col rounded-lg border border-line bg-raised shadow-sm"
+      className="audit-card flex h-[34vh] w-[min(20rem,85vw)] shrink-0 snap-end flex-col rounded-lg border border-line bg-raised shadow-sm"
     >
       <header className="flex items-start justify-between gap-2 border-b border-line px-4 pt-3 pb-2.5">
         <div className="min-w-0">

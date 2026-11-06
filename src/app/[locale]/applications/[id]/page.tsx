@@ -9,9 +9,11 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { SignContractForm } from '@/components/sign-contract-form';
+import { WithdrawButton } from '@/components/withdraw-button';
 import { Card, LinkButton, Notice, PageHeader } from '@/components/ui';
 import { loadQuestions } from '@/data/load';
 import { START_MONTHS_MAX } from '@/domain/contracts';
+import { withdrawalCheck } from '@/domain/question-flow/withdraw';
 import { addMonthsClamped } from '@/domain/invoicing/dates';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -65,6 +67,7 @@ const TONE = {
   rejected: 'error',
   manual_review: 'warning',
   awaiting_signatory: 'warning',
+  withdrawn: 'neutral',
 } as const;
 
 // The decision panel: one colour, one glyph per outcome. The glyph is decoration; the
@@ -73,18 +76,23 @@ const PANEL = {
   success: 'border-success-line bg-success-soft text-success-ink',
   warning: 'border-warning-line bg-warning-soft text-warning-ink',
   error: 'border-danger-line bg-danger-soft text-danger-ink',
+  neutral: 'border-line bg-muted text-ink',
 } as const;
 const ICON = {
   success: 'bg-success-solid text-raised',
   warning: 'bg-warning-solid text-raised',
   error: 'bg-danger-solid text-raised',
+  neutral: 'bg-neutral-solid text-raised',
 } as const;
-const GLYPH = { success: '✓', warning: '…', error: '!' } as const;
+const GLYPH = { success: '✓', warning: '…', error: '!', neutral: '×' } as const;
 
 export default async function ApplicationPage({
   params,
+  searchParams,
 }: PageProps<'/[locale]/applications/[id]'>) {
   const { locale, id } = await params;
+  // `?from=leases`: opened from My leases (rows.tsx), so the way back leads there first.
+  const fromLeases = (await searchParams).from === 'leases';
   if (!isLocale(locale)) notFound();
   await connection();
   const t = getT(locale);
@@ -117,6 +125,10 @@ export default async function ApplicationPage({
   // Read once here and passed down (team rule 4); the server signs on its own today anyway.
   const today = await todayForRequest();
   const contractId = decision === 'approved' ? await contractIdOfApplication(db, id) : null;
+  // D87: the applicant (or the admin for them) may step back while it is not a lease yet.
+  const mayWithdraw =
+    (actor === application.customerId || actor === ADMIN_ACTOR) &&
+    withdrawalCheck(decision, contractId !== null).ok;
   // The demo outbox stands in for the e-mail to the signatory: the admin's view only, never
   // the coordinator's, who must not hold the token (D46, wave 3 finding 1).
   const link =
@@ -143,14 +155,18 @@ export default async function ApplicationPage({
             {t(`decision.status.${decision}`)}
           </h2>
           <p className="mt-1">
-            {t('decision.decidedOn', { date: formatIsoDate(application.decidedOn, locale) })}
+            {t(decision === 'withdrawn' ? 'decision.withdrawnOn' : 'decision.decidedOn', {
+              date: formatIsoDate(application.decidedOn, locale),
+            })}
           </p>
         </div>
       </div>
 
       {/* A yes needs no reasons ("every check passed" says nothing new); a no, a manual
           review or a wait for the signatory does, without a badge repeating the panel. */}
-      {decision === 'approved' ? null : (
+      {/* A cancelled one needs no "why" either: the panel says it, and the old reasons no
+          longer matter. */}
+      {decision === 'approved' || decision === 'withdrawn' ? null : (
         <Card as="section" title={t('decision.reasons')} titleId="decision-reasons">
           <ul className="list-disc space-y-2 pl-5">
             {application.reasons.map((reason, index) => (
@@ -169,7 +185,7 @@ export default async function ApplicationPage({
                 {t('contract.sign.open')}
               </LinkButton>
             </div>
-          ) : actor === application.customerId || actor === ADMIN_ACTOR ? (
+          ) : actor === application.customerId ? (
             <div className="space-y-4">
               <p>{t('contract.sign.intro')}</p>
               <SignContractForm
@@ -180,6 +196,9 @@ export default async function ApplicationPage({
                 maxMonths={START_MONTHS_MAX}
               />
             </div>
+          ) : actor === ADMIN_ACTOR ? (
+            // D88: the admin reviews and may apply on a customer's behalf, but never signs.
+            <Notice tone="info">{t('authz.refusal.customer_signs')}</Notice>
           ) : (
             <Notice tone="info">{t('contract.sign.applicantOnly')}</Notice>
           )}
@@ -264,9 +283,22 @@ export default async function ApplicationPage({
         </Card>
       ) : null}
 
+      {mayWithdraw ? (
+        <Card as="section" title={t('withdraw.title')} titleId="withdraw" className="mt-6">
+          <p className="mb-4 text-ink-muted">{t('withdraw.intro')}</p>
+          <WithdrawButton applicationId={application.id} locale={locale} />
+        </Card>
+      ) : null}
+
       <div className="mt-8 flex flex-wrap gap-3">
-        <LinkButton href={`/${locale}`}>
-          <span aria-hidden="true">←</span> {t('decision.home')}
+        {fromLeases ? (
+          <LinkButton href={`/${locale}/leases`}>
+            <span aria-hidden="true">←</span> {t('decision.backToLeases')}
+          </LinkButton>
+        ) : null}
+        <LinkButton href={`/${locale}`} variant={fromLeases ? 'secondary' : 'primary'}>
+          {fromLeases ? null : <span aria-hidden="true">← </span>}
+          {t('decision.home')}
         </LinkButton>
         <LinkButton href={`/${locale}/catalogue`} variant="secondary">
           {t('decision.catalogue')}

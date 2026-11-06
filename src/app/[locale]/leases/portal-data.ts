@@ -19,11 +19,12 @@ export async function readLeases(filter: { customerId?: string }) {
     listAssets(db),
   ]);
   const assetById = new Map(assets.map((a) => [a.id, a]));
-  // An application that became a contract is listed as the contract only.
+  // An application that became a contract is listed as the contract only; one the applicant
+  // withdrew (D87) is no longer waiting for anything and is not listed.
   const signed = new Set(contracts.map((c) => c.applicationId));
   const unsigned: UnsignedApplication[] = await Promise.all(
     applications
-      .filter((a) => !signed.has(a.id))
+      .filter((a) => !signed.has(a.id) && a.decision !== 'withdrawn')
       .map(async (application) => {
         const quote = await getQuote(db, application.quoteId);
         return { application, asset: quote ? assetById.get(quote.breakdown.assetId) : undefined };

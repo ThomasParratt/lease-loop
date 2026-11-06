@@ -123,6 +123,12 @@ Typo Trading Oy (`cust-broken-id`) has **1234567-8**: 1·7 + 2·9 + 3·10 + 4·5
 
 "Why we ask" is a teal note (the `info` role, D21) with an info glyph and a chevron under each question, a native `<details>` so it opens from the keyboard; it spans the column on a phone and fits its text from `sm` up, so it does not read as one more option. The decision page leads with the outcome as an `h2` under the page's `h1`; a yes shows no reasons ("every check passed" adds nothing), while a no, a manual review and a wait for the signatory list theirs under "Why". A no is worded politely ("Sorry, your lease application was not approved"; card 5 adds "You can apply from 10 March 2027."), and every outcome ends with a way back to the home page and the catalogue.
 
+**The name against the record (D89).** A consumer's or sole trader's `q_full_name` is compared with the record like the birth date and the e-mail: a different name is a `record_mismatch`, so a person checks the case. `nameWords` ignores case, extra spaces, accents and word order: Aino answering "Maija Meikäläinen" goes to review; Sanna answering "sanna makela" or "Mäkelä Sanna" does not. A company's record name is not compared.
+
+**Stepping back (D87).** An application not signed yet (approved, manual review, awaiting the signatory) can be withdrawn by its applicant or the admin: it becomes `withdrawn` with a `withdrawn` reason (`withdrawalCheck`, `withdrawApplication`, `POST /api/applications/[id]/withdraw`). The decision page shows "Changed your mind?" with "Cancel application"; a withdrawn one shows "Application cancelled" and is left off the leases lists.
+
+**Why we ask.** The page's texts are the message files' `question.why.*`, not the pack's English: "Who is leasing?" now says what changes (a person's age and income, a business's ID and who can sign), and the e-bike use says what it means (delivery adds far more kilometres; they and the condition are checked on return). The answer to the e-bike use is stored with the application; no rule reads it.
+
 ## Decisions
 
 - **D9** eligibility: the rules above, every check a code with params.
@@ -207,6 +213,8 @@ getApplication(db, id): Promise<ApplicationView | null>;
 - `src/server/applications.ts` (+ test); routes `src/app/api/applications/route.ts`, `[id]/route.ts`, `[id]/decision/route.ts`; rows in `src/server/routes.ts`
 - `src/app/[locale]/apply/[quoteId]/page.tsx`, `src/components/question-flow.tsx`; `src/app/[locale]/applications/[id]/page.tsx`, `decision-form.tsx`
 - Message keys `apply.*`, `question.*`, `decision.*` in the four files
+
+- `src/domain/question-flow/withdraw.ts` and `src/server/withdraw.test.ts` (D87); `nameWords` in `record-check.ts` (D89).
 
 ## Tests that pin the numbers
 

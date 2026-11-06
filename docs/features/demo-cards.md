@@ -25,6 +25,8 @@ Worked example, card 8 on a fresh database: the run answers six steps, `quote_cr
 
 Steps and refusals are codes with params; a decision reason is one `application_reason` step with the reason's own params, written with `decision.reason.<code>`, and a refused step is written with the slice's own refusal sentence; the page writes them from `demo.step.<code>` and `demo.run.<code>` in the visitor's language, with `…Cents` as euros and days as dates (`src/app/[locale]/demo/card-steps.ts`).
 
+**The jump buttons.** "Demo clock", "Demo cards" and "Audit log" at the top of the demo page are `HashLink`s: they scroll to their section on every click, also when the URL already ends in that section's hash (a plain link did nothing the second time).
+
 ## Decisions
 
 - **D70** a second click is refused with `card_already_run` and links the earlier records; a run stopped before signing is picked up and signed; card 8 builds on card 1 and only previews again.

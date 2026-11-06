@@ -29,7 +29,20 @@ const TABLE: Record<
     other: 'admin_only',
     admin: 'ok',
   },
-  sign_contract: { anonymous: 'not_signed_in', owner: 'ok', other: 'not_owner', admin: 'ok' },
+  // Panu's finding: the customer signs their own lease; the admin reviews, never signs.
+  sign_contract: {
+    anonymous: 'not_signed_in',
+    owner: 'ok',
+    other: 'not_owner',
+    admin: 'customer_signs',
+  },
+  // Cancelling an application not signed yet: the customer, or the admin for them.
+  withdraw_application: {
+    anonymous: 'not_signed_in',
+    owner: 'ok',
+    other: 'not_owner',
+    admin: 'ok',
+  },
   read_contract: { anonymous: 'not_signed_in', owner: 'ok', other: 'not_owner', admin: 'ok' },
   pay_invoice: { anonymous: 'not_signed_in', owner: 'ok', other: 'not_owner', admin: 'ok' },
   exit_contract: { anonymous: 'not_signed_in', owner: 'ok', other: 'not_owner', admin: 'ok' },
