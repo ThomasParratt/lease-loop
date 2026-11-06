@@ -95,7 +95,7 @@ The pure card files are in `src/domain/scenarios/`, the end-to-end ones in `src/
 - 5 Money that adds up: done for the schedule and the balance (property tests in `src/domain/invoicing/schedule.property.test.ts` and `src/domain/scenarios/quote-schedule.property.test.ts`) ([docs/features/invoicing.md](docs/features/invoicing.md)).
 - 6 Explain my price: done; the breakdown line by line and the term comparison ([docs/features/pricing.md](docs/features/pricing.md)).
 - 2 Fair early exit: done, on the D31 assumption (below); buy, return and pass on line by line, the unpaid rents cancelled, one final invoice with the VAT of its day ([docs/features/exits.md](docs/features/exits.md)).
-- 3 Second-life matchmaking: done; the assessment re-prices the returned item (D12), every waiting-list entry gets a verdict naming its first failing step, the candidates are ranked by D13 with the step that decided each place, and the item is refurbished beyond the mandatory steps only when the winner needs it (D61) ([docs/features/second-life.md](docs/features/second-life.md)).
+- 3 Second-life matchmaking: done, with its bonus, the passport (every item's lives, contracts, assessments and refurbishments, and the CO₂ and money each later life saved, on `/[locale]/assets/[id]/passport`); the assessment re-prices the returned item (D12), every waiting-list entry gets a verdict naming its first failing step, the candidates are ranked by D13 with the step that decided each place, and the item is refurbished beyond the mandatory steps only when the winner needs it (D61) ([docs/features/second-life.md](docs/features/second-life.md), the passport in [docs/features/circular-impact.md](docs/features/circular-impact.md)).
 
 ## Features
 

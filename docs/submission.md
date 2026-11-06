@@ -34,9 +34,8 @@ Lease Loop takes one e-bike, laptop or farm machine through three lives: a live 
 
 <README Smart problems list>
 
-- [x] Wildcard: four things beyond the brief.
+- [x] Wildcard: three things beyond the brief. (The asset passport is not one of them: it is the bonus of smart problem 3, listed there.)
   - **The time-travel clock.** One demo clock on the demo page; every date the product uses is read from it once per request, so the judges can stand on 6 November for the price lock, 1 January 2027 for the VAT change and 5 June 2027 for the early exit ([demo-cards.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/features/demo-cards.md), [catalogue.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/features/catalogue.md)).
-  - **The asset passport.** Each item's lives, contracts, assessments and refurbishments, and the CO₂ each later life saved ([circular-impact.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/features/circular-impact.md)).
   - **The tamper-evident, sealed audit chain.** Each audit row carries the hash of the one before and an Ed25519 signature made with a key outside the database, and every new head is copied to an anchor file outside it; the audit page shows the head hash and the public key and names the first broken row. `npm run demo:tamper -- --rewrite` recomputes every hash and is still caught, and `npm run audit:anchor` has a public RFC 3161 timestamp authority sign the head (D81, [audit-chain.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/features/audit-chain.md)).
   - **The signatory link.** A company's signatory list and a one-time signing link for the named person: only the holder of the link signs card 6, and the demo outbox stands in for the e-mail ([signatories.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/features/signatories.md)).
 
