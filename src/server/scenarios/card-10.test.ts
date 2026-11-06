@@ -15,7 +15,7 @@ import { getContract } from '../contracts';
 import { exitContract } from '../exits';
 import type { PrismaClient } from '../prisma-client';
 import { createQuote } from '../quotes';
-import { assessAsset } from '../second-life';
+import { assessAsset, loadSecondLifeData } from '../second-life';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -183,5 +183,26 @@ describe('the passport after a return at the end of the lease', () => {
       months: 36,
     });
     expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
+  });
+});
+
+describe('an item no condition can lease is not relisted (relist_unpriced)', () => {
+  it('refuses the assessment, writes nothing and leaves ebike-008 returned', async () => {
+    const data = structuredClone(await loadSecondLifeData());
+    // Every band starts above any second-life amount: no option has a rent on any term.
+    const shift = 100_000_000;
+    data.pricing.table.bands = data.pricing.table.bands.map((b) => ({
+      ...b,
+      min_financed_cents: b.min_financed_cents + shift,
+      max_financed_cents: b.max_financed_cents + shift,
+    }));
+    const today = '2026-11-06';
+    const result = await assessAsset(db, { assetId: 'ebike-008', actor: 'admin', today }, data);
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'relist_unpriced', params: { assetId: 'ebike-008' } },
+    });
+    expect(await db.returnAssessment.count({ where: { asset_id: 'ebike-008' } })).toBe(0);
+    expect((await getAsset(db, 'ebike-008'))?.status).toBe('returned');
   });
 });

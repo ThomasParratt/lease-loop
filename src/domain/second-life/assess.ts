@@ -100,7 +100,10 @@ export type RefurbishComparison = {
   extraCostCents: number;
   /** Gain − extra cost: what the no-winner decision ranks (D86). */
   netGainCents: number;
-  /** Gain ≥ extra cost: the refurbishment pays for itself. */
+  /**
+   * Gain > extra cost: the refurbishment pays for itself. A tie is not worth the work, as the
+   * no-winner decision keeps the lower condition on a tie (D86).
+   */
   worthIt: boolean;
 };
 
@@ -117,7 +120,7 @@ export function compareToAsReturned(
     valueGainCents,
     extraCostCents,
     netGainCents: valueGainCents - extraCostCents,
-    worthIt: valueGainCents >= extraCostCents,
+    worthIt: valueGainCents > extraCostCents,
   };
 }
 

@@ -248,15 +248,15 @@ describe('compareToAsReturned (D86: refurbish or not)', () => {
     });
   });
 
-  it('a gain equal to the extra cost is worth it (gain ≥ cost)', () => {
+  it('a gain equal to the extra cost is not worth the work (gain > cost), as the decision ties', () => {
     const base = { valueCents: 100, costCents: 10 };
     expect(compareToAsReturned(base, { valueCents: 150, costCents: 60 })).toEqual({
       valueGainCents: 50,
       extraCostCents: 50,
       netGainCents: 0,
-      worthIt: true,
+      worthIt: false,
     });
-    expect(compareToAsReturned(base, { valueCents: 149, costCents: 60 }).worthIt).toBe(false);
+    expect(compareToAsReturned(base, { valueCents: 151, costCents: 60 }).worthIt).toBe(true);
   });
 });
 

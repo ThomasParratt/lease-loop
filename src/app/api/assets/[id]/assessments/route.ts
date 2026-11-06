@@ -17,6 +17,7 @@ const STATUS_OF: Record<Exclude<AssessRefusal['code'], AuthzRefusalCode>, number
   asset_not_returned: 409,
   no_list_price: 422,
   demand_taken: 409,
+  relist_unpriced: 422,
 };
 
 /** The inspection, or {} for no body (the assess button sends none). */

@@ -187,6 +187,24 @@ describe('matchDemand on other data', () => {
     });
   });
 
+  it('no winner and no condition the catalogue can lease: refused, relist_unpriced', () => {
+    const laptop = structuredClone(assessPackItem('laptop-006', '2026-11-06'));
+    // Like new unpriced too: no option at or above good has a rent on any term.
+    for (const option of laptop.options) {
+      option.rents = option.rents.map((r) => ({ ...r, monthlyNetCents: null }));
+    }
+    const match = matchDemand(laptop, []);
+    expect(match.decision).toEqual({
+      code: 'relist_unpriced',
+      params: { condition: 'like_new', upgrade: true },
+    });
+  });
+
+  it('a winner is never refused: relist_unpriced only without a match', () => {
+    const match = matchDemand(assessed, [entry({ id: 'w' })]);
+    expect(match.decision.code).toBe('relist_for_winner');
+  });
+
   it('a budget one cent short is out, by one cent', () => {
     const match = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 6_496 })]);
     expect(match.verdicts[0]!.outcome).toMatchObject({
