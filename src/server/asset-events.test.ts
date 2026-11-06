@@ -114,17 +114,21 @@ describe('readPassport', () => {
     expect(result?.passport.lives[1]!.between.map((e) => e.kind)).toEqual(['assessed']);
     expect(result?.co2.perLifeKg).toEqual([0, 29, 29]);
     expect(result?.co2.totalKg).toBe(58);
+    // D80 at the 2028 list price as new (v2, 188 900): 33 246.4 a 24-month life
+    expect(result?.money).toEqual({ perLifeCents: [0, 33_246, 33_246], totalCents: 66_493 });
   });
 
   it('on the signing day the third life has earned nothing yet', async () => {
     const result = await readPassport(db, 'ebike-008', '2026-11-06');
     expect(result?.co2.totalKg).toBe(29);
+    expect(result?.money.totalCents).toBe(33_246);
   });
 
   it('an asset with no history has no lives and no saving', async () => {
     const result = await readPassport(db, 'ebike-009', '2026-11-06');
     expect(result?.passport.lives).toEqual([]);
     expect(result?.co2.totalKg).toBe(0);
+    expect(result?.money.totalCents).toBe(0);
   });
 
   it('an unknown asset is null', async () => {
@@ -136,13 +140,15 @@ describe('readFleetImpact', () => {
   beforeEach(logThirdLife);
 
   it('totals the fleet from the past lives and the log', async () => {
-    const { fleet, assets } = await readFleetImpact(db, '2028-11-05');
+    const { fleet, money, assets } = await readFleetImpact(db, '2028-11-05');
     expect(fleet.perCategory.find((row) => row.category === 'e_bike')).toEqual({
       category: 'e_bike',
       assetsWithLaterLife: 1,
       kg: 58,
     });
     expect(fleet.totalKg).toBe(58);
+    expect(money.perCategory.find((row) => row.category === 'e_bike')?.cents).toBe(66_493);
+    expect(money.totalCents).toBe(66_493);
     expect(assets.map((item) => [item.asset.id, item.kg])).toEqual([['ebike-008', 58]]);
   });
 });

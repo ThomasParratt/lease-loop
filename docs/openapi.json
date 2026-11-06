@@ -1297,7 +1297,7 @@
     },
     "/api/assets/{id}/passport": {
       "get": {
-        "summary": "An asset's passport: its lives across leases and the CO2 its later lives saved (D15)",
+        "summary": "An asset's passport: its lives across leases and the CO2 and money its later lives saved (D15, D80)",
         "tags": ["passport"],
         "parameters": [
           {
@@ -1570,9 +1570,29 @@
                           },
                           "required": ["perLifeKg", "totalKg"],
                           "additionalProperties": false
+                        },
+                        "money": {
+                          "type": "object",
+                          "properties": {
+                            "perLifeCents": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "totalCents": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": ["perLifeCents", "totalCents"],
+                          "additionalProperties": false
                         }
                       },
-                      "required": ["asset", "asOf", "before", "lives", "co2"],
+                      "required": ["asset", "asOf", "before", "lives", "co2", "money"],
                       "additionalProperties": false
                     },
                     "meta": {
