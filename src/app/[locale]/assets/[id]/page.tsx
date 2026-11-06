@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { QuoteBreakdownList } from '@/components/quote-breakdown';
+import { PassportCard } from '@/components/passport-card';
 import { ItemArt } from '@/components/item-art';
 import { QuoteCalculator } from '@/components/quote-calculator';
 import { VersionPicker } from '@/components/version-picker';
@@ -190,16 +191,17 @@ export default async function PricePage({
           </div>
         ))}
       </dl>
-      <Link
-        href={`/${locale}/assets/${asset.id}/passport`}
-        className="mt-4 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"
-      >
-        {t('passport.link')}
-      </Link>
+      <PassportCard
+        locale={locale}
+        assetId={asset.id}
+        title={t('passport.cardTitle')}
+        text={t('passport.cardText')}
+        className="mt-6"
+      />
       {asset.status === 'returned' || secondLife ? (
         <Link
           href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}
-          className="mt-4 ml-6 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"
+          className="mt-4 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"
         >
           {t('secondLife.link')}
         </Link>
