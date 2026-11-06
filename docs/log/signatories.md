@@ -18,3 +18,5 @@
 - 03:40 merged main again (#33 term limits took D43, #48 My leases): mine are now D46 (signatories) and D47 (admin on behalf); the message files merged key by key.
 - 04:00 merged main again (#36 squash-merged as 0e6312b): main's hardening log; my versions of the test files (they hold #36 plus the signing link). Main's property test missed `term_over_category_max` (#33 came first): added to its known refusals.
 - 04:30 merged main again (#27 upkeep took D44 test isolation and D45 start date): mine are now D46 (signatories) and D47 (admin on behalf).
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#49); findings 1, 3 and 12 of `docs/reviews/wave-3.md` are its follow-ups.

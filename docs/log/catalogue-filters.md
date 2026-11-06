@@ -19,3 +19,5 @@ Nothing.
 
 - With today's data no listed model has both a new and a used unit, so the version picker shows only once second life puts a returned unit back (or on the Pro 14's identical pair it shows nothing, by design).
 - Returned units are hidden until second life re-prices them; if the demo should show them (cards 9 and 10), they need a "coming back soon" state, not the new-item price.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#32); the version picker shows once second life relists a used unit (#53).

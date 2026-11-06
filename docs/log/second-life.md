@@ -26,3 +26,5 @@ Base `main` at `a8a71cf`, slot `nostalgic-sutherland-1bb709`, time limit 150 min
 - D60's price as new for a seeded item (v1) is an assumption; a mentor question.
 - The README's "Smart problems" draft line for problem 3 is the hardening agent's to rewrite (the brief allowed only the card rows and the Features link here); STATUS.md is updated.
 - No browser test of the page in fi/sv/et; the keys are in all four files and the key-parity test passes.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#53); D60 is mentor question 3, the Smart problems line is the wave 3 hardening's.

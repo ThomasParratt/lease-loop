@@ -15,3 +15,5 @@ Nothing.
 ## Left undone
 
 - An approved application has no "Sign the contract" button on its page: signing exists only as `POST /api/contracts`. Raised with Panu as the next step.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged; the Sign button it left came with #47 (`1bac3ac`).

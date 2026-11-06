@@ -57,15 +57,15 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 
 ### Card 9 and card 10: the exits they start from
 
-- Card 9, `ebike-007` (fair, 18 400 km): `refurbishmentPlan` gives the battery 35 000 (18 400 ≥ 15 000 km, resets the usage to 0) + the safety inspection 4 500 = 39 500 to keep it fair, + fair->good 12 000 = 51 500 to reach good. Wave 3's assessment and re-pricing (D12) import this and `marketValueCents`.
-- Card 10, `ebike-008` (good, 9 800 km): 9 whole steps, −18 % on the market value; only the inspection to keep it good.
+- Card 9, `ebike-007` (fair, 18 400 km): `refurbishmentPlan` gives the battery 35 000 (18 400 ≥ 15 000 km, resets the usage to 0) + the safety inspection 4 500 = 39 500 to keep it fair, + fair->good 12 000 = 51 500 to reach good. The assessment and re-pricing (D12, PR #53, [second-life.md](second-life.md)) import this and `marketValueCents`: the second-life price is 155 476 and the rent 8 710 for 12 months to `wait-02`.
+- Card 10, `ebike-008` (good, 9 800 km): 9 whole steps, −18 % on the market value; only the inspection to keep it good; [second-life.md](second-life.md) relists it at 37 101 and leases it a third time (1 359 a month, 58 kg).
 - A return or pass-on sets the asset `returned` with the reported condition and usage, the state cards 9 and 10 start from. Pass-on writes `passed_on` in the passport with the next customer.
 
 ## Decisions
 
 - **D31** (decided 2026-11-06 as an assumption, stated in the README): the curve age of a first-life item from its lease start; **D11** (`ageInMonths`, from the model year) for an item with previous lives. `curveAgeInMonths` picks the rule.
 - **D14**: the balance by amortisation, buy = balance, return = max(0, balance − market value) + refurbishment, shown line by line.
-- **D16**: pass on names the next person (a picker of the customers, the leaving customer left out). It is assessed and costed like a return. The next person's application and the new contract with `previous_contract_id` are wave 3.
+- **D16**: pass on names the next person (a picker of the customers, the leaving customer left out). It is assessed and costed like a return. The next person applies in the normal way on the second-life price after the assessment, and the new contract carries `previous_contract_id` (D66, PR #53).
 - **D22**: `CONTRACT_BOUGHT_OUT` sets the asset `sold`; `UNIT_RETURNED` and `UNIT_PASSED_ON` set it `returned`, on the bus (`src/server/catalogue-handlers.ts`), each a conditional write on `leased`.
 - **D23**: every status (the contract's, the invoice's, the asset's), mode, condition, reason and invoice kind is parsed with its schema before use or write; a bad value throws.
 - **D1, D2**: one half-up rounding per amount, the VAT per invoice line at the rate of the invoice day.
@@ -99,13 +99,13 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 
 ## Open questions
 
-Written up in `docs/decisions.md`: D31 (card 8's curve age, an assumption) and D32 to D35 (decided: `ended_early`, the cancelled rents, the end-of-term return, what a cancelled invoice owes). The two mentor questions are in [mentor-questions.md](../mentor-questions.md).
+Written up in `docs/decisions.md`: D31 (card 8's curve age, an assumption) and D32 to D35 (decided: `ended_early`, the cancelled rents, the end-of-term return, what a cancelled invoice owes). The mentor questions are in [mentor-questions.md](../mentor-questions.md).
 
 - **Card 8: the market value by months since lease start (D31) is an assumption, not a confirmed reading.** Decided by Johannes on 2026-11-06 and stated in the README; the pack has no first-lease date. If the mentors answer D11 for every item, `curveAgeInMonths` returns `ageInMonths` for every item: a one-line change, and card 8 is 202 523 as good with 1 800 km.
-- **The condition and usage are self-reported** until the assessment (wave 3). The exit bills on what the customer says. The assessment may find another condition, and nothing re-bills yet.
+- **The condition and usage are self-reported** at the exit, which bills on what the customer says. The assessment ([second-life.md](second-life.md)) prices the item on the condition it records, but nothing re-bills the leaving customer if it differs.
 - **A return at the end of the term issues no invoice.** The cost shown is the refurbishment, but the invoice kinds (`down_payment`, `rent`, `buyout`, `early_exit`) have no refurbishment charge, so nothing is billed and the page says the lessor bears it. Options: add a `refurbishment` kind (a text column, no migration), or decide that normal wear at the end is the lessor's.
 - **`cancelled`** was added to `invoiceStatuses` (a text column, no migration). `contractBalanceOn` in invoicing skips a `cancelled` invoice (D35, wave 2 upkeep), so a cancelled rent is never counted as open.
 - **Every unpaid rent is cancelled, not only the future ones.** The brief said "unpaid rents with a period after today". Cancelling only those would bill an overdue rent twice, once on its own invoice and once inside the D14 balance. The balance after the paid rents covers every rent not paid.
-- **Pass on, next steps (wave 3):** the next person's application pre-filled for them, the second-life quote (D12), and `previous_contract_id` on their contract. Today the exit stops at `passed_on`, with the asset `returned` and the passport entry that names the next customer.
+- **Pass on, what is still missing:** the second-life quote (D12) and `previous_contract_id` on the next contract are built (PR #53); the next person's application is not pre-filled for them, and nothing reserves the item for the named person between the assessment and their quote.
 - **The farm machine's `per started N engine_hours since last service`** counts the blocks on the returned usage, because the pack has no service history.
 - **The body's `reason`** is optional. The server derives it from the day and refuses one that contradicts it (`reason_mismatch`).

@@ -12,3 +12,5 @@ Panu's session, 2026-11-05 (Helsinki time), stacked on PR #19.
 | 23:20 | Merged the updated #19 (with `main` at `ebcca74`); message files combined key by key. Review fixes: the quantity offer dropped until D8 is answered (the kids bike shows its refusal on Thursday), D7 revised, the docs and README notes brought current, the slider step that could not reach a 10 000 € preset, the breakdown open on a preset, the lock shown only for a valid quote, the comparison's terms from the data, refusal-branch tests. |
 
 Left undone: the dead `?quote=` section on the price page (card 2 holds on the contract page; remove when the contract page shows the quote). The organiser's README lines ("You should see the asset catalogue", "`page.tsx`: the catalogue page") are not ours to edit; the landing page leads to the catalogue in one click.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#23); its review findings were fixed before the merge.

@@ -20,3 +20,5 @@ Nothing.
 - The landing page no longer lists each item's saving (smart problem 7 asks per item and for the whole fleet). Each saving is on its item's passport; whether to bring back a list is Johannes's call.
 - `readFleetImpact` still returns the per-item list, now read only by its test.
 - Smooth scrolling itself was not watched (the browser pane was hidden); the call and the instant path were checked.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#30); the per-item saving stays on each passport, Johannes's call.

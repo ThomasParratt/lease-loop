@@ -1,6 +1,6 @@
 # Questions for the mentors
 
-Two readings of the brief we took in code and want confirmed on Friday morning (issues #13 and #54); the third, D31, is now a stated assumption (below). For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
+Three readings of the brief we took in code and want confirmed on Friday (issues #13 and #54, and D60 from second life); D31 is now a stated assumption (below). For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
 
 Not a question here: Thomas's question-flow validation (#25, merged) added four rules (D37 to D40: the birth-date range, answers checked against the customer record, only the named signatory signs, only the acting customer applies). They are listed for information; the scenario suite on `main` passes with them.
 
@@ -19,6 +19,14 @@ Not a question here: Thomas's question-flow validation (#25, merged) added four 
 **What the code does today.** The exit form asks for a customer for `pass_on` and refuses without one (`pass_on_needs_next_customer`), with yourself (`next_customer_is_self`) or with an unknown id (`next_customer_not_found`). The asset becomes `returned` and its passport records `passed_on` with the next customer ([exits.md](features/exits.md)).
 
 **If the answer differs.** If passing on means "back to the waiting list", `pass_on` and `return` become one flow: the person picker and its three refusals go, and the next customer comes from D13's matchmaking. The billing (D14) and the passport entry stay as they are.
+
+## 3. Second life: what price and age is a returned seeded item valued from? (D60)
+
+**Our reading.** The residual curve starts from the item's "net list price at its first lease". An item first leased by us has that price in its first contract and is aged from that contract's start (D31). A seeded item with past lives has neither in the pack, so we take the earliest price list that lists it (the lowest version, the price as new) and age it by D11 from 1 January of its model year. A third life is never valued from its second-life contract, whose "list price" is the second-life amount.
+
+**What the code does today.** `firstLeaseListPriceCents` in `src/domain/second-life/assess.ts` picks the price, `src/server/second-life.ts` the contract or the list. Card 9's `ebike-007` (one past life, no contract here) is valued from 549 000 (v1) at 46 months: 32.5 % on the curve, 115 976 as fair, a second-life price of **155 476** and **8 710** net a month for 12 months to `wait-02` ([second-life.md](features/second-life.md)).
+
+**If the answer differs.** If the price list live on the assessment day is meant, `ebike-007` starts from v2's 576 400 (about +5 %): 121 765 as fair and 161 265 with the mandatory 39 500, and every rent after it moves with the band and factor; the change is the list `firstLeaseListPriceCents` reads, and `assess.test.ts` pins the v1 numbers. If the mentors give a first-lease date, the age comes from it instead of the model year, through the same `curveAgeInMonths` switch as D31.
 
 ## Not a question any more: card 8's curve age (D31)
 

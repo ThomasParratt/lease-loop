@@ -15,3 +15,5 @@ Nothing.
 ## Left undone
 
 - "Ready to sign" is not checked against an expired quote or a leased item; the Sign button shows that refusal.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#48); the "Applied on" date is finding 8 of `docs/reviews/wave-3.md`.
