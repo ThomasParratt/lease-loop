@@ -36,11 +36,11 @@ describe('card 5: too young (Mikko, laptop-008)', () => {
     expect(app.ok && app.askedIds).toContain('q_monthly_income');
   });
 
+  // The table's terms a laptop may be offered: 48 is over the category's cap (D43), pinned below.
   it.each([
     [12, 15_837, 19_875, 'rejected'],
     [24, 10_269, 12_888, 'rejected'],
     [36, 7_972, 10_005, 'approved'],
-    [48, 6_631, 8_322, 'approved'],
   ])(
     'without the age rule, %i months (net %i, gross %i against 12 000 = 30 % of 400 €) is %s',
     (term, net, gross, decision) => {
@@ -75,4 +75,13 @@ describe('card 5: too young (Mikko, laptop-008)', () => {
       }
     }
   );
+
+  it('is not offered 48 months at all: a laptop is leased for at most 36 (D43), whatever the age', () => {
+    const q = quoteFor(deal(48));
+    expect(q.ok).toBe(false);
+    expect(!q.ok && q.reason).toEqual({
+      code: 'term_over_category_max',
+      params: { category: 'laptop', termMonths: 48, maxTermMonths: 36 },
+    });
+  });
 });

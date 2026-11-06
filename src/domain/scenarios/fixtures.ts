@@ -11,6 +11,7 @@ import customersJson from '../../../data/customers.json';
 import priceListsJson from '../../../data/price-lists.json';
 import questionsJson from '../../../data/questions.json';
 import secondLifeDemandJson from '../../../data/second-life-demand.json';
+import termLimitsJson from '../../../data/term-limits.json';
 import vatRatesJson from '../../../data/vat-rates.json';
 import {
   assetsFileSchema,
@@ -20,6 +21,7 @@ import {
   priceListsFileSchema,
   questionsFileSchema,
   secondLifeDemandFileSchema,
+  termLimitsSchema,
   vatRatesSchema,
   type Asset,
   type Customer,
@@ -48,12 +50,16 @@ export const pack = {
   customers: customersFileSchema.parse(customersJson),
   demand: secondLifeDemandFileSchema.parse(secondLifeDemandJson),
   co2Factors: co2FactorsSchema.parse(co2FactorsJson),
+  /** The team's longest term per category (D43), beside the organiser's pack. */
+  termLimits: termLimitsSchema.parse(termLimitsJson),
 };
 
 export const pricing: PricingData = {
   priceLists: pack.priceLists,
   table: pack.table,
   vatRates: pack.vatRates,
+  termLimits: pack.termLimits,
+  assets: pack.assets,
 };
 
 /** The coefficient table's lowest and highest financed amount, as the application uses them. */

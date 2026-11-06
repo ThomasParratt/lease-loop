@@ -1,5 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import {
+  loadAssets,
+  loadCoefficientTable,
+  loadPriceLists,
+  loadTermLimits,
+  loadVatRates,
+} from '@/data/load';
 import { compareTerms } from './compare';
 import type { PricingData } from './quote';
 
@@ -9,6 +15,8 @@ beforeAll(async () => {
     priceLists: await loadPriceLists(),
     table: await loadCoefficientTable(),
     vatRates: await loadVatRates(),
+    termLimits: await loadTermLimits(),
+    assets: await loadAssets(),
   };
 });
 
@@ -30,6 +38,12 @@ describe('compareTerms', () => {
       totalIfReturnCents: 36 * 13_466,
       totalIfBuyCents: 36 * 13_466 + 73_229,
     });
+  });
+
+  it('shows a laptop only the terms under its cap (D43): 48 is neither a row nor unavailable', () => {
+    const result = compareTerms(data, { ...input, assetId: 'laptop-004' });
+    expect(result.rows.map((r) => r.termMonths)).toEqual([12, 24, 36]);
+    expect(result.unavailable).toEqual([]);
   });
 
   it('lowers the monthly rent as the term grows', () => {

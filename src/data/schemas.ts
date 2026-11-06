@@ -398,3 +398,15 @@ export const co2FactorsSchema = z.strictObject({
   e_bike_avoided_car_km_kg_per_km: z.number().nonnegative(),
 });
 export type Co2Factors = z.infer<typeof co2FactorsSchema>;
+
+// ---------------------------------------------------------------------------
+// data/term-limits.json: the team's longest lease term per category (D43), beside the pack.
+// ---------------------------------------------------------------------------
+
+export const termLimitsSchema = z.strictObject({
+  /** Says this is the team's rule, not the organiser's pack. */
+  note: z.string(),
+  /** Category → the longest term offered, in months. Every category has one. */
+  max_term_months: z.record(assetCategorySchema, z.number().int().positive()),
+});
+export type TermLimits = z.infer<typeof termLimitsSchema>;

@@ -16,6 +16,7 @@ export {
   type UnitSplit,
 } from './quote';
 export { quoteStatusOn, type QuoteForStatus, type QuoteStatus } from './quote-status';
+export { allowedTerms, allowedTermsOf, longestAllowedTerm, termAllowed } from './terms';
 
 /** A stored quote is valid until its quote day + this many days, that last day included (D7). */
 export const QUOTE_VALID_DAYS = 14;

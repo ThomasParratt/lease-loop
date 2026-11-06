@@ -20,7 +20,7 @@ import {
   unavailableUnits,
   type CatalogueFilters,
 } from '@/domain/catalogue/catalogue';
-import { financeOffer, termsOf, type FinanceOffer } from '@/domain/pricing';
+import { allowedTermsOf, financeOffer, termsOf, type FinanceOffer } from '@/domain/pricing';
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale, type Locale } from '@/i18n/locales';
@@ -68,11 +68,17 @@ export default async function CataloguePage({
   const today = await todayForRequest(); // read once here; domain code never reads the clock
   const [assets, data] = await Promise.all([listAssets(db), loadPricingData()]);
   const termMonths = termsOf(data.table).includes(CARD_TERM) ? CARD_TERM : termsOf(data.table)[0]!;
-
+  // Each item is priced at the catalogue's term when its category allows it, else at the longest
+  // term it may be offered (D43), so a category capped below the default still shows a price. An
+  // item with no allowed term is priced at the default and the offer carries the refusal.
+  const termOf = (assetId: string): number => {
+    const allowed = allowedTermsOf(data, assetId);
+    return allowed.includes(termMonths) ? termMonths : (allowed[allowed.length - 1] ?? termMonths);
+  };
   const offers = new Map(
     assets.map((asset) => [
       asset.id,
-      financeOffer(data, { assetId: asset.id, termMonths, isoDate: today }),
+      financeOffer(data, { assetId: asset.id, termMonths: termOf(asset.id), isoDate: today }),
     ])
   );
   const entries: CatalogueEntry[] = assets.map((asset) => ({
@@ -197,7 +203,7 @@ export default async function CataloguePage({
               <ModelCard
                 group={group}
                 offer={offers.get(group.versions[0]!.asset.id)!}
-                termMonths={termMonths}
+                termMonths={termOf(group.versions[0]!.asset.id)}
                 locale={locale}
                 t={t}
               />

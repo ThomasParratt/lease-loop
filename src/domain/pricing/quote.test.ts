@@ -1,5 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import {
+  loadAssets,
+  loadCoefficientTable,
+  loadPriceLists,
+  loadTermLimits,
+  loadVatRates,
+} from '@/data/load';
 import { buildSchedule, scheduleTotals } from '../invoicing/schedule';
 import { breakdownFromFrozen, priceQuote, splitEvenly, type PricingData } from './quote';
 
@@ -10,6 +16,8 @@ beforeAll(async () => {
     priceLists: await loadPriceLists(),
     table: await loadCoefficientTable(),
     vatRates: await loadVatRates(),
+    termLimits: await loadTermLimits(),
+    assets: await loadAssets(),
   };
 });
 
@@ -89,6 +97,66 @@ describe('priceQuote, card 2 (laptop-004 across the price-list change, band B, 3
       unitListPriceCents: 321_100,
       band: 'B',
       monthlyNetCents: 8857,
+    });
+  });
+});
+
+describe('priceQuote, the term cap per category (D43)', () => {
+  it('refuses a laptop at 48 months with the code, the category and the cap', () => {
+    const result = priceQuote(data, { ...base, assetId: 'laptop-004', termMonths: 48 });
+    expect(result).toEqual({
+      ok: false,
+      reason: {
+        code: 'term_over_category_max',
+        params: { category: 'laptop', termMonths: 48, maxTermMonths: 36 },
+      },
+    });
+  });
+
+  it('still prices a laptop at 36 months (card 2) and a farm machine at 48 (card 7) as before', () => {
+    expect(quoteOf({ ...base, assetId: 'laptop-004', termMonths: 36 }).monthlyNetCents).toBe(9627);
+    const combine = quoteOf({
+      ...base,
+      assetId: 'farm-002',
+      termMonths: 48,
+      downPaymentCents: 2_000_000,
+    });
+    expect(combine).toMatchObject({ band: 'D', monthlyNetCents: 272_038 });
+  });
+
+  it('checks the cap after the term and the asset, before the money: a cheap laptop at 48 is over the cap, not below the band', () => {
+    const cheap = {
+      ...data,
+      priceLists: [{ ...data.priceLists[0]!, prices: { 'laptop-004': 1000 } }],
+    };
+    const result = priceQuote(cheap, { ...base, assetId: 'laptop-004', termMonths: 48 });
+    expect(result.ok === false && result.reason.code).toBe('term_over_category_max');
+  });
+
+  it('names the longest term the table offers under the cap: a cap of 40 says at most 36', () => {
+    const limits = {
+      ...data.termLimits,
+      max_term_months: { ...data.termLimits.max_term_months, laptop: 40 },
+    };
+    const result = priceQuote(
+      { ...data, termLimits: limits },
+      { ...base, assetId: 'laptop-004', termMonths: 48 }
+    );
+    expect(result.ok === false && result.reason.params).toEqual({
+      category: 'laptop',
+      termMonths: 48,
+      maxTermMonths: 36,
+    });
+  });
+
+  it('refuses an asset the data has no category for', () => {
+    const result = priceQuote(
+      { ...data, assets: [] },
+      { ...base, assetId: 'laptop-004', termMonths: 36 }
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'unknown_asset', params: { assetId: 'laptop-004' } },
     });
   });
 });

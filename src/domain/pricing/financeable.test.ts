@@ -1,5 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import {
+  loadAssets,
+  loadCoefficientTable,
+  loadPriceLists,
+  loadTermLimits,
+  loadVatRates,
+} from '@/data/load';
 import { financeOffer } from './financeable';
 import type { PricingData } from './quote';
 
@@ -9,6 +15,8 @@ beforeAll(async () => {
     priceLists: await loadPriceLists(),
     table: await loadCoefficientTable(),
     vatRates: await loadVatRates(),
+    termLimits: await loadTermLimits(),
+    assets: await loadAssets(),
   };
 });
 
@@ -78,6 +86,18 @@ describe('financeOffer', () => {
     const noVat: PricingData = { ...data, vatRates: { ...data.vatRates, rates: [] } };
     const offer = financeOffer(noVat, { assetId: 'farm-006', termMonths: 48, isoDate: THURSDAY });
     expect(offer).toMatchObject({ kind: 'none', reason: { code: 'no_vat_rate_on_date' } });
+  });
+
+  it('passes the category cap through (D43): a laptop at 48 months is not offered', () => {
+    expect(
+      financeOffer(data, { assetId: 'laptop-004', termMonths: 48, isoDate: THURSDAY })
+    ).toEqual({
+      kind: 'none',
+      reason: {
+        code: 'term_over_category_max',
+        params: { category: 'laptop', termMonths: 48, maxTermMonths: 36 },
+      },
+    });
   });
 
   it('passes other refusals through, such as an unknown asset or term', () => {

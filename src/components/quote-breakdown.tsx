@@ -1,6 +1,7 @@
 // "Explain my price": the breakdown of one quote in three short sums, in words a 17-year-old and a
 // 70-year-old can both follow. No hooks, so the price page (server) and the calculator
 // (client) render the same lines. The numbers come from the domain; this only writes them.
+import { assetCategorySchema } from '@/data/schemas';
 import type { QuoteBreakdown, QuoteRefusal } from '@/domain/pricing';
 import { formatEuro } from '@/domain/money';
 import type { Translate } from '@/i18n/get-t';
@@ -33,6 +34,10 @@ export function refusalText(
   for (const [name, value] of Object.entries(refusal.params)) {
     if (name.endsWith('Cents') && typeof value === 'number') {
       values[name] = formatEuro(value, intlLocale[locale]);
+    } else if (name === 'category' && typeof value === 'string') {
+      // The category is a code; the page writes its name (D43's refusal names the category).
+      const category = assetCategorySchema.safeParse(value);
+      values[name] = category.success ? t(`category.${category.data}`) : value;
     } else if (Array.isArray(value)) {
       values[name] = value.join(', ');
     } else if (typeof value === 'string' || typeof value === 'number') {
@@ -43,6 +48,7 @@ export function refusalText(
     'below_minimum',
     'above_maximum',
     'unknown_term',
+    'term_over_category_max',
     'unknown_asset',
     'no_price_list_on_date',
     'down_payment_too_high',

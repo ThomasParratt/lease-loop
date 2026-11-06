@@ -19,7 +19,9 @@ import {
 } from '@/components/ui';
 import { modelVersions } from '@/domain/catalogue/catalogue';
 import { formatEuro } from '@/domain/money';
+import { termControl } from '@/components/quote-terms';
 import {
+  allowedTermsOf,
   financeOffer,
   MAX_QUANTITY,
   termsOf,
@@ -70,8 +72,18 @@ export default async function PricePage({
   const storedForAsset = stored && stored.breakdown.assetId === asset.id ? stored : null;
 
   const price = listPriceOn(data.priceLists, asset.id, today);
-  const terms = termsOf(data.table);
-  const termMonths = terms.includes(DEFAULT_TERM) ? DEFAULT_TERM : terms[0]!;
+  // The terms this item may be offered: the table's, under its category's cap (D43). The
+  // default term is picked from them, so the offer and the versions never price over the cap.
+  const terms = allowedTermsOf(data, asset.id);
+  const termMonths = terms.includes(DEFAULT_TERM) ? DEFAULT_TERM : (terms[0] ?? DEFAULT_TERM);
+  // The note names the longest term the item may be offered, as the refusal does.
+  const termNote =
+    terms.length > 0 && terms.length < termsOf(data.table).length
+      ? t('pricing.calculator.termCap', {
+          category: t(`category.${asset.category}`),
+          months: terms[terms.length - 1]!,
+        })
+      : undefined;
   // How the item can be financed at the default term: an item leased only several together
   // or with a down payment opens set up that way, with a notice saying why (D41).
   const offer = financeOffer(data, { assetId: asset.id, termMonths, isoDate: today });
@@ -188,11 +200,12 @@ export default async function PricePage({
         </Notice>
       ) : null}
 
-      {price.ok ? (
+      {price.ok && termControl(terms) !== 'none' ? (
         <QuoteCalculator
           assetId={asset.id}
           locale={locale}
           terms={terms}
+          termNote={termNote}
           unitPriceCents={price.priceCents}
           initial={initial}
           initialPreview={previewQuote(data, { assetId: asset.id, ...initial, today })}
@@ -204,7 +217,9 @@ export default async function PricePage({
         <>
           {item}
           <Notice tone="warning" className="mt-8">
-            {t('asset.noPrice')}
+            {price.ok
+              ? t('pricing.noTermsForCategory', { category: t(`category.${asset.category}`) })
+              : t('asset.noPrice')}
           </Notice>
         </>
       )}

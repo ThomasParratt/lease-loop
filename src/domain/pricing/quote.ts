@@ -4,7 +4,14 @@
 // The numbers are computed once here, then frozen in a stored quote (D7). Everything that can
 // be derived from the frozen numbers is derived by `breakdownFromFrozen`, so a stored quote and
 // a fresh one always show the same lines and a stored quote is never re-priced.
-import type { CoefficientTable, PriceList, VatRates } from '@/data/schemas';
+import type {
+  Asset,
+  AssetCategory,
+  CoefficientTable,
+  PriceList,
+  TermLimits,
+  VatRates,
+} from '@/data/schemas';
 import { monthlyFactorFor } from '../coefficient';
 import {
   applyMillionths,
@@ -16,11 +23,18 @@ import {
 } from '../money-math';
 import { listPriceOn } from '../price-list';
 import { vatRateOn } from '../vat';
+import { categoryOf, longestAllowedTerm, termAllowed, termsOf } from './terms';
+
+export { termsOf };
 
 export type PricingData = {
   priceLists: readonly PriceList[];
   table: CoefficientTable;
   vatRates: VatRates;
+  /** The team's longest term per category (D43); `loadPricingData()` reads it beside the pack. */
+  termLimits: TermLimits;
+  /** The assets' categories, for the cap (the quote has only an asset id). */
+  assets: readonly Pick<Asset, 'id' | 'category'>[];
 };
 
 export type QuoteInput = {
@@ -89,6 +103,10 @@ export type QuoteRefusal =
   | { code: 'invalid_down_payment'; params: { downPaymentCents: number } }
   | { code: 'unknown_term'; params: { termMonths: number; terms: number[] } }
   | { code: 'unknown_asset'; params: { assetId: string } }
+  | {
+      code: 'term_over_category_max';
+      params: { category: AssetCategory; termMonths: number; maxTermMonths: number };
+    }
   | { code: 'no_price_list_on_date'; params: { isoDate: string } }
   | { code: 'down_payment_too_high'; params: { downPaymentCents: number; listPriceCents: number } }
   | { code: 'below_minimum'; params: { financedCents: number; minimumCents: number } }
@@ -96,13 +114,6 @@ export type QuoteRefusal =
   | { code: 'no_vat_rate_on_date'; params: { isoDate: string } };
 
 export type QuoteResult = { ok: true; quote: QuoteBreakdown } | { ok: false; reason: QuoteRefusal };
-
-/** The terms the table offers, smallest first (12, 24, 36, 48 in the data pack). */
-export function termsOf(table: CoefficientTable): number[] {
-  return Object.keys(table.end_of_term_buyout_percent_of_financed)
-    .map(Number)
-    .sort((a, b) => a - b);
-}
 
 /** Splits `totalCents` over `parts` units without losing or inventing a cent. */
 export function splitEvenly(totalCents: number, parts: number): UnitSplit {
@@ -118,7 +129,8 @@ export function splitEvenly(totalCents: number, parts: number): UnitSplit {
 
 /**
  * Prices a lease on `input.isoDate`. The checks run in the order a customer would fix them:
- * quantity, term, asset and price list, down payment, then the band of what is left to finance.
+ * quantity, term, asset and price list, the category's term cap (D43), down payment, then the
+ * band of what is left to finance.
  * Every expected refusal is a code with params for the page to write in the visitor's language.
  */
 export function priceQuote(data: PricingData, input: QuoteInput): QuoteResult {
@@ -140,6 +152,19 @@ export function priceQuote(data: PricingData, input: QuoteInput): QuoteResult {
     return price.reason === 'unknown_asset'
       ? refuse({ code: 'unknown_asset', params: { assetId } })
       : refuse({ code: 'no_price_list_on_date', params: { isoDate } });
+  }
+
+  // D43: the category's cap, before any money is looked at. An asset whose category the data
+  // does not know cannot be checked against the cap, so it is not in the catalogue. The refusal
+  // names the longest term the table offers under the cap (a cap of 40 says "at most 36").
+  const category = categoryOf(data.assets, assetId);
+  if (!category) return refuse({ code: 'unknown_asset', params: { assetId } });
+  if (!termAllowed(category, termMonths, data.table, data.termLimits)) {
+    const maxTermMonths = longestAllowedTerm(category, data.table, data.termLimits);
+    return refuse({
+      code: 'term_over_category_max',
+      params: { category, termMonths, maxTermMonths },
+    });
   }
 
   // D8: the fleet is financed as one amount, so the band is decided on the total.

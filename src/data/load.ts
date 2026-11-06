@@ -14,6 +14,7 @@ import {
   refurbishmentCostsSchema,
   residualCurvesSchema,
   secondLifeDemandFileSchema,
+  termLimitsSchema,
   vatRatesSchema,
 } from './schemas';
 
@@ -48,3 +49,5 @@ export const loadSecondLifeDemand = () =>
 export const loadRefurbishmentCosts = () =>
   loadDataFile('refurbishment-costs.json', refurbishmentCostsSchema);
 export const loadCo2Factors = () => loadDataFile('co2-factors.json', co2FactorsSchema);
+/** The team's longest term per category (D43), kept beside the organiser's pack. */
+export const loadTermLimits = () => loadDataFile('term-limits.json', termLimitsSchema);

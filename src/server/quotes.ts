@@ -4,7 +4,13 @@
 // shows the price it was given.
 import { randomUUID } from 'node:crypto';
 import type { Quote as QuoteRow } from '@/generated/prisma/client';
-import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
+import {
+  loadAssets,
+  loadCoefficientTable,
+  loadPriceLists,
+  loadTermLimits,
+  loadVatRates,
+} from '@/data/load';
 import {
   addDays,
   compareTerms,
@@ -25,14 +31,19 @@ import { withAudit } from './audit';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
 
-/** The price lists, the coefficient table and the VAT rates from the data pack. */
+/**
+ * The price lists, the coefficient table and the VAT rates from the data pack, with the team's
+ * term cap per category (D43) and the pack's assets for their categories.
+ */
 export async function loadPricingData(): Promise<PricingData> {
-  const [priceLists, table, vatRates] = await Promise.all([
+  const [priceLists, table, vatRates, termLimits, assets] = await Promise.all([
     loadPriceLists(),
     loadCoefficientTable(),
     loadVatRates(),
+    loadTermLimits(),
+    loadAssets(),
   ]);
-  return { priceLists, table, vatRates };
+  return { priceLists, table, vatRates, termLimits, assets };
 }
 
 export type StoredQuote = {

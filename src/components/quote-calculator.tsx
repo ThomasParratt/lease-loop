@@ -18,6 +18,7 @@ import { formatEuro } from '@/domain/money';
 import { parseEurosToCents } from '@/domain/question-flow/answers';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { formatBasisPoints, QuoteBreakdownList, refusalText } from './quote-breakdown';
+import { termControl } from './quote-terms';
 import { Button, Disclosure, Field, Money, Notice, PriceTag, inputClasses } from './ui';
 
 export type QuotePreviewData = {
@@ -30,7 +31,10 @@ export type QuotePreviewData = {
 type QuoteCalculatorProps = {
   assetId: string;
   locale: Locale;
+  /** The terms this item may be offered, shortest first: the table's under its category's cap (D43). */
   terms: number[];
+  /** Why the slider stops short of the table's longest term, when it does. */
+  termNote?: string;
   /** Today's net list price of one unit, for the down-payment slider's range. */
   unitPriceCents: number;
   initial: { termMonths: number; downPaymentCents: number; quantity: number };
@@ -67,7 +71,7 @@ function downPaymentStep(totalCents: number, presetCents: number): number {
 }
 
 export function QuoteCalculator(props: QuoteCalculatorProps) {
-  const { assetId, locale, terms, unitPriceCents, initialPreview, canQuote } = props;
+  const { assetId, locale, terms, termNote, unitPriceCents, initialPreview, canQuote } = props;
   const t = getT(locale);
   const router = useRouter();
   const ids = useId();
@@ -212,33 +216,44 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
           </div>
 
           <div className="mt-6 space-y-6">
-            <Field id={`${ids}-term`} label={t('pricing.calculator.term')}>
-              {(control) => (
-                <div>
+            <Field id={`${ids}-term`} label={t('pricing.calculator.term')} hint={termNote}>
+              {(control) =>
+                // One allowed term is a fact, not a choice: a line instead of a 0-to-0 slider.
+                termControl(terms) === 'static' ? (
                   <p
+                    id={control.id}
                     className="mb-1 font-heading text-2xl font-semibold tabular-nums"
-                    aria-hidden="true"
+                    data-testid="term-static"
                   >
                     {t('pricing.months', { months: termMonths })}
                   </p>
-                  <input
-                    {...control}
-                    type="range"
-                    min={0}
-                    max={terms.length - 1}
-                    step={1}
-                    value={termIndex}
-                    aria-valuetext={t('pricing.months', { months: termMonths })}
-                    onChange={(e) => setTermIndex(Number(e.target.value))}
-                    className="h-11 w-full"
-                  />
-                  <div className="flex justify-between text-xs text-ink-muted" aria-hidden="true">
-                    {terms.map((term) => (
-                      <span key={term}>{term}</span>
-                    ))}
+                ) : (
+                  <div>
+                    <p
+                      className="mb-1 font-heading text-2xl font-semibold tabular-nums"
+                      aria-hidden="true"
+                    >
+                      {t('pricing.months', { months: termMonths })}
+                    </p>
+                    <input
+                      {...control}
+                      type="range"
+                      min={0}
+                      max={terms.length - 1}
+                      step={1}
+                      value={termIndex}
+                      aria-valuetext={t('pricing.months', { months: termMonths })}
+                      onChange={(e) => setTermIndex(Number(e.target.value))}
+                      className="h-11 w-full"
+                    />
+                    <div className="flex justify-between text-xs text-ink-muted" aria-hidden="true">
+                      {terms.map((term) => (
+                        <span key={term}>{term}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              }
             </Field>
 
             <Field
