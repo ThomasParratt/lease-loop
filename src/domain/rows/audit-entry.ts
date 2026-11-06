@@ -12,6 +12,7 @@ export const auditEntityTypes = [
   'invoice',
   'asset_event',
   'return_assessment',
+  'company_signatory',
 ] as const;
 
 export const auditEntrySchema = z.strictObject({

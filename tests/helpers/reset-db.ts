@@ -5,6 +5,8 @@ import type { PrismaClient } from '@/server/prisma-client';
 
 /** Every model, children first, so no foreign key is ever left pointing at a deleted row. */
 export const RESET_ORDER = [
+  'signatureRequest',
+  'companySignatory',
   'returnAssessment',
   'invoice',
   'assetEvent',
@@ -25,6 +27,10 @@ export async function resetDb(db: PrismaClient): Promise<void> {
 
 function deleteAll(db: PrismaClient, table: ResetTable) {
   switch (table) {
+    case 'signatureRequest':
+      return db.signatureRequest.deleteMany();
+    case 'companySignatory':
+      return db.companySignatory.deleteMany();
     case 'returnAssessment':
       return db.returnAssessment.deleteMany();
     case 'invoice':
