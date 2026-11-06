@@ -51,6 +51,18 @@ describe('recordMismatches (D38)', () => {
     expect(recordMismatches(norvi, { q_business_id: '0737546-2' })).toEqual(['q_business_id']);
   });
 
+  it('the trap: card 6 Norvi’s coordinator, who may not sign on record, answers "yes"', () => {
+    const norvi = customer('cust-norvi');
+    expect(recordMismatches(norvi, { q_can_sign: 'yes' })).toEqual(['q_can_sign']);
+    expect(recordMismatches(norvi, { q_can_sign: 'no' })).toEqual([]);
+    // the other way round is a difference too: the record is what we hold
+    expect(recordMismatches(customer('cust-kettukoodi'), { q_can_sign: 'no' })).toEqual([
+      'q_can_sign',
+    ]);
+    // a consumer record has no signing right to compare
+    expect(recordMismatches(customer('cust-aino'), { q_can_sign: 'yes' })).toEqual([]);
+  });
+
   it('a question not answered is not compared, nor one the record does not know', () => {
     expect(recordMismatches(customer('cust-aino'), {})).toEqual([]);
     // a consumer record has no business id

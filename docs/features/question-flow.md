@@ -41,13 +41,20 @@ After every answer, `pruneAnswers` drops the answers to questions that are no lo
 Each answer is checked for its shape (a choice is one of the options, a date a real day, money cents as digits) and then by `answerProblem` against the day and the other answers:
 
 - **Birth date** from 120 years before the request's day up to that day. On **2026-11-05** the range is **1906-11-05 to 2026-11-05**: 2030-01-01 and 1800-01-01 are refused with `birth_date_out_of_range`, and the page says "Enter a date of birth between 5 November 1906 and 5 November 2026". Mikko's 2009-03-10 is an answer; being 17 is a reason (`too_young`), not a refused answer. The date picker gets the same `min` and `max`.
-- **Signatory e-mail** must not be the applicant's own: Norvi's coordinator `fleet@norvi.example.com` cannot name `FLEET@norvi.example.com` (case and spaces ignored), `signatory_is_applicant`.
+- **Signatory e-mail** must not be the applicant's own: Norvi's coordinator `fleet@norvi.example.com` cannot name `FLEET@norvi.example.com` (case and spaces ignored), `signatory_is_applicant`. "Own" is both the e-mail answered (`q_email`) and the one on the customer record, so answering another `q_email` does not open the door.
 
 The server runs the same checks on submit and answers 400 `INVALID_ANSWER` with `{ questionId, problem }`.
 
+The request body is parsed before anything is read (`createApplicationBodySchema`, a `strictObject`): unknown keys, wrong types and oversize values are 400 `VALIDATION_ERROR`. The bounds, each pinned by a test in `src/app/api/applications/route.test.ts`:
+
+- `quoteId` and `customerId` are trimmed, 1 to 100 characters; the trimmed customer id must be the actor.
+- An answer is a string of at most 500 characters or a list of at most 20 items of 200; a question id is `q_` plus lower-case letters, digits and underscores, at most 64 characters; an application has at most 64 answers (`MAX_ANSWERS`, the bank has 19).
+- The application id in the path is 1 to 100 characters; `reviewedBy` on a decision is trimmed, 1 to 200.
+- Cents and quantities are safe integers (Zod 4's `int()`): `1e308` and `2^53` are refused; the quote body caps the quantity at 100.
+
 ### Answers against the customer record (D38, D40)
 
-The applicant is a customer we know, and only that customer applies in their own name: the `customerId` of `POST /api/applications` must be the actor (D17), else 403 `NOT_APPLICANT` (D40). Without it, Mikko could send Aino's id with her answers and be approved in her name. `recordMismatches` compares four answers with the record: customer type, birth date, country (a country outside FI, SE, EE on record is answered "other") and business id (spaces ignored). A difference is not refused, but the case is never approved by a rule: it goes to `manual_review` with `answer_differs_from_record { question }` for each, after `pep`; the decision page names the question in the visitor's language. A failed rule still rejects first.
+The applicant is a customer we know, and only that customer applies in their own name: the `customerId` of `POST /api/applications` must be the actor (D17), else 403 `NOT_APPLICANT` (D40). Without it, Mikko could send Aino's id with her answers and be approved in her name. `recordMismatches` compares five answers with the record: customer type, birth date, country (a country outside FI, SE, EE on record is answered "other"), business id (spaces ignored) and, for a company, whether the applicant may sign (`applicant_can_sign`: card 6's coordinator answering "yes" would otherwise be approved and sign the contract himself). A difference is not refused, but the case is never approved by a rule: it goes to `manual_review` with `answer_differs_from_record { question }` for each, after `pep`; the decision page names the question in the visitor's language. A failed rule still rejects first.
 
 **The trap**: Mikko (`cust-mikko`, a consumer born 2009-03-10) answers "Who is leasing?" with **company** and a valid business id. The age question is not asked any more, so the rules alone would approve him; with the record check he goes to `manual_review` with `answer_differs_from_record { question: q_customer_type }`.
 
@@ -127,7 +134,7 @@ businessIdCheckDigit(sevenDigits: string): number | null;
 // answers.ts
 eligibilityInputFromAnswers({ context, answers, startDate, grossMonthlyRentCents, financedLimits?, knownPep?, recordMismatches? }): EligibilityInput;
 validateAnswer(question: Question, answer: Answer): boolean; // the shape only
-answerProblem(question, answer, { today, answers? }): // null, or
+answerProblem(question, answer, { today, answers?, applicantEmail? }): // null, or
   { code: 'invalid' } | { code: 'birth_date_out_of_range'; params: { earliest; latest } } | { code: 'signatory_is_applicant' };
 birthDateRange(today: string): { earliest: string; latest: string };
 parseEurosToCents(input: string): number | null;
@@ -135,7 +142,7 @@ grossFromNetCents(netCents: number, vatRateBp: number): number;
 answersFromCustomer(customer: Customer): Record<string, Answer>;
 
 // record-check.ts
-recordMismatches(record: Customer, answers: Answers): string[]; // question ids, the bank's order
+recordMismatches(record: Customer, answers: Answers): string[]; // question ids, the bank's order (type, birth date, country, business id, can sign)
 
 // signatory.ts
 sameEmail(a?: string, b?: string): boolean;
@@ -156,23 +163,30 @@ getApplication(db, id): Promise<ApplicationView | null>;
 
 ## Tests that pin the numbers
 
-| Number                                                                          | Test                                                                                                                                |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Card 7's ten questions, PEP details after yes                                   | `engine.test.ts` "card 7: …"                                                                                                        |
-| Card 6 at 2 196 000, signatory pruning                                          | `engine.test.ts` "card 6: …", "pruneAnswers … card 6"                                                                               |
-| Card 1's consumer questions                                                     | `engine.test.ts` "card 1: …"                                                                                                        |
-| Mikko 2027-03-10; rents 12 888 / 10 005 / 8 322                                 | `eligibility.test.ts` "evaluate: card 5"                                                                                            |
-| Norvi `awaiting_signatory`, Haapala `manual_review`                             | `eligibility.test.ts` "card 6", "card 7"; `applications.test.ts` on a real DB                                                       |
-| 1234567-8 → check digit 1; every other id valid                                 | `business-id.test.ts`                                                                                                               |
-| 10 730 net → 13 466 gross                                                       | `answers.test.ts` "grossFromNetCents"                                                                                               |
-| Every persona decides without throwing                                          | `eligibility.test.ts` "every customer in customers.json …"                                                                          |
-| Admin review, signatory sign-off, final states                                  | `applications.test.ts` "decideApplication (D10)"                                                                                    |
-| Birth date range 1906-11-05 to 2026-11-05; 2030 and 1800 refused                | `answers.test.ts` "birthDateRange", "answerProblem"; `applications.test.ts` "a birth date in the future …"                          |
-| Mikko answering "company" → `manual_review`, not approved                       | `record-check.test.ts`, `eligibility.test.ts` "answers that differ …"; `applications.test.ts` "card 5 Mikko answering …"            |
-| Mikko cannot apply in Aino's name; nor the admin or anonymous                   | `applications.test.ts` "card 5 Mikko cannot apply in Aino's name …"                                                                 |
-| Only the named signatory signs, on the company's account; not oneself           | `signatory.test.ts`; `applications.test.ts` "card 6 cannot be signed by …", "cannot name themself …"                                |
-| Two decisions at the same instant: one wins, the other writes nothing           | `applications.test.ts` "two decisions at the same instant …"                                                                        |
-| Cards 5, 6, 7 and every customer × category on the data pack (scenario harness) | `src/domain/scenarios/card-05-too-young.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `customers.test.ts` |
+| Number                                                                                                                                                   | Test                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Card 7's ten questions, PEP details after yes                                                                                                            | `engine.test.ts` "card 7: …"                                                                                                        |
+| Card 6 at 2 196 000, signatory pruning                                                                                                                   | `engine.test.ts` "card 6: …", "pruneAnswers … card 6"                                                                               |
+| Card 1's consumer questions                                                                                                                              | `engine.test.ts` "card 1: …"                                                                                                        |
+| Mikko 2027-03-10; rents 12 888 / 10 005 / 8 322                                                                                                          | `eligibility.test.ts` "evaluate: card 5"                                                                                            |
+| Norvi `awaiting_signatory`, Haapala `manual_review`                                                                                                      | `eligibility.test.ts` "card 6", "card 7"; `applications.test.ts` on a real DB                                                       |
+| 1234567-8 → check digit 1; every other id valid                                                                                                          | `business-id.test.ts`                                                                                                               |
+| 10 730 net → 13 466 gross                                                                                                                                | `answers.test.ts` "grossFromNetCents"                                                                                               |
+| Every persona decides without throwing                                                                                                                   | `eligibility.test.ts` "every customer in customers.json …"                                                                          |
+| Admin review, signatory sign-off, final states                                                                                                           | `applications.test.ts` "decideApplication (D10)"                                                                                    |
+| Birth date range 1906-11-05 to 2026-11-05; 2030 and 1800 refused                                                                                         | `answers.test.ts` "birthDateRange", "answerProblem"; `applications.test.ts` "a birth date in the future …"                          |
+| Mikko answering "company" → `manual_review`, not approved                                                                                                | `record-check.test.ts`, `eligibility.test.ts` "answers that differ …"; `applications.test.ts` "card 5 Mikko answering …"            |
+| Mikko cannot apply in Aino's name; nor the admin or anonymous                                                                                            | `applications.test.ts` "card 5 Mikko cannot apply in Aino's name …"                                                                 |
+| Only the named signatory signs, on the company's account; not oneself                                                                                    | `signatory.test.ts`; `applications.test.ts` "card 6 cannot be signed by …", "cannot name themself …"                                |
+| Two decisions at the same instant: one wins, the other writes nothing                                                                                    | `applications.test.ts` "two decisions at the same instant …"                                                                        |
+| Cards 5, 6, 7 and every customer × category on the data pack (scenario harness)                                                                          | `src/domain/scenarios/card-05-too-young.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `customers.test.ts` |
+| Birth dates at the edges: today, tomorrow, 1906-11-05 and the day before, 29 Feb → 1 Mar, the start day vs the quote day, one day off the record         | `src/domain/scenarios/answers-hardening.test.ts` "birth dates"                                                                      |
+| Type and record: consumer ↔ company, a corrected broken id, wrong check digits and prefixes, countries, PEP both ways, the coordinator answering "yes"   | `answers-hardening.test.ts` "the customer type and the record"; `record-check.test.ts` "card 6 Norvi's coordinator …"               |
+| The signatory cannot be the record e-mail either; a failed rule wins over PEP and the record; the same outcome from every answer order                   | `answers-hardening.test.ts` "conflicting and extra answers", "precedence"; `answers.test.ts` "nor the applicant's record e-mail"    |
+| Quantities, down payments and terms that cannot be; 1 vs 2 `ebike-004` for PEP, 14 vs 15 `laptop-004` for revenue; income 44 887 passes, 44 886 does not | `src/domain/scenarios/plausibility.test.ts`                                                                                         |
+| Random customer × asset × term × quantity × down payment: a known refusal or a decision whose codes have keys in all four languages (seed 20261105)      | `src/domain/scenarios/question-flow.property.test.ts`                                                                               |
+| Declining then signing, signing twice, anonymous, the quote's last valid day, the reason chain pep → differs → signatory → reviewed → signed             | `src/server/applications.hardening.test.ts`                                                                                         |
+| The routes: unknown keys, wrong types, a 100 000-character answer, 65 answers, every wrong actor; always `fail()` with a code                            | `src/app/api/applications/route.test.ts`                                                                                            |
 
 ## Open questions
 
@@ -182,3 +196,4 @@ getApplication(db, id): Promise<ApplicationView | null>;
 - Affordability uses the chosen term's gross rent; the page could suggest the shortest term that passes (Mikko's 36 months).
 - A double-submit of the application form creates two applications for one quote (`quote_id` is not unique on purpose: a rejected customer may reapply). Only one can be signed; the form should disable its button while sending.
 - `grossFromNetCents` is a local copy until the money/VAT helper on main replaces it.
+- Open product rules, written as `it.todo` with their candidate outcomes in the name (`plausibility.test.ts`, `answers-hardening.test.ts`, `applications.hardening.test.ts`, `route.test.ts`): a consumer's quantity per category; a farm machine for a consumer; a sanity ceiling on income; revenue below the financed amount, owners' percentages and duplicates; `q_email` and revenue against the record; a signatory who is another customer of the pack; a quote asked for by another customer or already used; who may read an application through `GET /api/applications/[id]`.

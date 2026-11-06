@@ -154,7 +154,11 @@ export async function createApplication(
     const problem =
       answer === undefined
         ? null
-        : answerProblem(question, answer, { today: input.today, answers });
+        : answerProblem(question, answer, {
+            today: input.today,
+            answers,
+            applicantEmail: found.customer.email,
+          });
     if (problem) return { ok: false, reason: 'invalid_answer', questionId: question.id, problem };
   }
   const missing = nextQuestion(questions, context, answers);

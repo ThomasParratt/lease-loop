@@ -50,12 +50,21 @@ describe('the scenario fixtures', () => {
     expect(app.ok === false && app.step).toBe('quote');
   });
 
-  it('stop at the first unanswered question', () => {
-    const app = applyFor(
-      customerById('cust-aino'),
-      { assetId: 'ebike-003', termMonths: 36, isoDate: '2026-11-05' },
-      { answers: { q_email: '' } }
-    );
-    expect(app).toEqual({ ok: false, step: 'incomplete', questionId: 'q_email' });
+  it('stop at the first unanswered question, and at an answer that cannot be taken', () => {
+    const deal = { assetId: 'ebike-003', termMonths: 36, isoDate: '2026-11-05' };
+    // the persona's answers fill every question; a follow-up they do not know can stay open
+    const three = { ...deal, quantity: 3 }; // 1 167 000 financed: PEP is asked
+    expect(applyFor(customerById('cust-aino'), three, { answers: { q_pep: 'yes' } })).toEqual({
+      ok: false,
+      step: 'incomplete',
+      questionId: 'q_pep_details',
+    });
+    // as createApplication: an empty string is an answer that cannot be taken, not a gap
+    expect(applyFor(customerById('cust-aino'), deal, { answers: { q_email: '' } })).toEqual({
+      ok: false,
+      step: 'invalid',
+      questionId: 'q_email',
+      problem: { code: 'invalid', params: {} },
+    });
   });
 });

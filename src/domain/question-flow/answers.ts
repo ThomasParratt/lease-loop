@@ -72,12 +72,14 @@ export type AnswerProblem =
  * Why an answer cannot be taken, as a code for the page, or null when it can. First the
  * shape (`validateAnswer`), then the checks that need the day or the other answers: a birth
  * date from the future or more than 120 years back (D37), and a signatory e-mail that is the
- * applicant's own (D39), since the applicant would then sign for themself.
+ * applicant's own (D39), since the applicant would then sign for themself. "Own" is the
+ * e-mail answered (`q_email`) and the one on the customer record (`applicantEmail`): with
+ * the answer alone, another `q_email` would let the applicant name their record address.
  */
 export function answerProblem(
   question: Question,
   answer: Answer,
-  flow: { today: string; answers?: Answers }
+  flow: { today: string; answers?: Answers; applicantEmail?: string }
 ): AnswerProblem | null {
   if (!validateAnswer(question, answer)) return { code: 'invalid', params: {} };
   const value = text(answer);
@@ -87,7 +89,10 @@ export function answerProblem(
       return { code: 'birth_date_out_of_range', params: range };
     }
   }
-  if (question.id === 'q_signatory_email' && sameEmail(value, text(flow.answers?.q_email))) {
+  if (
+    question.id === 'q_signatory_email' &&
+    (sameEmail(value, text(flow.answers?.q_email)) || sameEmail(value, flow.applicantEmail))
+  ) {
     return { code: 'signatory_is_applicant', params: {} };
   }
   return null;

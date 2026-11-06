@@ -28,11 +28,14 @@ import {
 } from '@/data/schemas';
 import { priceQuote, type PricingData, type QuoteResult } from '../pricing';
 import {
-  grossFromNetCents,
-  eligibilityInputFromAnswers,
+  answerProblem,
   answersFromCustomer,
+  eligibilityInputFromAnswers,
+  grossFromNetCents,
+  type AnswerProblem,
 } from '../question-flow/answers';
 import { evaluate, type EligibilityResult } from '../question-flow/eligibility';
+import { recordMismatches } from '../question-flow/record-check';
 import {
   nextQuestion,
   pruneAnswers,
@@ -99,6 +102,7 @@ export function quoteFor(deal: Deal): QuoteResult {
 
 export type Application =
   | { ok: false; step: 'quote'; quote: QuoteResult }
+  | { ok: false; step: 'invalid'; questionId: string; problem: AnswerProblem }
   | { ok: false; step: 'incomplete'; questionId: string }
   | {
       ok: true;
@@ -110,9 +114,10 @@ export type Application =
 
 /**
  * A data-pack customer applies for a deal, by the steps `createApplication` takes: the quote,
- * the flow context, the customer's answers pruned to the visible questions, every visible
- * question answered, then the eligibility rules on the quote's gross rent. `startDate` is
- * the quote day unless given.
+ * the flow context, the customer's answers pruned to the visible questions, every answer
+ * checked on the day (D37, D39), every visible question answered, the answers compared with
+ * the customer record (D38), then the eligibility rules on the quote's gross rent.
+ * `startDate` is the quote day unless given; the answers are checked on that day too.
  */
 export function applyFor(
   customer: Customer,
@@ -132,6 +137,15 @@ export function applyFor(
     ...answersFromCustomer(customer),
     ...options.answers,
   });
+  const today = options.startDate ?? deal.isoDate;
+  for (const question of questions) {
+    const answer = answers[question.id];
+    const problem =
+      answer === undefined
+        ? null
+        : answerProblem(question, answer, { today, answers, applicantEmail: customer.email });
+    if (problem) return { ok: false, step: 'invalid', questionId: question.id, problem };
+  }
   const missing = nextQuestion(questions, context, answers);
   if (missing) return { ok: false, step: 'incomplete', questionId: missing.id };
   const result = evaluate(
@@ -139,13 +153,14 @@ export function applyFor(
     eligibilityInputFromAnswers({
       context,
       answers,
-      startDate: options.startDate ?? deal.isoDate,
+      startDate: today,
       grossMonthlyRentCents: grossFromNetCents(
         quote.quote.monthlyNetCents,
         quote.quote.vatRateBasisPoints
       ),
       financedLimits,
       knownPep: customer.is_pep,
+      recordMismatches: recordMismatches(customer, answers),
     })
   );
   return {

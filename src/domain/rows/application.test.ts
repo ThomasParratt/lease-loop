@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { applicationRow } from '../../../tests/helpers/row-examples';
-import { applicationDecisionUpdateSchema, applicationRowSchema } from './application';
+import {
+  answersSchema,
+  applicationDecisionUpdateSchema,
+  applicationRowSchema,
+  MAX_ANSWERS,
+} from './application';
 
 const refuses = (row: unknown) => applicationRowSchema.safeParse(row).success === false;
 
@@ -18,6 +23,23 @@ describe('applicationRowSchema: the answers and what the rules decided', () => {
       true
     );
     expect(refuses({ ...applicationRow(), answers_json: 'not json' })).toBe(true);
+  });
+
+  it('refuses more answers than the bank could ever ask, and an id longer than any question id', () => {
+    const many = Object.fromEntries(
+      Array.from({ length: MAX_ANSWERS + 1 }, (_, i) => [`q_x${i}`, 'x'])
+    );
+    expect(answersSchema.safeParse(many).success).toBe(false);
+    const exactly = Object.fromEntries(
+      Array.from({ length: MAX_ANSWERS }, (_, i) => [`q_x${i}`, 'x'])
+    );
+    expect(answersSchema.safeParse(exactly).success).toBe(true);
+    expect(answersSchema.safeParse({ [`q_${'a'.repeat(MAX_ANSWERS - 1)}`]: 'x' }).success).toBe(
+      false
+    );
+    expect(answersSchema.safeParse({ [`q_${'a'.repeat(MAX_ANSWERS - 2)}`]: 'x' }).success).toBe(
+      true
+    );
   });
 
   it('refuses a reason written as a sentence (team rule 6)', () => {

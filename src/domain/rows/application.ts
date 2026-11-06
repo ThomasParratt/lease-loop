@@ -7,8 +7,25 @@ import { idSchema, isoDateSchema, jsonText, ON_VALID_FIELDS, outcomeSchema } fro
 /** One answer: text, a choice, an ISO day, cents as digits, or a list (beneficial owners). */
 export const answerSchema = z.union([z.string().max(500), z.array(z.string().max(200)).max(20)]);
 
+/**
+ * At most this many answers in one application. The bank has 19 questions and an id is at
+ * most 20 characters; 64 leaves room for the bank to grow while a body of ten thousand keys
+ * is refused before anything is read.
+ */
+export const MAX_ANSWERS = 64;
+
 /** Question id → answer. */
-export const answersSchema = z.record(z.string().regex(/^q_[a-z0-9_]+$/), answerSchema);
+export const answersSchema = z
+  .record(
+    z
+      .string()
+      .regex(/^q_[a-z0-9_]+$/)
+      .max(MAX_ANSWERS),
+    answerSchema
+  )
+  .refine((answers) => Object.keys(answers).length <= MAX_ANSWERS, {
+    message: `at most ${MAX_ANSWERS} answers`,
+  });
 export type Answers = z.infer<typeof answersSchema>;
 
 export const reasonsSchema = z.array(outcomeSchema);
