@@ -3,8 +3,13 @@
 // second-life price. The numbers are the pure functions' (src/domain/second-life); this file
 // reads the rows and the data pack and writes the result in one `withAudit`:
 // the `ReturnAssessment` row, the passport's `assessed`, `refurbished` (when the plan has any
-// work) and `repriced`, and the asset `available` with its condition and usage after the plan
-// (D22). The quote then prices the asset on the assessment's amount (second-life-price.ts).
+// work) and `repriced`, and the asset `available` with its condition after the plan and its
+// total usage, which a battery never resets (D22, D83). The quote then prices the asset on the
+// assessment's amount (second-life-price.ts).
+//
+// The usage since the last battery (D83) is not a column: the assessment rows already record
+// each replacement (its step and the usage it was done at), and `usageAtLastReset` reads the
+// newest; an item the pack seeds has none, so its usage since the battery is its total.
 //
 // The inputs of the curve (D60): an item first leased by us (no `previous_lives`, a contract in
 // our books) is valued like an exit, from its first contract's list price and start day (D31);
@@ -22,7 +27,7 @@ import {
   type ReturnAssessmentResult,
 } from '@/domain/second-life/assess';
 import { firstLeaseCurve } from '@/domain/second-life/first-lease';
-import { usageAtLastService } from '@/domain/refurbishment/plan';
+import { usageAtLastReset, usageAtLastService } from '@/domain/refurbishment/plan';
 import { matchDemand, type MatchResult } from '@/domain/second-life/match';
 import type { AuthzRefusal } from '@/domain/authz/policy';
 import { appendAssetEvent } from './asset-events';
@@ -145,6 +150,8 @@ async function buildProposal(
     condition: inspected.condition ?? asset.condition,
     usage: { unit: asset.usage.unit, value: inspected.usageValue ?? asset.usage.value },
     usageAtLastService: usageAtLastService(history, asset.category, data.costs),
+    // D83: the total at the last battery replacement, read from the assessments that did it.
+    usageAtLastReset: usageAtLastReset(history, asset.category, data.costs),
     age: curve.age,
     newPriceCents: curve.listPriceCents,
     isoDate: today,
@@ -269,6 +276,7 @@ export async function assessAsset(
               costCents: relist.plan.totalCents,
               conditionAfter: relist.condition,
               usageAfter: relist.plan.usageAfter,
+              usageSinceResetAfter: relist.plan.usageSinceResetAfter,
             },
           });
         }
@@ -281,6 +289,8 @@ export async function assessAsset(
           },
         });
         // The catalogue's own write (team rule 3): D22's returned → available, D23's parsing.
+        // D83: the total usage stays on the asset (the passport, circular impact); the battery
+        // reset is recorded by this assessment's steps, which `usageAtLastReset` reads back.
         await relistReturnedAsset(tx, {
           assetId: input.assetId,
           condition: relist.condition,

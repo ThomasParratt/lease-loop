@@ -678,7 +678,7 @@
   "secondLife.plan.quantity": "{label} × {count}",
   "secondLife.plan.total": "Kokku",
   "secondLife.plan.none": "Tööd pole vaja.",
-  "secondLife.plan.usageReset": "Kasutus nullitakse uue osaga.",
+  "secondLife.plan.usageReset": "Kasutus alates viimasest akuvahetusest algab taas nullist ja väärtus arvestab seda; kogukasutus jääb tootepassi.",
   "secondLife.step.battery_replacement": "Uus aku",
   "secondLife.step.safety_inspection": "Ohutuskontroll",
   "secondLife.step.certified_data_wipe": "Sertifitseeritud andmete kustutamine",

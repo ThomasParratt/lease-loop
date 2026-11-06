@@ -42,30 +42,30 @@ describe('matchDemand on the pack (card 9)', () => {
   const match = matchDemand(assessed, pack.demand);
   const verdict = (id: string) => match.verdicts.find((v) => v.demandId === id)!;
 
-  it('wait-02 is matched as returned: fair is enough, 7 411 a month for 12 months', () => {
+  it('wait-02 is matched as returned: fair is enough, 8 710 a month for 12 months', () => {
     expect(verdict('wait-02').outcome).toEqual({
       code: 'candidate',
       params: {
         condition: 'fair',
         upgrade: false,
         termMonths: 12,
-        monthlyNetCents: 7_411,
+        monthlyNetCents: 8_710,
         maxMonthlyNetCents: 9_000,
-        totalRentCents: 88_932,
+        totalRentCents: 104_520,
       },
     });
   });
 
-  it('wait-13 is matched only refurbished to good: 6 332 a month for 24 months', () => {
+  it('wait-13 is matched only refurbished to good: 7 219 a month for 24 months', () => {
     expect(verdict('wait-13').outcome).toEqual({
       code: 'candidate',
       params: {
         condition: 'good',
         upgrade: true,
         termMonths: 24,
-        monthlyNetCents: 6_332,
+        monthlyNetCents: 7_219,
         maxMonthlyNetCents: 9_000,
-        totalRentCents: 151_968,
+        totalRentCents: 173_256,
       },
     });
   });
@@ -73,12 +73,12 @@ describe('matchDemand on the pack (card 9)', () => {
   it('names the failing step of every other entry', () => {
     expect(verdict('wait-01').outcome).toMatchObject({
       code: 'over_budget',
-      params: { monthlyNetCents: 6_332, maxMonthlyNetCents: 4_500, shortCents: 1_832 },
+      params: { monthlyNetCents: 7_219, maxMonthlyNetCents: 4_500, shortCents: 2_719 },
     });
-    // D79: at 5 585 for 36 months as like new, wait-03 now fits its 6 000.
+    // D83: like new is 229 004 (band B), 6 317 for 36 months, 317 over wait-03's 6 000.
     expect(verdict('wait-03').outcome).toMatchObject({
-      code: 'candidate',
-      params: { condition: 'like_new', termMonths: 36, monthlyNetCents: 5_585 },
+      code: 'over_budget',
+      params: { condition: 'like_new', termMonths: 36, monthlyNetCents: 6_317, shortCents: 317 },
     });
     expect(verdict('wait-05').outcome.code).toBe('over_budget');
     expect(verdict('wait-06').outcome).toEqual({
@@ -91,18 +91,17 @@ describe('matchDemand on the pack (card 9)', () => {
     expect(match.ranking.map((r) => [r.demandId, r.decidedBy])).toEqual([
       ['wait-02', null],
       ['wait-13', 'no_refurbishment'],
-      ['wait-03', 'needed_by'],
       ['wait-04', 'needed_by'],
     ]);
     expect(match.winner?.demandId).toBe('wait-02');
   });
 
-  it('decides not to refurbish beyond the mandatory steps: relisted fair at 132 281', () => {
+  it('decides not to refurbish beyond the mandatory steps: relisted fair at 155 476', () => {
     expect(match.decision).toEqual({
       code: 'relist_for_winner',
       params: { condition: 'fair', upgrade: false, demandId: 'wait-02' },
     });
-    expect(match.relist.secondLifeFinancedCents).toBe(132_281);
+    expect(match.relist.secondLifeFinancedCents).toBe(155_476);
   });
 
   it('without wait-02 the item is refurbished to good for wait-13 (earliest need)', () => {
@@ -111,7 +110,7 @@ describe('matchDemand on the pack (card 9)', () => {
       pack.demand.filter((d) => d.id !== 'wait-02')
     );
     expect(match2.winner?.demandId).toBe('wait-13');
-    expect(match2.ranking[1]).toMatchObject({ demandId: 'wait-03', decidedBy: 'needed_by' });
+    expect(match2.ranking[1]).toMatchObject({ demandId: 'wait-04', decidedBy: 'needed_by' });
     expect(match2.decision.params).toMatchObject({ condition: 'good', upgrade: true });
   });
 });
@@ -132,12 +131,12 @@ describe('matchDemand on other data', () => {
   });
 
   it('a budget one cent short is out, by one cent', () => {
-    const match = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 7_410 })]);
+    const match = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 8_709 })]);
     expect(match.verdicts[0]!.outcome).toMatchObject({
       code: 'over_budget',
       params: { shortCents: 1 },
     });
-    const exact = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 7_411 })]);
+    const exact = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 8_710 })]);
     expect(exact.winner?.demandId).toBe('a');
   });
 
@@ -159,7 +158,7 @@ describe('matchDemand on other data', () => {
       entry({ id: 'w-a', preferred_term_months: 12 }),
       entry({ id: 'w-b', preferred_term_months: 24 }),
     ]);
-    // 24 × 5 696 = 136 704 beats 12 × 7 411 = 104 520.
+    // 24 × 5 696 = 136 704 beats 12 × 8 710 = 104 520.
     expect(match.ranking.map((r) => [r.demandId, r.decidedBy])).toEqual([
       ['w-b', null],
       ['w-a', 'total_rent'],
@@ -201,7 +200,8 @@ describe('matchDemand: who is still waiting (D62)', () => {
       code: 'expired',
       params: { neededBy: '2026-11-10', isoDate: '2026-11-11' },
     });
-    expect(match.winner?.demandId).toBe('wait-03');
+    // wait-13 (same day) is expired too, wait-03 is over budget: wait-04 is left.
+    expect(match.winner?.demandId).toBe('wait-04');
   });
 
   it('needed on the assessment day itself still counts', () => {

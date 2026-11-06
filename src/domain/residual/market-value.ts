@@ -78,7 +78,8 @@ export function usageAdjustment(
     throw new RangeError(`usage must be a whole number ≥ 0, got ${usage.value}`);
   }
   const steps = Math.floor(usage.value / rule.step);
-  const uncapped = steps * signedBasisPoints(rule.percent_per_step);
+  // No step is 0, never −0 (0 × −200): the page would print "−0 %" after a new battery (D83).
+  const uncapped = steps === 0 ? 0 : steps * signedBasisPoints(rule.percent_per_step);
   const cap = signedBasisPoints(rule.max_total_percent);
   const basisPoints = cap < 0 ? Math.max(uncapped, cap) : Math.min(uncapped, cap);
   return { steps, basisPoints };

@@ -6,8 +6,9 @@
 // - the refurbishment plan (`refurbishmentPlan`, the data's own `when` rules);
 // - the market value after it (`marketValueCents`: the net list price at the first lease ×
 //   the curve at the item's age × the condition multiplier after the plan × the usage
-//   adjustment on the usage as returned (D79, the organisers' rule of 6 Nov: a new battery
-//   is a refurbishment cost in the price, it does not lift the market value; reverses D68);
+//   adjustment on the usage since the last battery after the plan (D83, the organisers' answer
+//   of 6 Nov 2026, 10:35: `resets_usage` resets the usage adjustment, so a new battery puts it
+//   at 0; the total usage never resets and stays for the passport; replaces D79);
 // - the second-life financed amount, D12: market value + refurbishment cost;
 // - the monthly net rent for each allowed term (D43), priced by `priceQuote` itself on that
 //   amount, so a quote made later on the relisted item gives exactly the same rent.
@@ -43,9 +44,12 @@ export type AssessInput = {
   category: AssetCategory;
   /** As returned. */
   condition: AssetCondition;
+  /** The total usage as returned (D83: never reset). */
   usage: { unit: UsageUnit; value: number };
   /** The usage at the last per-block service (review finding 7); absent: none on record. */
   usageAtLastService?: number;
+  /** D83: the total usage at the last battery replacement; absent: none on record. */
+  usageAtLastReset?: number;
   /** For the curve age (D11 / D31). */
   age: CurveAgeInput;
   /** Net list price of one unit at its first lease (D60: `firstLeaseListPriceCents`). */
@@ -149,6 +153,7 @@ export function assessReturn(input: AssessInput, data: AssessData): ReturnAssess
         condition: input.condition,
         usage: input.usage,
         usageAtLastService: input.usageAtLastService,
+        usageAtLastReset: input.usageAtLastReset,
         targetCondition: target,
       },
       data.costs
@@ -159,8 +164,8 @@ export function assessReturn(input: AssessInput, data: AssessData): ReturnAssess
         category: input.category,
         ageMonths,
         condition: plan.conditionAfter,
-        // D79: the usage as returned, even when the plan replaces the battery.
-        usage: input.usage,
+        // D83: the usage since the last battery after the plan, 0 when the plan replaces it.
+        usage: plan.usageSinceResetAfter,
       },
       data.curves
     );

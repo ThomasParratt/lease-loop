@@ -20,7 +20,7 @@ import type {
   ResidualCurves,
 } from '@/data/schemas';
 import { outstandingBalanceAfter, type AmortisationRow } from '../invoicing/balance';
-import { refurbishmentPlan, type RefurbishmentPlan } from '../refurbishment/plan';
+import { refurbishmentPlan, usageSinceReset, type RefurbishmentPlan } from '../refurbishment/plan';
 import { curveAgeInMonths } from '../residual/age';
 import type { FirstLeaseCurve } from '../second-life/first-lease';
 import { marketValueCents, type MarketValue, type Usage } from '../residual/market-value';
@@ -79,6 +79,8 @@ export type EarlyExitInput = {
   reported: { condition: AssetCondition; usage: Usage };
   /** The usage at the last per-block service (review finding 7); absent: none on record. */
   usageAtLastService?: number;
+  /** D83: the total usage at the last battery replacement; absent: none on record. */
+  usageAtLastReset?: number;
   curves: ResidualCurves;
   costs: RefurbishmentCosts;
 };
@@ -135,7 +137,11 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
       category: asset.category,
       ageMonths: curveAgeInMonths(input.curve.age, today),
       condition: reported.condition,
-      usage: reported.usage,
+      // D83: the usage since the last battery replacement (the total when none is on record).
+      usage: {
+        unit: reported.usage.unit,
+        value: usageSinceReset(reported.usage.value, input.usageAtLastReset),
+      },
     },
     input.curves
   );
@@ -145,6 +151,7 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
       condition: reported.condition,
       usage: reported.usage,
       usageAtLastService: input.usageAtLastService,
+      usageAtLastReset: input.usageAtLastReset,
       targetCondition: LEASABLE_CONDITION,
     },
     input.costs

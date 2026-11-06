@@ -678,7 +678,7 @@
   "secondLife.plan.quantity": "{label} × {count}",
   "secondLife.plan.total": "Total",
   "secondLife.plan.none": "No work needed.",
-  "secondLife.plan.usageReset": "The usage resets to 0 with the new part.",
+  "secondLife.plan.usageReset": "The usage since the last battery replacement starts again at 0 and the value counts it; the total usage stays on the passport.",
   "secondLife.step.battery_replacement": "New battery",
   "secondLife.step.safety_inspection": "Safety inspection",
   "secondLife.step.certified_data_wipe": "Certified data wipe",

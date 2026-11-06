@@ -13,7 +13,13 @@
 //    time (`poor->fair`, then `fair->good`, …). An item already as good as the target needs
 //    none and is never downgraded; a missing step in the data is an error.
 //
-// The usage after the plan is 0 when a step `resets_usage` (a new battery), else unchanged.
+// Two usage counters (D83, the organisers' answer of 6 Nov 2026): the total (odometer, hours,
+// cycles) never resets; the usage since the last step that `resets_usage` (in the pack, only a
+// battery replacement) is the total less the reading when that step was last done
+// (`usageAtLastReset`, 0 when none is on record). A resetting step's own `usage.value >= N` rule
+// reads the usage since the last reset (the next battery is due 15 000 km after the last one),
+// and after the plan that usage is 0 when such a step is done, else unchanged. The market value
+// takes its usage adjustment on it (assess.ts); the passport and circular impact read the total.
 import type { AssetCategory, AssetCondition, RefurbishmentCosts, UsageUnit } from '@/data/schemas';
 import { usageUnitSchema } from '@/data/schemas';
 
@@ -35,6 +41,8 @@ export type RefurbishmentInput = {
   usage: { unit: UsageUnit; value: number };
   /** The usage when the per-started-block steps were last done; 0 or absent: never. */
   usageAtLastService?: number;
+  /** D83: the total usage when a step that resets usage was last done; 0 or absent: never. */
+  usageAtLastReset?: number;
   targetCondition: AssetCondition;
 };
 
@@ -43,7 +51,10 @@ export type RefurbishmentPlan = {
   fixedCents: number;
   upgradeCents: number;
   totalCents: number;
+  /** D83: the total usage, which no step resets. */
   usageAfter: { unit: UsageUnit; value: number };
+  /** D83: the usage since the last reset after the plan: 0 when a step resets it. */
+  usageSinceResetAfter: { unit: UsageUnit; value: number };
   conditionAfter: AssetCondition;
 };
 
@@ -102,11 +113,22 @@ export function refurbishmentPlan(
   const data = costs[category];
   const steps: RefurbishmentStep[] = [];
   let resets = false;
+  const sinceReset = {
+    unit: usage.unit,
+    value: usageSinceReset(usage.value, input.usageAtLastReset),
+  };
 
   for (const fixed of data.fixed) {
-    const quantity = timesApplied(parseWhenRule(fixed.when), usage, input.usageAtLastService ?? 0);
-    if (quantity === 0) continue;
     const resetsUsage = fixed.resets_usage === true;
+    // D83: a resetting step (the battery) is due on the usage since it was last done. That
+    // figure already counts from its own reset, so no last-service reading is taken off it.
+    const counted = resetsUsage ? sinceReset : usage;
+    const quantity = timesApplied(
+      parseWhenRule(fixed.when),
+      counted,
+      resetsUsage ? 0 : (input.usageAtLastService ?? 0)
+    );
+    if (quantity === 0) continue;
     resets ||= resetsUsage;
     steps.push({
       kind: 'fixed',
@@ -138,9 +160,35 @@ export function refurbishmentPlan(
     fixedCents,
     upgradeCents,
     totalCents: fixedCents + upgradeCents,
-    usageAfter: { unit: usage.unit, value: resets ? 0 : usage.value },
+    usageAfter: { unit: usage.unit, value: usage.value },
+    usageSinceResetAfter: { unit: usage.unit, value: resets ? 0 : sinceReset.value },
     conditionAfter: to > from ? targetCondition : condition,
   };
+}
+
+/**
+ * D83: the usage since the last reset, the total less the reading at that reset. None on record
+ * (absent or 0) is the total; a total below the reading (a replaced meter) counts from 0.
+ */
+export function usageSinceReset(total: number, atLastReset = 0): number {
+  return total >= atLastReset ? total - atLastReset : total;
+}
+
+/**
+ * D83: the total usage at the last reset: the usage of the newest past assessment whose plan did
+ * a step that `resets_usage` (the battery replacement), or 0 when none did. `assessments` newest
+ * first, as for `usageAtLastService`.
+ */
+export function usageAtLastReset(
+  assessments: readonly { usageValue: number; stepIds: readonly string[] }[],
+  category: AssetCategory,
+  costs: RefurbishmentCosts
+): number {
+  const resetting = new Set(
+    costs[category].fixed.filter((fixed) => fixed.resets_usage === true).map((fixed) => fixed.id)
+  );
+  const reset = assessments.find((a) => a.stepIds.some((id) => resetting.has(id)));
+  return reset?.usageValue ?? 0;
 }
 
 /**

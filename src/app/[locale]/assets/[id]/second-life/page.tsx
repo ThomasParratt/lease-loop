@@ -199,7 +199,7 @@ function PlanAndValue({ proposal, ctx }: { proposal: SecondLifeProposal; ctx: Ct
             </div>
           </dl>
         )}
-        {plan.usageAfter.value === 0 && proposal.input.usage.value > 0 ? (
+        {plan.steps.some((step) => step.kind === 'fixed' && step.resetsUsage) ? (
           <p className="mt-3 text-sm text-ink-muted">{t('secondLife.plan.usageReset')}</p>
         ) : null}
       </Card>

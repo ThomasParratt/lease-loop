@@ -137,6 +137,23 @@ describe('earlyExitCost, the rules around it', () => {
     ]);
   });
 
+  it('a battery replaced at 18 400 km (D83): the value counts the km since, the battery is not due again', () => {
+    const relisted = (usageAtLastReset?: number) =>
+      earlyExitCost(
+        card8({
+          reported: { condition: 'good', usage: { unit: 'km', value: 20_200 } },
+          usageAtLastReset,
+        })
+      );
+    // None on record: 20 200 km is −20 % (the cap) and the battery is due.
+    expect(relisted().marketValue.usageAdjustmentPercent).toBe(-20);
+    expect(relisted().refurbishment.steps.map((s) => s.id)).toContain('battery_replacement');
+    // 1 800 km since the battery: one step of −2 %, as card 8; no battery, only the inspection.
+    const since = relisted(18_400);
+    expect(since.marketValue.valueCents).toBe(259_230);
+    expect(since.refurbishment.steps.map((s) => s.id)).toEqual(['safety_inspection']);
+  });
+
   it('a rent paid in advance counts; a down payment does not; paid rents cap at the term', () => {
     const withDown = earlyExitCost(
       card8({ invoices: [{ kind: 'down_payment', status: 'paid' }, ...rents(7)] })

@@ -39,24 +39,30 @@ async function relistAndLease(assetId: string, termMonths: number) {
 describe('an early return of a relisted item (finding 1)', () => {
   it('card 9: ebike-007 (relisted fair) returned on 2027-11-06 is valued from 549 000 at 58 months', async () => {
     const { contract } = await relistAndLease('ebike-007', 24);
-    expect(contract.unitListPriceCents).toBe(132_281);
+    expect(contract.unitListPriceCents).toBe(155_476);
     const preview = await previewExit(
       db,
       {
         contractId: contract.id,
         mode: 'return',
-        reported: { condition: 'good', usage: { unit: 'km', value: 0 } },
+        // D83: the odometer kept its 18 400 km at the relist; 600 km since the new battery.
+        reported: { condition: 'good', usage: { unit: 'km', value: 19_000 } },
       },
       '2027-11-06'
     );
     if (!preview.ok) throw new Error(preview.reason.code);
-    // The review's 448,99 € came from the second-life price aged again; D60 gives 1 213,29 € as
-    // good. Reported good, it was leased fair, so D77 values it fair: 121 329 × 0.65 / 0.85.
+    // The review's 448,99 € came from the second-life price aged again. D60: 549 000 × 26 %
+    // (58 months); reported good, it was leased fair, so D77 values it fair (× 0.65); 600 km
+    // since the battery is no whole step (× 1.00): 92 781.
     expect(marketValueOf(preview.preview.return.lines)).toMatchObject({
       amountCents: 92_781,
       ageMonths: 58,
       condition: 'fair',
+      usageAdjustmentPercent: 0,
     });
+    // The battery is not due again: 600 km since it, not 19 000.
+    const steps = preview.preview.return.lines.filter((l) => l.code === 'refurb_fixed');
+    expect(steps.map((l) => l.params.step)).toEqual(['safety_inspection']);
   });
 
   it("card 10: ebike-008's exit preview starts from 179 900 (v1) at 70 months, not 37 101", async () => {

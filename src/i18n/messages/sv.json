@@ -678,7 +678,7 @@
   "secondLife.plan.quantity": "{label} × {count}",
   "secondLife.plan.total": "Totalt",
   "secondLife.plan.none": "Inget arbete behövs.",
-  "secondLife.plan.usageReset": "Användningen nollställs med den nya delen.",
+  "secondLife.plan.usageReset": "Användningen sedan senaste batteribytet börjar om från 0 och värdet räknas på den; den totala användningen står kvar i produktpasset.",
   "secondLife.step.battery_replacement": "Nytt batteri",
   "secondLife.step.safety_inspection": "Säkerhetsbesiktning",
   "secondLife.step.certified_data_wipe": "Certifierad dataradering",

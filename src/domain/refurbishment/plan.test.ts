@@ -4,7 +4,13 @@
 import { describe, expect, it } from 'vitest';
 import refurbishmentJson from '../../../data/refurbishment-costs.json';
 import { refurbishmentCostsSchema, type RefurbishmentCosts } from '@/data/schemas';
-import { parseWhenRule, refurbishmentPlan, usageAtLastService } from './plan';
+import {
+  parseWhenRule,
+  refurbishmentPlan,
+  usageAtLastReset,
+  usageAtLastService,
+  usageSinceReset,
+} from './plan';
 
 const costs = refurbishmentCostsSchema.parse(refurbishmentJson);
 const km = (value: number) => ({ unit: 'km' as const, value });
@@ -50,7 +56,9 @@ describe('refurbishmentPlan', () => {
     expect(plan.fixedCents).toBe(39_500);
     expect(plan.upgradeCents).toBe(12_000);
     expect(plan.totalCents).toBe(51_500);
-    expect(plan.usageAfter).toEqual(km(0));
+    // D83, the organisers' answer of 6 Nov: the total never resets, the usage since the battery does.
+    expect(plan.usageAfter).toEqual(km(18_400));
+    expect(plan.usageSinceResetAfter).toEqual(km(0));
     expect(plan.conditionAfter).toBe('good');
   });
 
@@ -70,7 +78,54 @@ describe('refurbishmentPlan', () => {
     );
     expect(plan.steps.map((s) => s.id)).toEqual(['safety_inspection']);
     expect(plan.usageAfter).toEqual(km(14_999));
+    expect(plan.usageSinceResetAfter).toEqual(km(14_999));
     expect(plan.totalCents).toBe(4_500);
+  });
+
+  // D83, the organisers' answer of 6 Nov: the next replacement counts the usage since the last one.
+  const ebikeAt = (total: number, usageAtLastReset?: number) =>
+    refurbishmentPlan(
+      {
+        category: 'e_bike',
+        condition: 'good',
+        usage: km(total),
+        usageAtLastReset,
+        targetCondition: 'good',
+      },
+      costs
+    );
+
+  it('the next battery is due at 15 000 km since the last one, not on the total (D83)', () => {
+    const early = ebikeAt(30_000, 18_400);
+    expect(early.steps.map((s) => s.id)).toEqual(['safety_inspection']);
+    expect(early.usageAfter).toEqual(km(30_000));
+    expect(early.usageSinceResetAfter).toEqual(km(11_600));
+    const due = ebikeAt(33_400, 18_400);
+    expect(due.steps.map((s) => s.id)).toEqual(['battery_replacement', 'safety_inspection']);
+    expect(due.usageAfter).toEqual(km(33_400));
+    expect(due.usageSinceResetAfter).toEqual(km(0));
+  });
+
+  it('a laptop battery is due at 500 cycles since the last one (D83)', () => {
+    const laptop = (value: number, usageAtLastReset: number) =>
+      refurbishmentPlan(
+        {
+          category: 'laptop',
+          condition: 'good',
+          usage: { unit: 'battery_cycles', value },
+          usageAtLastReset,
+          targetCondition: 'good',
+        },
+        costs
+      ).steps.map((s) => s.id);
+    expect(laptop(899, 400)).toEqual(['certified_data_wipe']);
+    expect(laptop(900, 400)).toEqual(['certified_data_wipe', 'battery_replacement']);
+  });
+
+  it('a last reset above the counter (a replaced meter) counts from 0, never negative', () => {
+    const plan = ebikeAt(5_000, 18_400);
+    expect(plan.steps.map((s) => s.id)).toEqual(['safety_inspection']);
+    expect(plan.usageSinceResetAfter).toEqual(km(5_000));
   });
 
   it('upgrades step by step in order: poor to good is poor->fair then fair->good', () => {
@@ -200,5 +255,29 @@ describe('usageAtLastService', () => {
     expect(usageAtLastService([], 'farm_machine', costs)).toBe(0);
     // An e-bike has no per-block step: its battery is a threshold rule.
     expect(usageAtLastService(history, 'e_bike', costs)).toBe(0);
+  });
+});
+
+describe('usageSinceReset (D83)', () => {
+  it('is the total less the reading at the last reset; none on record is the total', () => {
+    expect(usageSinceReset(18_400)).toBe(18_400);
+    expect(usageSinceReset(18_400, 18_400)).toBe(0);
+    expect(usageSinceReset(30_000, 18_400)).toBe(11_600);
+    // A counter below the reading (a replaced meter) counts from 0.
+    expect(usageSinceReset(5_000, 18_400)).toBe(5_000);
+  });
+});
+
+describe('usageAtLastReset (D83)', () => {
+  it('the newest assessment that replaced the battery gives the reading; none gives 0', () => {
+    const history = [
+      { usageValue: 30_000, stepIds: ['safety_inspection'] },
+      { usageValue: 18_400, stepIds: ['battery_replacement', 'safety_inspection'] },
+      { usageValue: 16_000, stepIds: ['battery_replacement'] },
+    ];
+    expect(usageAtLastReset(history, 'e_bike', costs)).toBe(18_400);
+    expect(usageAtLastReset([], 'e_bike', costs)).toBe(0);
+    // A farm machine has no step that resets usage.
+    expect(usageAtLastReset(history, 'farm_machine', costs)).toBe(0);
   });
 });

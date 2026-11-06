@@ -16,7 +16,9 @@ Not a question here: Thomas's question-flow validation (#25, merged) added four 
 
 **What the code does.** Pass on names the next customer (the picker, standing in for an e-mail invitation), and refuses without one (`pass_on_needs_next_customer`), with yourself (`next_customer_is_self`) or an unknown id (`next_customer_not_found`). The waiting-list route is "return": the item is assessed and matchmaking (D13) names the next customer. A waiting-list entry has no customer record in the pack, so it cannot apply or sign itself. Both exits share the assessment (D77), the first contract ends `passed_on` (or `ended_early` before its end, D32 to D35), the second-life price is D12 on D60 and D79, and the passport chains the lives (D66). The mapping is in [issue #54](https://github.com/ThomasParratt/northfina-lease-loop/issues/54).
 
-## 3. Second life: answered (D60, D79)
+## 3. Second life: answered (D60, D83)
+
+**Their follow-up of 2026-11-06, 10:35, on the battery (D83, replaces D79).** `resets_usage: true` resets both the usage adjustment in the market value and the next-replacement trigger. Two numbers: the total usage never resets (passport, circular impact); the usage since the last battery replacement is 0 after it (the value's usage adjustment, the next battery at 15 000 km or 500 cycles). Their example: 92 781 before the battery, **115 976** with it, 151 661 also good. Card 9 is now 115 976 + 39 500 = **155 476**, `wait-02` at **8 710** a month for 12 months; the paragraph below is the earlier answer as D79 read it.
 
 **Answered by the organisers on 2026-11-06.** For an item with past lives in the pack, the price at its first lease is its price on list 1, and its age counts from 1 January of its model year. Their worked example values `ebike-007` on 6 Nov 2026 at 927,81 €, with its usage counted.
 
