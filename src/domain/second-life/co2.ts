@@ -11,8 +11,8 @@
 // out?"): no, a short or late life earns a small share, never a whole footprint.
 //
 // Not counted: transport, use-phase emissions and the e-bike's avoided car kilometres (the
-// usage in the data pack is a lifetime total, not per life). Money saved is left out: the
-// factors file has no money factor.
+// usage in the data pack is a lifetime total, not per life). Money saved is in money-saved.ts
+// (D80), by the same method.
 //
 // Rounding: every figure is computed in grams, unrounded, and rounded once, half up, to whole
 // kilograms by `gramsToKg` where it is shown. The fleet total is the sum of the rounded
@@ -66,17 +66,25 @@ const assertWholeNonNegative = (name: string, value: number) => {
   }
 };
 
-/** Grams of CO2e one life avoided, unrounded. 0 for the first life and past the design life. */
-export function co2SavedByLife(method: Co2Method, life: LifeInput): number {
+/**
+ * The months of a life that earn a saving: none for the first life, and at most what is left of
+ * the design life. Shared with the money saved (money-saved.ts, D80).
+ */
+export function countedMonths(method: Co2Method, life: LifeInput): number {
   const usedBefore = life.monthsUsedBefore ?? 0;
   assertWholeNonNegative('lifeIndex', life.lifeIndex);
   assertWholeNonNegative('months', life.months);
   assertWholeNonNegative('monthsUsedBefore', usedBefore);
   if (life.lifeIndex === 0) return 0;
-
   const designLife = method.designLifeMonths[life.category];
-  const counted = Math.min(life.months, Math.max(0, designLife - usedBefore));
+  return Math.min(life.months, Math.max(0, designLife - usedBefore));
+}
+
+/** Grams of CO2e one life avoided, unrounded. 0 for the first life and past the design life. */
+export function co2SavedByLife(method: Co2Method, life: LifeInput): number {
+  const counted = countedMonths(method, life);
   if (counted === 0) return 0;
+  const designLife = method.designLifeMonths[life.category];
 
   const footprintGrams = method.factors.manufacturing_new_kg[life.category] * 1000;
   const netGrams = footprintGrams * (1 - method.factors.refurbishment_share_of_new);
