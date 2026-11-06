@@ -257,6 +257,7 @@
   "decision.status.awaiting_signatory": "Waiting for the signatory",
   "decision.decidedOn": "Decided on {date}",
   "decision.home": "Back to the home page",
+  "decision.catalogue": "See the catalogue",
   "decision.reasons": "Why",
   "decision.reason.too_young": "You must be 18 on the day the lease starts. You can apply from {eighteenOn}.",
   "decision.reason.residency_not_allowed": "We can lease only to residents of Finland, Sweden and Estonia.",

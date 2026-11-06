@@ -257,6 +257,7 @@
   "decision.status.awaiting_signatory": "Odottaa allekirjoittajaa",
   "decision.decidedOn": "Päätetty {date}",
   "decision.home": "Takaisin etusivulle",
+  "decision.catalogue": "Katso valikoima",
   "decision.reasons": "Miksi",
   "decision.reason.too_young": "Sinun on oltava 18-vuotias sopimuksen alkaessa. Voit hakea {eighteenOn} alkaen.",
   "decision.reason.residency_not_allowed": "Voimme vuokrata vain Suomessa, Ruotsissa ja Virossa asuville.",

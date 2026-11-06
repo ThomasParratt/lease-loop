@@ -257,6 +257,7 @@
   "decision.status.awaiting_signatory": "Ootab allkirjastajat",
   "decision.decidedOn": "Otsustatud {date}",
   "decision.home": "Tagasi avalehele",
+  "decision.catalogue": "Vaata kataloogi",
   "decision.reasons": "Miks",
   "decision.reason.too_young": "Pead lepingu alguse päeval olema 18-aastane. Saad taotleda alates {eighteenOn}.",
   "decision.reason.residency_not_allowed": "Saame liisida ainult Soome, Rootsi ja Eesti elanikele.",

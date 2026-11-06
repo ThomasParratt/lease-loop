@@ -4,8 +4,6 @@
 
 The applicant answers only the questions of `data/questions.json` that apply to their deal, one at a time, with "why we ask" for each; going back and changing an answer removes the answers that no longer apply and says so. An answer that cannot be true (a birth date in the future) is refused at the question, and an answer that differs from the customer record sends the case to a person. On submit, the eligibility rules give a clear yes, no, "a person will check" or "waiting for the signatory", each with reasons as codes the page writes in the visitor's language (CHALLENGE.md smart problem 4, spine 3).
 
-On the page: "why we ask" is a narrow teal note with a chevron under each question, so it does not read as one more option. The decision page leads with the outcome; a yes shows no reasons ("every check passed" adds nothing), while a no, a manual review and a wait for the signatory list theirs under "Why". A no is worded politely ("Sorry, your lease application was not approved"), and every outcome ends with a way back to the home page and the catalogue.
-
 ## The rule
 
 ### Which questions appear (`ask_when`)
@@ -88,6 +86,10 @@ At 36 and 48 months the age is the only reason; at 24 both reasons are listed. O
 Seven digits, a hyphen, a check digit. Multiply the digits by **7 9 10 5 8 4 2**, sum, take the remainder mod 11: remainder 0 → check digit 0; remainder 1 → no valid id; otherwise 11 − remainder.
 
 Typo Trading Oy (`cust-broken-id`) has **1234567-8**: 1·7 + 2·9 + 3·10 + 4·5 + 5·8 + 6·4 + 7·2 = 153; 153 mod 11 = 10; check digit 11 − 10 = **1**, not 8. Rejected with `invalid_business_id { businessId: 1234567-8 }`. Every other business id in `customers.json` is valid. A wrong check digit is a valid _answer_ (the form takes it) and a _reason_ (the rules reject it), so the applicant sees why.
+
+### On the page
+
+"Why we ask" is a teal note (the `info` role, D21) with an info glyph and a chevron under each question, a native `<details>` so it opens from the keyboard; it spans the column on a phone and fits its text from `sm` up, so it does not read as one more option. The decision page leads with the outcome as an `h2` under the page's `h1`; a yes shows no reasons ("every check passed" adds nothing), while a no, a manual review and a wait for the signatory list theirs under "Why". A no is worded politely ("Sorry, your lease application was not approved"; card 5 adds "You can apply from 10 March 2027."), and every outcome ends with a way back to the home page and the catalogue.
 
 ## Decisions
 

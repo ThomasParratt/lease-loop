@@ -257,6 +257,7 @@
   "decision.status.awaiting_signatory": "Väntar på firmatecknaren",
   "decision.decidedOn": "Beslutat {date}",
   "decision.home": "Tillbaka till startsidan",
+  "decision.catalogue": "Se katalogen",
   "decision.reasons": "Varför",
   "decision.reason.too_young": "Du måste vara 18 år den dag avtalet börjar. Du kan ansöka från {eighteenOn}.",
   "decision.reason.residency_not_allowed": "Vi kan bara leasa till personer bosatta i Finland, Sverige och Estland.",

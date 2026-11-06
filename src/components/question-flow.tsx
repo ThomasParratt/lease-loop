@@ -304,7 +304,7 @@ function QuestionStep(props: StepProps) {
 
   // Teal, narrow and with a chevron, so it reads as a note to open and not as one more option.
   const why = (
-    <details className="group w-fit max-w-prose rounded-lg border border-info-line bg-info-soft text-sm text-info-ink">
+    <details className="group w-full max-w-prose sm:w-fit rounded-lg border border-info-line bg-info-soft text-sm text-info-ink">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-semibold [&::-webkit-details-marker]:hidden">
         <svg
           aria-hidden="true"

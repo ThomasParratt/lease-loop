@@ -112,8 +112,9 @@ export default async function ApplicationPage({
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader title={t('decision.title')} />
+      {/* The outcome is the page's first heading under the h1; it is there on load, so it
+          is not announced as a live region. */}
       <div
-        role="status"
         className={`mb-8 flex items-center gap-5 rounded-xl border-2 p-6 ${PANEL[TONE[decision]]}`}
       >
         <span
@@ -123,9 +124,9 @@ export default async function ApplicationPage({
           {GLYPH[TONE[decision]]}
         </span>
         <div>
-          <p className="font-heading text-2xl leading-tight font-semibold sm:text-3xl">
+          <h2 className="font-heading text-2xl leading-tight font-semibold sm:text-3xl">
             {t(`decision.status.${decision}`)}
-          </p>
+          </h2>
           <p className="mt-1">
             {t('decision.decidedOn', { date: formatIsoDate(application.decidedOn, locale) })}
           </p>
@@ -223,7 +224,7 @@ export default async function ApplicationPage({
           <span aria-hidden="true">←</span> {t('decision.home')}
         </LinkButton>
         <LinkButton href={`/${locale}/catalogue`} variant="secondary">
-          {t('home.cta.catalogue')}
+          {t('decision.catalogue')}
         </LinkButton>
       </div>
     </div>
