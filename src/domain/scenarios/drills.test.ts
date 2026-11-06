@@ -174,7 +174,9 @@ describe('drill: a returned laptop through the assessment and the waiting list',
       ['certified_data_wipe', 2_500],
       ['battery_replacement', 9_000],
     ]);
-    expect(assessed.options[0]!.plan.usageAfter.value).toBe(0);
+    // D83: the cycles since the battery reset, the total cycles stay.
+    expect(assessed.options[0]!.plan.usageSinceResetAfter.value).toBe(0);
+    expect(assessed.options[0]!.plan.usageAfter.value).toBe(780);
   });
 
   it('only laptop entries are weighed; the winner takes it fair, the good-only twins are over budget', () => {

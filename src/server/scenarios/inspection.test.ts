@@ -48,7 +48,8 @@ describe('an exit checks the report against the item at signing', () => {
       {
         contractId: contract.id,
         mode: 'return',
-        reported: { condition: 'new', usage: { unit: 'km', value: 4_000 } },
+        // D83: the odometer kept its 18 400 km at the relist; 4 000 km more on this lease.
+        reported: { condition: 'new', usage: { unit: 'km', value: 22_400 } },
         actor: 'cust-aino',
       },
       contract.endDate
@@ -57,7 +58,7 @@ describe('an exit checks the report against the item at signing', () => {
     expect(await getAsset(db, 'ebike-007')).toMatchObject({
       status: 'returned',
       condition: 'fair',
-      usage: { unit: 'km', value: 4_000 },
+      usage: { unit: 'km', value: 22_400 },
     });
   });
 

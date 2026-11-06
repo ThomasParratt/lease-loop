@@ -6,7 +6,7 @@ A returned item is assessed: every way to relist it (as returned, or refurbished
 
 ## The rule
 
-1. **Options.** For each target condition from the returned one up to like new: `refurbishmentPlan` (the data's fixed steps whose `when` holds, then the condition upgrades), the market value after it (`marketValueCents`: net list price at the first lease × curve at the age × condition multiplier after × usage adjustment on the usage as returned (D79, the organisers’ rule; a new battery is a cost in the price, not a higher value)), and **D12: second-life price = market value + refurbishment cost**, then the normal band and factor through `priceQuote` for every allowed term (D43), no down payment.
+1. **Options.** For each target condition from the returned one up to like new: `refurbishmentPlan` (the data's fixed steps whose `when` holds, then the condition upgrades), the market value after it (`marketValueCents`: net list price at the first lease × curve at the age × condition multiplier after × usage adjustment on the usage since the last battery replacement after the plan (D83, the organisers’ answer of 6 Nov, 10:35: a new battery resets it to 0; the total usage never resets and stays on the asset for the passport and circular impact)), and **D12: second-life price = market value + refurbishment cost**, then the normal band and factor through `priceQuote` for every allowed term (D43), no down payment.
 2. **Verdicts (D62).** Each entry of the waiting list, the first failing step named as a code: `other_category`, `already_matched` (an earlier assessment won it), `expired` (`needed_by` before the assessment day), `term_not_offered`, `condition_unreachable`, `rent_not_priced`, `over_budget { shortCents }`, else `candidate`. An entry is offered the lowest condition that satisfies it: max(as returned, its minimum, fair).
 3. **Ranking (D13).** No refurbishment beyond the mandatory steps first, then the earliest `needed_by`, then the highest total rent over the term (rent × term), then the lower id. Each row names the step that put it below the row above.
 4. **Decision (D61).** Relist in the winner's condition; with no winner, at good (or as returned when better). The mandatory steps are always done.
@@ -14,22 +14,24 @@ A returned item is assessed: every way to relist it (as returned, or refurbished
 ### Card 9: `ebike-007`, fair, 18 400 km, assessed on 2026-11-06
 
 - **Value inputs (D60).** One past life, no contract in our books: the earliest list price, 549 000 (v1), aged by D11 from January 2023: 46 months. The e-bike curve between 36 (40 %) and 48 (31 %) gives 40 − 9 × 10/12 = **32.5 %**.
-- **The plan, as returned:** battery 35 000 (18 400 ≥ 15 000 km, usage resets to 0) + safety inspection 4 500 = **39 500**. To good: + fair→good 12 000 = **51 500**. To like new: + good→like new 8 000 = 59 500.
-- **Market value (D79, as returned):** fair 549 000 × 32.5 % × 0.65 × 0.80 (18 400 km, −20 % cap) = **92 781**, the organisers’ 927,81 €; good × 0.85 = **121 329**; like new × 0.95 = 135 603.
-- **D12 price:** fair 92 781 + 39 500 = **132 281** (band A); good 121 329 + 51 500 = **172 829** (band A); like new 195 103 (band A).
-- **Rents (band A):** fair **7 411** for 12 months (24: 4 846, 36: 3 787, 48: 3 168); good **6 332** for 24 months (12: 9 682); like new 5 585 for 36 months.
+- **The plan, as returned:** battery 35 000 (18 400 ≥ 15 000 km since the last battery; the pack records none, so that is the total) + safety inspection 4 500 = **39 500**. To good: + fair→good 12 000 = **51 500**. To like new: + good→like new 8 000 = 59 500.
+- **Two usage counters (D83).** The total, 18 400 km, never resets: the relisted bike keeps it, the passport shows it and the next exit must report at least it. The usage since the last battery is 0 after the plan; it is what the value's usage adjustment counts and what the next battery waits for (15 000 km more, so at 33 400 km on the odometer).
+- **Market value (D83, the organisers' worked example):** before the battery 549 000 × 32.5 % × 0.65 × 0.80 (−20 % cap) = 92 781; with the new battery fair × 1.00 = **115 976** (1 159,76 €); good × 0.85 × 1.00 = **151 661**; like new × 0.95 = 169 504.
+- **D12 price:** fair 115 976 + 39 500 = **155 476** (band A); good 151 661 + 51 500 = **203 161** (band B); like new 229 004 (band B).
+- **Rents:** fair (band A) **8 710** for 12 months (24: 5 696, 36: 4 451, 48: 3 723); good (band B) **7 219** for 24 months (12: 11 133); like new (band B) 6 317 for 36 months.
+- **Refurbish or not, the organisers' comparison.** To good the value gains 151 661 − 92 781 = 58 880 against 51 500 of work (35 000 + 12 000 + 4 500); the battery alone gains 23 195 for 35 000, but it is a mandatory step at 15 000 km. Whether to go beyond the mandatory steps is still D61's: the winner's condition.
 - **The waiting list (e-bikes):**
 
-| Entry   | Wants                   | Offered at | Rent  | Verdict              | Rank and step                              |
-| ------- | ----------------------- | ---------- | ----- | -------------------- | ------------------------------------------ |
-| wait-02 | fair, 12 m, ≤ 9 000     | fair       | 7 411 | candidate            | 1, winner                                  |
-| wait-13 | good, 24 m, ≤ 9 000     | good       | 6 332 | candidate            | 2, needs refurbishing (`no_refurbishment`) |
-| wait-03 | like new, 36 m, ≤ 6 000 | like new   | 5 585 | candidate            | 3, needed later (`needed_by`)              |
-| wait-04 | good, 24 m, ≤ 12 000    | good       | 6 332 | candidate            | 4, needed later (`needed_by`)              |
-| wait-01 | good, 24 m, ≤ 4 500     | good       | 6 332 | over budget by 1 832 |                                            |
-| wait-05 | good, 12 m, ≤ 3 500     | good       | 9 682 | over budget by 6 182 |                                            |
+| Entry   | Wants                   | Offered at | Rent   | Verdict              | Rank and step                              |
+| ------- | ----------------------- | ---------- | ------ | -------------------- | ------------------------------------------ |
+| wait-02 | fair, 12 m, ≤ 9 000     | fair       | 8 710  | candidate            | 1, winner                                  |
+| wait-13 | good, 24 m, ≤ 9 000     | good       | 7 219  | candidate            | 2, needs refurbishing (`no_refurbishment`) |
+| wait-04 | good, 24 m, ≤ 12 000    | good       | 7 219  | candidate            | 3, needed later (`needed_by`)              |
+| wait-03 | like new, 36 m, ≤ 6 000 | like new   | 6 317  | over budget by 317   |                                            |
+| wait-01 | good, 24 m, ≤ 4 500     | good       | 7 219  | over budget by 2 719 |                                            |
+| wait-05 | good, 12 m, ≤ 3 500     | good       | 11 133 | over budget by 7 633 |                                            |
 
-- **The answer.** Refurbish? **No**, only the mandatory battery and inspection (39 500). Who? **`wait-02`**: both twins fit the budget and need it by 2026-11-10, but `wait-02` takes it as returned and `wait-13` needs 12 000 more of work, so D13's first step decides. At what rent? **8 710 net a month for 12 months** (87.10 €, 109.31 € with 25.5 % VAT), on a second-life price of 1 554.76 €. A quote at 12 months on the relisted item gives exactly 8 710.
+- **The answer.** Refurbish? **No**, only the mandatory battery and inspection (39 500). Who? **`wait-02`**: both twins fit the budget and need it by 2026-11-10, but `wait-02` takes it as returned and `wait-13` needs 12 000 more of work, so D13's first step decides. D83 moved the numbers, not the winner: the rents rose (7 411 → 8 710, 6 332 → 7 219) and both twins are still under 9 000; only `wait-03` drops out. At what rent? **8 710 net a month for 12 months** (87.10 €, 109.31 € with 25.5 % VAT), on a second-life price of 1 554.76 €. A quote at 12 months on the relisted item gives exactly 8 710.
 
 ### Card 10: `ebike-008`, two past lives, good, 9 800 km
 
@@ -40,14 +42,15 @@ A returned item is assessed: every way to relist it (as returned, or refurbished
 
 ## Decisions
 
-D12 (re-pricing), D77 (the inspection wins over the report), D13 (matchmaking), D15 (CO2), D16 and D66 (the contract chain), D22 and D23 (`returned` → `available`, statuses parsed before the write), D31 and D60 (the price and age the value starts from), D61 (refurbish or not, the floor), D62 (the budget test), D63 (where the price lives), D64 (the admin button, not an event handler), D65 (an assessment without a contract), D67 (a relisted fair item is open to anyone), D68 (the new battery in the value and in the price).
+D12 (re-pricing), D77 (the inspection wins over the report), D13 (matchmaking), D15 (CO2), D16 and D66 (the contract chain), D22 and D23 (`returned` → `available`, statuses parsed before the write), D31 and D60 (the price and age the value starts from), D61 (refurbish or not, the floor), D62 (the budget test), D63 (where the price lives), D64 (the admin button, not an event handler), D65 (an assessment without a contract), D67 (a relisted fair item is open to anyone), D83 (two usage counters: the total never resets, the usage since the last battery takes the value's usage adjustment and the next battery; replaces D79, which had replaced D68).
 
 ## Pure functions
 
-- `assessReturn(input, { curves, costs, pricing })` in `src/domain/second-life/assess.ts`. In: asset id, category, returned condition and usage, the curve-age input (D11/D31), the new price (D60), the ISO day. Out: `{ assetId, category, isoDate, ageMonths, returnedCondition, options[] }`, each option `{ condition, upgrade, plan, marketValue, secondLifeFinancedCents, rents[{ termMonths, monthlyNetCents | null, band, refusal }] }`.
+- `assessReturn(input, { curves, costs, pricing })` in `src/domain/second-life/assess.ts`. In: asset id, category, returned condition and total usage, the total at the last battery replacement (`usageAtLastReset`, D83; absent: none), the curve-age input (D11/D31), the new price (D60), the ISO day. Out: `{ assetId, category, isoDate, ageMonths, returnedCondition, options[] }`, each option `{ condition, upgrade, plan, marketValue, secondLifeFinancedCents, rents[{ termMonths, monthlyNetCents | null, band, refusal }] }`.
 - `matchDemand(assessment, demand)` in `src/domain/second-life/match.ts`. Out: `{ verdicts[{ demandId, neededBy, outcome: { code, params } }], ranking[{ …, rank, decidedBy }], winner, decision: { code, params }, relist }`.
 - `firstLeaseCurve({ assetId, modelYear, previousLives, contracts, priceLists, today }) → { listPriceCents, age } | null` and `livesSoFar(packPreviousLives, contracts) → { previousLives, currentLife }` in `src/domain/second-life/first-lease.ts`: D60 in one place, read by the assessment and the exit (review findings 1 and 3); `firstLeaseListPriceCents` lives there too (re-exported from `assess.ts`). `withSecondLifePrice(pricing, assetId, cents)` in `assess.ts`.
 - **The inspection (D77).** `POST /api/assets/[id]/assessments` takes an optional body `{ condition?, usageValue? }`: the admin's inspection, assessed and relisted on instead of the reported values the exit stored; no body assesses the stored values, as the assess button does. A per-block service (the farm machine's) counts from the usage of the newest assessment that did it.
+- **The usage since the last battery (D83)** in `src/domain/refurbishment/plan.ts`: `usageSinceReset(total, atLastReset) → number` (none on record is the total; a total below the reading counts from 0) and `usageAtLastReset(assessments, category, costs) → number` (the usage of the newest assessment whose plan did a `resets_usage` step, else 0). `refurbishmentPlan` takes `usageAtLastReset` and returns `usageAfter` (the total, unchanged) and `usageSinceResetAfter` (0 when a step resets it). Stored as no column: the assessment rows already record each replacement.
 
 ## Files
 
@@ -59,14 +62,15 @@ D12 (re-pricing), D77 (the inspection wins over the report), D13 (matchmaking), 
 
 ## Tests that pin the numbers
 
-- `src/domain/second-life/assess.test.ts`: 46 months, 32.5 %, 39 500 / 51 500, 92 781 / 121 329, 132 281 / 172 829, the rents per term; a cheaper cost table, a first-life item (D31), an unfinanceable item, a laptop's terms.
-- `src/domain/second-life/match.test.ts`: wait-02 wins, wait-13 second by `no_refurbishment`; without wait-02, wait-13 by `needed_by` and refurbished to good; no demand in the category; one cent short; equal but id; total rent; another demand list; a poor item never relisted poor; an expired entry (card 9 on 11-11, card 10 on 11-09: `wait-13` wins ebike-008); an entry already matched.
+- `src/domain/second-life/assess.test.ts`: 46 months, 32.5 %, 39 500 / 51 500, 115 976 / 151 661, 155 476 / 203 161, the rents per term; "the organisers' example" pins their three numbers (92 781 before the battery, 115 976 with it, 151 661 also good) and a bike back at 30 000 km after a battery at 18 400 (no new battery, the 11 600 km since count); a cheaper cost table, a first-life item (D31), an unfinanceable item, a laptop's terms.
+- `src/domain/refurbishment/plan.test.ts`: the next battery at 15 000 km (e-bike) and 500 cycles (laptop) since the last one, a replaced meter, `usageSinceReset`, `usageAtLastReset` (D83).
+- `src/domain/second-life/match.test.ts`: wait-02 wins at 8 710, wait-13 second by `no_refurbishment` at 7 219, wait-03 over budget by 317; without wait-02, wait-13 by `needed_by` and refurbished to good; no demand in the category; one cent short; equal but id; total rent; another demand list; a poor item never relisted poor; an expired entry (card 9 on 11-11, card 10 on 11-09: `wait-13` wins ebike-008); an entry already matched.
 - `src/domain/scenarios/card-09-second-life.test.ts`: the five card 9 steps, no todos left.
-- `src/server/scenarios/card-09.test.ts`: on a migrated database, the preview writes nothing; the assessment row, the events, the asset available fair at 0 km; a quote at 12 months is 7 411 on 132 281 with the live list's version; admin only, returned only; an entry matched to another item is passed over; an unreadable stored row reads as none.
+- `src/server/scenarios/card-09.test.ts`: on a migrated database, the preview writes nothing; the assessment row, the events, the asset available fair at 18 400 km (D83: the total stays); a quote at 12 months is 8 710 on 155 476 with the live list's version; back again at 20 200 km: no battery, the 1 800 km since cost one 2 % step (113 657); admin only, returned only; an entry matched to another item is passed over; an unreadable stored row reads as none.
 - `src/server/scenarios/card-10.test.ts`: ebike-008 assessed (37 101, wait-05), leased for 24 months at 1 359, three lives and 58 kg; card 1's bike returned, assessed and leased again with `previous_contract_id`.
 - `src/domain/scenarios/traps.test.ts`: the twin pairs through `matchDemand`: `wait-02` over `wait-13` (`no_refurbishment`), `wait-06` over `wait-14` (`id`) on `laptop-006`.
 - `src/domain/scenarios/drills.test.ts`: a returned laptop (data wipe, battery at 500 cycles, `wait-08`), a waiting list nobody fits (each verdict's failing step, relisted at good), an entry already matched.
-- `src/server/demo-cards.test.ts`: cards 9 and 10 from the demo button: 132 281 and `wait-02` at 7 411; 37 101 leased at 1 359, three lives, 58 kg; a second click refused.
+- `src/server/demo-cards.test.ts`: cards 9 and 10 from the demo button: 155 476 and `wait-02` at 8 710; 37 101 leased at 1 359, three lives, 58 kg; a second click refused.
 
 ## Open questions
 

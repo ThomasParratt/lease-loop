@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import refurbishmentJson from '../../../data/refurbishment-costs.json';
 import residualJson from '../../../data/residual-curves.json';
 import { refurbishmentCostsSchema, residualCurvesSchema, type PriceList } from '@/data/schemas';
+import { marketValueCents } from '../residual/market-value';
 import { pricing } from '../scenarios/fixtures';
 import {
   assessReturn,
@@ -46,33 +47,84 @@ describe('assessReturn (card 9: ebike-007, fair, 18 400 km)', () => {
     ]);
   });
 
-  it('as returned: battery 35 000 + inspection 4 500, value as returned 92 781, price 132 281', () => {
+  it('as returned: battery 35 000 + inspection 4 500, value with the new battery 115 976, price 155 476', () => {
     const fair = option('fair');
     expect(fair.plan.totalCents).toBe(39_500);
-    expect(fair.plan.usageAfter).toEqual({ unit: 'km', value: 0 });
-    // 549 000 × 32.5 % × 0.65 × 0.80 (18 400 km, −20 % cap) = 92 781 (D79: the usage as returned; the organisers' 927,81 €).
-    expect(fair.marketValue.valueCents).toBe(92_781);
-    expect(fair.secondLifeFinancedCents).toBe(92_781 + 39_500);
+    // D83: the total stays on the odometer, the usage since the battery is 0.
+    expect(fair.plan.usageAfter).toEqual({ unit: 'km', value: 18_400 });
+    expect(fair.plan.usageSinceResetAfter).toEqual({ unit: 'km', value: 0 });
+    // 549 000 × 32.5 % × 0.65 × 1.00 (0 km since the battery) = 115 976.25 → 115 976.
+    expect(fair.marketValue.valueCents).toBe(115_976);
+    expect(fair.marketValue.usageAdjustmentPercent).toBe(0);
+    expect(fair.secondLifeFinancedCents).toBe(115_976 + 39_500);
   });
 
-  it('to good: 51 500 of work, value 121 329, price 172 829 (band B)', () => {
+  it('to good: 51 500 of work, value 151 661, price 203 161 (band B)', () => {
     const good = option('good');
     expect(good.plan.totalCents).toBe(51_500);
-    expect(good.marketValue.valueCents).toBe(121_329);
-    expect(good.secondLifeFinancedCents).toBe(172_829);
+    expect(good.marketValue.valueCents).toBe(151_661);
+    expect(good.secondLifeFinancedCents).toBe(203_161);
   });
 
   it('prices every allowed term on the D12 amount with the normal band and factor', () => {
-    // 132 281, band A: 12 months 7 411, 24 months 4 846, 36 months 3 787, 48 months 3 168.
+    // 155 476, band A: 12 months 8 710, 24 months 5 696, 36 months 4 451, 48 months 3 723.
     expect(option('fair').rents.map((r) => [r.termMonths, r.monthlyNetCents])).toEqual([
-      [12, 7_411],
-      [24, 4_846],
-      [36, 3_787],
-      [48, 3_168],
+      [12, 8_710],
+      [24, 5_696],
+      [36, 4_451],
+      [48, 3_723],
     ]);
-    // 172 829 is band A now (D79): 24 months at 6 332.
-    expect(option('good').rents.find((r) => r.termMonths === 24)?.monthlyNetCents).toBe(6_332);
-    expect(option('good').rents.find((r) => r.termMonths === 24)?.band).toBe('A');
+    // 203 161 is band B: 24 months × 0.035532 = 7 218.72 → 7 219.
+    expect(option('good').rents.find((r) => r.termMonths === 24)?.monthlyNetCents).toBe(7_219);
+    expect(option('good').rents.find((r) => r.termMonths === 24)?.band).toBe('B');
+  });
+});
+
+// The organisers' answer of 6 Nov 2026 (10:35), D83: `resets_usage: true` resets the usage
+// adjustment in the market value and the next-replacement trigger; the total usage never resets.
+describe("the organisers' example: ebike-007, 18 400 km, fair, 46 months on 6 Nov 2026", () => {
+  const result = assessReturn(ebike007, data);
+  const option = (condition: string) => result.options.find((o) => o.condition === condition)!;
+
+  it('before the battery: 549 000 × 32.5 % × 0.65 × 0.80 (the −20 % cap) = 92 781', () => {
+    const before = marketValueCents(
+      {
+        listPriceCents: 549_000,
+        category: 'e_bike',
+        ageMonths: result.ageMonths,
+        condition: 'fair',
+        usage: { unit: 'km', value: 18_400 },
+      },
+      data.curves
+    );
+    expect(before.valueCents).toBe(92_781);
+    expect(before.usageAdjustmentPercent).toBe(-20);
+  });
+
+  it('with a new battery (usage → 0): 549 000 × 32.5 % × 0.65 × 1.00 = 115 976', () => {
+    expect(option('fair').marketValue.valueCents).toBe(115_976);
+  });
+
+  it('also fair → good: 549 000 × 32.5 % × 0.85 × 1.00 = 151 661', () => {
+    expect(option('good').marketValue.valueCents).toBe(151_661);
+  });
+
+  it('the gain against the cost: +58 880 of value for 51 500 of work (35 000 + 12 000 + 4 500)', () => {
+    expect(option('good').marketValue.valueCents - 92_781).toBe(58_880);
+    expect(option('good').plan.totalCents).toBe(35_000 + 12_000 + 4_500);
+  });
+
+  it('battery replaced at 18 400 km, back at 30 000: no new battery, the 11 600 km since count', () => {
+    const again = assessReturn(
+      { ...ebike007, usage: { unit: 'km', value: 30_000 }, usageAtLastReset: 18_400 },
+      data
+    );
+    const fair = again.options[0]!;
+    expect(fair.plan.steps.map((s) => s.id)).toEqual(['safety_inspection']);
+    expect(fair.plan.usageAfter.value).toBe(30_000);
+    expect(fair.marketValue.usageSteps).toBe(11);
+    // 11 steps of −2 % is −22 %, held at the −20 % cap: 92 781 again.
+    expect(fair.marketValue.valueCents).toBe(92_781);
   });
 });
 
@@ -82,8 +134,8 @@ describe('assessReturn on other data', () => {
     cheap.e_bike.fixed = cheap.e_bike.fixed.map((f) => ({ ...f, cost_cents: 1_000 }));
     const result = assessReturn(ebike007, { ...data, costs: cheap });
     expect(result.options[0]!.plan.totalCents).toBe(2_000);
-    expect(result.options[0]!.marketValue.valueCents).toBe(92_781);
-    expect(result.options[0]!.secondLifeFinancedCents).toBe(94_781);
+    expect(result.options[0]!.marketValue.valueCents).toBe(115_976);
+    expect(result.options[0]!.secondLifeFinancedCents).toBe(117_976);
   });
 
   it('a first-life item is aged from its lease start (D31)', () => {
@@ -141,10 +193,10 @@ describe('assessReturn on other data', () => {
 
 describe('withSecondLifePrice', () => {
   it('replaces the asset price in every list and keeps the versions and other prices', () => {
-    const lists = withSecondLifePrice(pricing, 'ebike-007', 132_281).priceLists;
+    const lists = withSecondLifePrice(pricing, 'ebike-007', 155_476).priceLists;
     expect(lists.map((l) => [l.version, l.prices['ebike-007']])).toEqual([
-      [1, 132_281],
-      [2, 132_281],
+      [1, 155_476],
+      [2, 155_476],
     ]);
     expect(lists[0]!.prices['ebike-001']).toBe(pricing.priceLists[0]!.prices['ebike-001']);
     expect(pricing.priceLists[0]!.prices['ebike-007']).toBe(549_000);

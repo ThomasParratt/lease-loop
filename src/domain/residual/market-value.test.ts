@@ -38,6 +38,16 @@ describe('usageAdjustment (the file rule: percent per whole step, capped)', () =
     expect(usageAdjustment(curves.usage_adjustment.e_bike!, km(18_400)).basisPoints).toBe(-2000);
   });
 
+  it('0 km since a new battery (D83) is 0 %, never −0 %', () => {
+    expect(usageAdjustment(curves.usage_adjustment.e_bike!, km(0))).toEqual({
+      steps: 0,
+      basisPoints: 0,
+    });
+    expect(
+      Object.is(usageAdjustment(curves.usage_adjustment.e_bike!, km(999)).basisPoints, 0)
+    ).toBe(true);
+  });
+
   it('a usage unit that is not the category unit is a bug and throws', () => {
     expect(() =>
       usageAdjustment(curves.usage_adjustment.e_bike!, { unit: 'engine_hours', value: 10 })

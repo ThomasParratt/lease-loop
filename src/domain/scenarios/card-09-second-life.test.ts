@@ -6,6 +6,7 @@ import refurbishmentJson from '../../../data/refurbishment-costs.json';
 import residualJson from '../../../data/residual-curves.json';
 import { refurbishmentCostsSchema, residualCurvesSchema } from '@/data/schemas';
 import { refurbishmentPlan } from '../refurbishment/plan';
+import { marketValueCents } from '../residual/market-value';
 import { assessReturn, firstLeaseListPriceCents } from '../second-life/assess';
 import { matchDemand } from '../second-life/match';
 import { assetById, pack, pricing } from './fixtures';
@@ -53,7 +54,9 @@ describe('card 9: second life (ebike-007, fair, 18 400 km)', () => {
       ['fair->good', 12_000],
     ]);
     expect([plan.fixedCents, plan.upgradeCents, plan.totalCents]).toEqual([39_500, 12_000, 51_500]);
-    expect(plan.usageAfter).toEqual({ unit: 'km', value: 0 });
+    // D83: the odometer keeps its 18 400 km, the usage since the battery is 0.
+    expect(plan.usageAfter).toEqual({ unit: 'km', value: 18_400 });
+    expect(plan.usageSinceResetAfter).toEqual({ unit: 'km', value: 0 });
     expect(plan.conditionAfter).toBe('good');
   });
 
@@ -77,10 +80,30 @@ describe('card 9: second life (ebike-007, fair, 18 400 km)', () => {
   const match = matchDemand(assessed, pack.demand);
   const option = (c: string) => assessed.options.find((o) => o.condition === c)!;
 
-  it('the battery is replaced (35 000, over 15 000 km) and usage resets', () => {
+  it('the battery is replaced (35 000, over 15 000 km): the usage since it resets, the total stays', () => {
     const battery = option('fair').plan.steps.find((s) => s.id === 'battery_replacement');
     expect(battery).toMatchObject({ costCents: 35_000, resetsUsage: true });
-    expect(option('fair').plan.usageAfter.value).toBe(0);
+    expect(option('fair').plan.usageSinceResetAfter.value).toBe(0);
+    expect(option('fair').plan.usageAfter.value).toBe(18_400);
+  });
+
+  it("the organisers' three numbers (D83): 92 781 before the battery, 115 976 after, 151 661 good", () => {
+    // 549 000 × 32.5 % × 0.65 × 0.80 (the −20 % cap) = 92 781, before the battery.
+    expect(
+      marketValueCents(
+        {
+          listPriceCents: 549_000,
+          category: 'e_bike',
+          ageMonths: assessed.ageMonths,
+          condition: 'fair',
+          usage: { unit: 'km', value: 18_400 },
+        },
+        residualCurvesSchema.parse(residualJson)
+      ).valueCents
+    ).toBe(92_781);
+    // × 1.00 with the new battery: 115 976; and fair → good, × 0.85: 151 661.
+    expect(option('fair').marketValue.valueCents).toBe(115_976);
+    expect(option('good').marketValue.valueCents).toBe(151_661);
   });
 
   it('the safety inspection 4 500 is always charged', () => {
@@ -93,28 +116,29 @@ describe('card 9: second life (ebike-007, fair, 18 400 km)', () => {
     expect(option('good').plan.totalCents - option('fair').plan.totalCents).toBe(12_000);
   });
 
-  it('as is, it matches wait-02 (fair, 12 months, up to 9 000): 132 281 financed, 7 411 a month', () => {
-    // 549 000 × 32.5 % (46 months) × 0.65 = 92 781 + 39 500 = 132 281; × 0.056022 = 7 411.
-    expect(option('fair').secondLifeFinancedCents).toBe(132_281);
+  it('as is, it matches wait-02 (fair, 12 months, up to 9 000): 155 476 financed, 8 710 a month', () => {
+    // 549 000 × 32.5 % (46 months) × 0.65 × 1.00 = 115 976 + 39 500 = 155 476 (band A);
+    // × 0.056022 = 8 710.08 → 8 710, under wait-02's 9 000.
+    expect(option('fair').secondLifeFinancedCents).toBe(155_476);
     expect(match.winner).toMatchObject({
       demandId: 'wait-02',
       condition: 'fair',
       upgrade: false,
       termMonths: 12,
-      monthlyNetCents: 7_411,
+      monthlyNetCents: 8_710,
     });
     expect(match.decision.code).toBe('relist_for_winner');
     expect(match.relist.condition).toBe('fair');
   });
 
   it('refurbished to good, it matches wait-13 (good, 24 months, up to 9 000) and ranks second', () => {
-    // 549 000 × 32.5 % × 0.85 = 121 329 + 51 500 = 172 829 (band B); × 0.035532 = 6 332.
-    expect(option('good').secondLifeFinancedCents).toBe(172_829);
+    // 549 000 × 32.5 % × 0.85 × 1.00 = 151 661 + 51 500 = 203 161 (band B); × 0.035532 = 7 219.
+    expect(option('good').secondLifeFinancedCents).toBe(203_161);
     expect(match.ranking[1]).toMatchObject({
       demandId: 'wait-13',
       condition: 'good',
       upgrade: true,
-      monthlyNetCents: 6_332,
+      monthlyNetCents: 7_219,
       decidedBy: 'no_refurbishment',
     });
   });

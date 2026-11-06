@@ -19,7 +19,7 @@ import type {
   VatRates,
 } from '@/data/schemas';
 import type { PlanExitInput } from '@/domain/exits';
-import { usageAtLastService } from '@/domain/refurbishment/plan';
+import { usageAtLastReset, usageAtLastService } from '@/domain/refurbishment/plan';
 import { firstLeaseCurve } from '@/domain/second-life/first-lease';
 import type { TransactionClient } from './audit';
 import { getAsset } from './assets';
@@ -127,6 +127,8 @@ export function planInputOf(
     // Not written during the lease: the asset as it was leased (D77).
     atSigning: { condition: asset.condition, usage: asset.usage },
     usageAtLastService: usageAtLastService(context.assessments, asset.category, data.costs),
+    // D83: the odometer at the last battery replacement, from the same assessment history.
+    usageAtLastReset: usageAtLastReset(context.assessments, asset.category, data.costs),
     // D60, the read the assessment uses too (review finding 1). A relisted item's contract price
     // is its second-life amount; no price list for an item with past lives is a data error.
     curve: curveOf(context, data, choice.today),

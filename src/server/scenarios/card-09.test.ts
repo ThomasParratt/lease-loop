@@ -1,6 +1,7 @@
 // Card 9 on a real migrated database: `ebike-007` came back fair with 18 400 km. Assessed on
 // 6 Nov 2026 it is relisted as returned (no refurbishment beyond the mandatory steps) for
-// wait-02, at 132 281 financed, and a quote at wait-02's term gives the matched rent.
+// wait-02, at 155 476 financed (D83: the new battery resets the usage the value counts, the
+// odometer keeps its 18 400 km), and a quote at wait-02's term gives the matched rent.
 import { refusal } from '../../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
@@ -50,7 +51,7 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     expect((await getAsset(db, 'ebike-007'))?.status).toBe('returned');
   });
 
-  it('assessing writes the row, the passport and the asset available at 132 281', async () => {
+  it('assessing writes the row, the passport and the asset available at 155 476', async () => {
     const result = await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
     if (!result.ok) throw new Error(result.reason.code);
     const row = await db.returnAssessment.findFirstOrThrow({ where: { asset_id: 'ebike-007' } });
@@ -60,8 +61,8 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
       usage_value: 18_400,
       refurbish: false,
       new_condition: 'fair',
-      market_value_cents: 92_781,
-      second_life_financed_cents: 132_281,
+      market_value_cents: 115_976,
+      second_life_financed_cents: 155_476,
       matched_demand_id: 'wait-02',
     });
     expect(JSON.parse(row.refurbishment_json)).toEqual([
@@ -71,7 +72,8 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     expect(await getAsset(db, 'ebike-007')).toMatchObject({
       status: 'available',
       condition: 'fair',
-      usage: { unit: 'km', value: 0 },
+      // D83: the total never resets; the battery is on the row's steps.
+      usage: { unit: 'km', value: 18_400 },
     });
     expect((await listAssetEvents(db, 'ebike-007')).map((e) => e.kind)).toEqual([
       'assessed',
@@ -89,7 +91,7 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
   });
 
-  it("a quote at the winner's term gives the matched rent: 7 411 net for 12 months", async () => {
+  it("a quote at the winner's term gives the matched rent: 8 710 net for 12 months", async () => {
     await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
     const quote = await createQuote(db, {
       assetId: 'ebike-007',
@@ -100,13 +102,31 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     });
     if (!quote.ok) throw new Error(quote.reason.code);
     expect(quote.quote.breakdown).toMatchObject({
-      unitListPriceCents: 132_281,
-      financedCents: 132_281,
+      unitListPriceCents: 155_476,
+      financedCents: 155_476,
       band: 'A',
-      monthlyNetCents: 7_411,
+      monthlyNetCents: 8_710,
       // The live list's version: the amount is the assessment's, the list is v2 on 6 Nov.
       priceListVersion: 2,
     });
+  });
+
+  it('back again at 20 200 km (D83): no battery due, the value counts the 1 800 km since it', async () => {
+    await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    // Stand-in for a second lease and return: the odometer moved on 1 800 km.
+    await db.asset.update({
+      where: { id: 'ebike-007' },
+      data: { status: 'returned', usage_value: 20_200 },
+    });
+    const preview = await previewAssessment(db, 'ebike-007', today);
+    if (!preview.ok) throw new Error(preview.reason.code);
+    expect(preview.proposal.input.usageAtLastReset).toBe(18_400);
+    const fair = preview.proposal.assessment.options[0]!;
+    expect(fair.plan.steps.map((s) => s.id)).toEqual(['safety_inspection']);
+    expect(fair.plan.usageAfter.value).toBe(20_200);
+    // 549 000 × 32.5 % × 0.65 × 0.98 (one step of 1 000 km) = 113 656.725 → 113 657.
+    expect(fair.marketValue.usageSteps).toBe(1);
+    expect(fair.marketValue.valueCents).toBe(113_657);
   });
 
   it('only admin assesses, and only a returned asset', async () => {
