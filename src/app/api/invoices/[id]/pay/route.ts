@@ -22,8 +22,13 @@ export const POST = handleRoute(
     const result = await payInvoice(db, { id, paidOn: await todayForRequest(), actor });
     if (result.ok) return ok(result.invoice);
     if (result.reason === 'forbidden') return forbiddenResponse(result.refusal);
-    return result.reason === 'not_found'
-      ? notFound()
-      : fail(409, 'INVOICE_ALREADY_PAID', 'This invoice is already paid');
+    if (result.reason === 'not_found') return notFound();
+    if (result.reason === 'cancelled') {
+      return fail(409, 'INVOICE_CANCELLED', 'This invoice was cancelled and is not owed');
+    }
+    if (result.reason === 'paid_before_signing') {
+      return fail(422, 'PAID_BEFORE_SIGNING', 'A payment cannot be dated before the contract');
+    }
+    return fail(409, 'INVOICE_ALREADY_PAID', 'This invoice is already paid');
   }
 );

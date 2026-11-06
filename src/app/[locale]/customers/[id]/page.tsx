@@ -9,6 +9,7 @@ import { Notice, PageHeader } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { ADMIN_ACTOR, ANONYMOUS_ACTOR, readActor } from '@/server/actor';
+import { authorize } from '@/server/authorize';
 import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -29,15 +30,20 @@ export default async function CustomerPage({ params }: PageProps<'/[locale]/cust
   await connection();
   const t = getT(locale);
 
-  const [actor, customer, today] = await Promise.all([
-    readActor(db),
-    getCustomer(db, id),
-    todayForRequest(),
-  ]);
+  const actor = await readActor(db);
+  // D73: authorized before the customer's record is read. Anonymous is refused before the id
+  // is even looked up; another customer is refused whatever the id.
+  const auth =
+    actor === ANONYMOUS_ACTOR || actor === ADMIN_ACTOR || actor === id
+      ? await authorize(db, actor, 'read_leases', { customer: id })
+      : null;
+  const [customer, today] = auth?.ok
+    ? await Promise.all([getCustomer(db, id), todayForRequest()])
+    : [null, ''];
   const refusal =
     actor === ANONYMOUS_ACTOR
       ? t('leases.chooseActor')
-      : actor !== ADMIN_ACTOR && actor !== id
+      : !auth || (!auth.ok && auth.reason.code !== 'not_found')
         ? t('portal.customer.notAllowed')
         : !customer
           ? t('portal.customer.notFound')

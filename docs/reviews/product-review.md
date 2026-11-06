@@ -48,11 +48,15 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 4. medium: an admin's manual status change can pull an asset from under an active contract
 
+**Status:** fixed in `fix/review-phase2` (coordinator): by hand only `available` ⇄ `reserved` (`checkManualAssetStatusChange`, 409 `transition_by_event_only`); an exit on an asset that is no longer leased answers 409 `asset_not_leased`.
+
 - **Where:** `PATCH /api/assets/[id]/status` (`src/server/routes.ts:80-82`, `src/server/assets.ts:89-97`) allows every D22 transition, including `leased → returned` and `available → leased` (`src/domain/catalogue/transitions.ts:7,9`).
 - **Reproduce:** `PATCH /api/assets/ebike-003/status {"status":"returned"}` while card 1's contract is active; assess it; it is relisted and a second customer can lease it. Aino's exit then throws `AssetNotLeasedError` in the handler, which `exitContract` does not map (`src/server/exits.ts:178` catches only its race), so she gets a generic 500. An item can also be set `leased` with no contract.
 - **Fix:** by hand only `available ⇄ reserved`; `leased`, `returned`, `sold` only through the events; map `AssetNotLeasedError` to a coded 409.
 
 ### 5. medium: the decision form and the signing-link form turn every refusal into one generic error
+
+**Status:** fixed in `fix/review-phase2` (coordinator): both forms write the sentence for the error code (`src/components/api-failure.ts`, the authorization code in `details` first), keys in all four files.
 
 - **Where:** `src/app/[locale]/applications/[id]/decision-form.tsx:30`, `src/app/[locale]/sign/[token]/sign-form.tsx:27`: `if (!response.ok) throw …`, then `labels.error`.
 - **What is wrong:** the API answers with codes (`APPLICATION_NOT_PENDING`, `SIGNING_LINK_EXPIRED`, `SIGNING_LINK_USED`, `SIGNATORY_NOT_ACTIVE`, `ADMIN_ONLY`) and the page drops them. A judge who decides twice, or opens a used signing link (card 6's second click), sees "something went wrong" instead of "already decided" or "this link was used".
@@ -77,6 +81,8 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 - **Fix:** `interpolate` returns the key when the template is missing (and logs it), or both callers check with `isKey` first.
 
 ### 9. low: `payInvoice` answers "already paid" for a cancelled invoice, writes its literals unparsed and never checks `paid_on`
+
+**Status:** fixed in `fix/review-phase2` (coordinator): `cancelled` (409 `INVOICE_CANCELLED`) and `paid_before_signing` (422) refusals, the day and both statuses parsed before the write.
 
 - **Where:** `src/server/invoices.ts:136` and `:156-171`.
 - **What is wrong:** a cancelled rent (after an exit) falls through to the conditional write, finds nothing and answers `INVOICE_ALREADY_PAID`. `'issued'` and `'paid'` are written without `invoiceStatusSchema.parse` (D23; the exit handler does parse them), and the update bypasses `parseRow`, so with the demo clock moved back a rent can be paid before its contract was signed.

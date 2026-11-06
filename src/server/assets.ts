@@ -12,7 +12,8 @@ import {
 } from '@/data/schemas';
 import {
   checkAssetStatusChange,
-  type AssetStatusChangeRefusal,
+  checkManualAssetStatusChange,
+  type ManualAssetStatusChangeRefusal,
 } from '@/domain/catalogue/transitions';
 import type { AuthzRefusal } from '@/domain/authz/policy';
 import { withAudit, type TransactionClient } from './audit';
@@ -75,7 +76,7 @@ export type ChangeAssetStatusResult =
   | { ok: true; asset: Asset }
   | { ok: false; reason: 'not_found' }
   | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal }
-  | { ok: false; reason: AssetStatusChangeRefusal };
+  | { ok: false; reason: ManualAssetStatusChangeRefusal };
 
 /** Thrown inside the transaction when another request changed the status first. */
 class LostStatusRace extends Error {}
@@ -100,7 +101,8 @@ export async function changeAssetStatus(
   }
   const existing = await db.asset.findUnique({ where: { id: input.id } });
   if (!existing) return { ok: false, reason: 'not_found' };
-  const check = checkAssetStatusChange(existing.status, status);
+  // Product review 4: by hand only available ⇄ reserved; the rest follows a contract.
+  const check = checkManualAssetStatusChange(existing.status, status);
   if (!check.ok) return { ok: false, reason: check.reason };
 
   try {

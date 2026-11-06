@@ -212,6 +212,23 @@ describe('exitContract at the end of the term', () => {
 });
 
 describe('exitContract refusals write nothing', () => {
+  it('an asset that is no longer leased is asset_not_leased, not a 500 (product review 4)', async () => {
+    const contractId = await card1(7);
+    // Whatever moved it (a direct write, a script): the lease's asset is not out any more.
+    await db.asset.update({ where: { id: 'ebike-003' }, data: { status: 'returned' } });
+    const before = await writesSoFar(contractId);
+    const result = await exitContract(
+      db,
+      { contractId, mode: 'return', reported: AINO_REPORTS, actor: 'cust-aino' },
+      MONTH_7
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'asset_not_leased', params: { assetId: 'ebike-003' } },
+    });
+    expect(await writesSoFar(contractId)).toEqual(before);
+  });
+
   it('a second exit is refused contract_not_active', async () => {
     const contractId = await card1(7);
     const first = await exitContract(
