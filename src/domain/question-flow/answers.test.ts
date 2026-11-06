@@ -99,18 +99,31 @@ describe('eligibilityInputFromAnswers', () => {
     });
   });
 
-  it('money answers are cents as digits; a known PEP stays a PEP', () => {
+  it('money answers are cents as digits; no PEP without a PEP answer', () => {
     const input = eligibilityInputFromAnswers({
       context: { ...context, customerType: 'consumer' },
       answers: { q_monthly_income: '320000' },
       startDate: '2026-11-05',
       grossMonthlyRentCents: 1,
-      knownPep: true,
     });
     expect(input.monthlyNetIncomeCents).toBe(320_000);
     expect(input.customerType).toBe('consumer');
-    expect(input.isPep).toBe(true);
+    expect(input.isPep).toBe(false);
     expect(input.applicantCanSign).toBeUndefined();
+  });
+
+  it('D82: a PEP is a PEP only by the answer, which is asked from 10 000 € financed', () => {
+    const input = (answers: Record<string, string>) =>
+      eligibilityInputFromAnswers({
+        context,
+        answers,
+        startDate: '2026-11-05',
+        grossMonthlyRentCents: 1,
+      });
+    expect(input({ q_pep: 'yes' }).isPep).toBe(true);
+    expect(input({ q_pep: 'no' }).isPep).toBe(false);
+    // The question was hidden (a small lease): no answer, no PEP check.
+    expect(input({}).isPep).toBe(false);
   });
 });
 

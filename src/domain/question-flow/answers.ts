@@ -141,8 +141,6 @@ export type InputFromAnswers = {
   startDate: string;
   grossMonthlyRentCents: number;
   financedLimits?: { minCents: number; maxCents: number };
-  /** The customer record knows a PEP even when the amount is too small to ask. */
-  knownPep?: boolean;
   /** Question ids answered other than the customer record (`recordMismatches`, D38). */
   recordMismatches?: readonly string[];
   /** The quote's quantity, for the consumer cap. */
@@ -169,7 +167,9 @@ export function eligibilityInputFromAnswers(args: InputFromAnswers): Eligibility
     monthlyNetIncomeCents: cents(answers.q_monthly_income),
     grossMonthlyRentCents: args.grossMonthlyRentCents,
     businessId: text(answers.q_business_id),
-    isPep: text(answers.q_pep) === 'yes' || args.knownPep === true,
+    // Only the answer (D82, the organisers' rule): below the PEP threshold the question is
+    // hidden, so no PEP check runs, whatever the customer record says.
+    isPep: text(answers.q_pep) === 'yes',
     applicantCanSign: canSign === undefined ? undefined : canSign === 'yes',
     signatoryEmail: text(answers.q_signatory_email),
     financedCents: context.financedCents,

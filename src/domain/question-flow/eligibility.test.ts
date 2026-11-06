@@ -36,7 +36,6 @@ function decide(id: string, context: Omit<FlowContext, 'customerType'>, grossRen
       startDate: '2026-11-05',
       grossMonthlyRentCents: grossRent,
       financedLimits: LIMITS,
-      knownPep: c.is_pep,
     })
   );
 }
@@ -232,7 +231,8 @@ describe('every customer in customers.json gets a decision without throwing', ()
     'cust-lena': 'approved',
     'cust-pekka': 'approved',
     'cust-kettukoodi': 'approved',
-    'cust-haapala': 'manual_review',
+    // D82: the PEP question is hidden below 10 000 € financed, so no PEP check runs.
+    'cust-haapala': 'approved',
     'cust-norvi': 'awaiting_signatory',
     'cust-broken-id': 'rejected',
     'cust-sanna': 'approved',

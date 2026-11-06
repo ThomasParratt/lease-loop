@@ -64,7 +64,8 @@ describe('every customer applies for every category', () => {
     ['cust-lena', 'approved', 'approved', 'rejected:unaffordable'],
     ['cust-pekka', 'approved', 'approved', 'approved'],
     ['cust-kettukoodi', 'approved', 'approved', 'approved'],
-    ['cust-haapala', 'manual_review:pep', 'manual_review:pep', 'manual_review:pep'],
+    // D82: below 10 000 € financed the PEP question is hidden, so no PEP check runs.
+    ['cust-haapala', 'approved', 'approved', 'manual_review:pep'],
     ['cust-norvi', 'awaiting_signatory', 'awaiting_signatory', 'awaiting_signatory'],
     [
       'cust-broken-id',

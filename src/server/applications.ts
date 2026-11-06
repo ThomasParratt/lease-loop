@@ -72,7 +72,6 @@ export type FlowSetup = {
   /** The quote's day: no application before it (review finding 10). */
   quoteDate: string;
   quoteValidUntil: string;
-  customerIsPep: boolean;
 };
 
 /**
@@ -110,7 +109,6 @@ export async function flowSetupFor(
       },
       quoteDate: quote.quoteDate,
       quoteValidUntil: quote.validUntil,
-      customerIsPep: customer.is_pep,
     },
     quote: {
       monthlyNetCents: deal.monthlyNetCents,
@@ -200,7 +198,7 @@ export async function createApplication(
   if (!namesApplicant(input)) return { ok: false, reason: 'not_applicant' };
   const found = await flowSetupFor(db, input.quoteId, input.customerId);
   if (!found.ok) return found;
-  const { context, quoteDate, quoteValidUntil, customerIsPep } = found.setup;
+  const { context, quoteDate, quoteValidUntil } = found.setup;
   if (quoteValidUntil < input.today) return { ok: false, reason: 'quote_expired' };
   if (input.today < quoteDate) return { ok: false, reason: 'quote_not_yet_valid' };
 
@@ -233,7 +231,6 @@ export async function createApplication(
         minCents: Math.min(...table.bands.map((b) => b.min_financed_cents)),
         maxCents: Math.max(...table.bands.map((b) => b.max_financed_cents)),
       },
-      knownPep: customerIsPep,
       recordMismatches: recordMismatches(found.customer, answers),
       quantity: found.quote.quantity,
       recordCountry: found.customer.country,
