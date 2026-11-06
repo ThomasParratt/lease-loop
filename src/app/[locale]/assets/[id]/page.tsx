@@ -42,6 +42,8 @@ import {
   storedQuoteStatusOn,
   type StoredQuote,
 } from '@/server/quotes';
+import { latestAssessment } from '@/server/second-life';
+import { pricingForAsset } from '@/server/second-life-price';
 
 const DEFAULT_TERM = 36;
 
@@ -61,9 +63,14 @@ export default async function PricePage({
 
   const t = getT(locale);
   const today = await todayForRequest(); // read once here, passed down
-  const [assets, data] = await Promise.all([listAssets(db), loadPricingData()]);
+  const [assets, listData] = await Promise.all([listAssets(db), loadPricingData()]);
   const asset = assets.find((a) => a.id === id);
   if (!asset) notFound();
+  // D12: a relisted item is priced on its assessment's second-life amount, here as in the quote.
+  const [data, secondLife] = await Promise.all([
+    pricingForAsset(db, asset.id, listData),
+    latestAssessment(db, asset.id),
+  ]);
 
   const query = await searchParams;
   const quoteParam = query.quote;
@@ -163,6 +170,14 @@ export default async function PricePage({
           {t(`status.${asset.status}`)}
         </Badge>
       ) : null}
+      {secondLife && asset.status === 'available' ? (
+        <Notice tone="info" className="mt-6">
+          {t('secondLife.priceNote', {
+            price: formatEuro(secondLife.match.relist.secondLifeFinancedCents, intlLocale[locale]),
+            date: formatIsoDate(secondLife.assessedOn, locale),
+          })}
+        </Notice>
+      ) : null}
       <OfferNotice offer={offer} locale={locale} t={t} />
       {versions.length > 1 ? (
         <VersionPicker versions={versions} currentId={asset.id} locale={locale} t={t} />
@@ -189,6 +204,14 @@ export default async function PricePage({
       >
         {t('passport.link')}
       </Link>
+      {asset.status === 'returned' || secondLife ? (
+        <Link
+          href={`/${locale}/assets/${asset.id}/second-life`}
+          className="mt-4 ml-6 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"
+        >
+          {t('secondLife.link')}
+        </Link>
+      ) : null}
     </div>
   );
 

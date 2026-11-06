@@ -1,5 +1,5 @@
 // The write schema of a `ReturnAssessment` row (prisma/schema.prisma). Ready for the second
-// life slice (wave 2).
+// life slice (src/server/second-life.ts).
 import { z } from 'zod';
 import { assetConditionSchema } from '@/data/schemas';
 import {
@@ -22,7 +22,8 @@ export const returnAssessmentRowSchema = z
   .strictObject({
     id: idSchema.optional(),
     asset_id: idSchema,
-    contract_id: idSchema,
+    /** Null for an item the data pack seeds as returned, with no lease in our books. */
+    contract_id: idSchema.nullable(),
     assessed_on: isoDateSchema,
     /** As returned. */
     condition: assetConditionSchema,
@@ -36,6 +37,8 @@ export const returnAssessmentRowSchema = z
     /** An id from data/second-life-demand.json, or null when nobody fits. */
     matched_demand_id: idSchema.nullable().optional(),
     match_reasons_json: jsonText(z.array(outcomeSchema)),
+    /** The D12 options and the D13 match as computed, for the page (an object). */
+    assessment_json: jsonText(z.record(z.string(), z.unknown())),
   })
   .superRefine((row, ctx) => {
     if (!row.refurbish && row.new_condition !== row.condition) {

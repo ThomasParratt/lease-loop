@@ -2,7 +2,9 @@
 // The live sliders: prices on the request's day without storing anything.
 import { handleRoute, ok } from '@/server/api-response';
 import { todayForRequest } from '@/server/demo-clock';
+import { db } from '@/server/db';
 import { loadPricingData, previewQuote } from '@/server/quotes';
+import { pricingForAsset } from '@/server/second-life-price';
 import { previewQuoteQuerySchema } from '@/server/quote-schemas';
 
 export const GET = handleRoute(async (request) => {
@@ -14,5 +16,7 @@ export const GET = handleRoute(async (request) => {
     downPaymentCents: searchParams.get('downPaymentCents') ?? undefined,
   });
   const today = await todayForRequest();
-  return ok(previewQuote(await loadPricingData(), { ...query, today }));
+  // D12: a relisted item slides on its second-life price.
+  const data = await pricingForAsset(db, query.assetId, await loadPricingData());
+  return ok(previewQuote(data, { ...query, today }));
 });

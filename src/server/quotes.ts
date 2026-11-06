@@ -30,6 +30,7 @@ import { getAsset } from './assets';
 import { withAudit, type TransactionClient } from './audit';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
+import { pricingForAsset } from './second-life-price';
 
 /**
  * The price lists, the coefficient table and the VAT rates from the data pack, with the team's
@@ -107,7 +108,8 @@ export async function createQuote(
   input: CreateQuoteInput,
   data?: PricingData
 ): Promise<CreateQuoteResult> {
-  const pricing = data ?? (await loadPricingData());
+  // D12: a relisted item is priced on its second-life amount (src/server/second-life-price.ts).
+  const pricing = await pricingForAsset(db, input.assetId, data ?? (await loadPricingData()));
   const priced = priceQuote(pricing, {
     assetId: input.assetId,
     quantity: input.quantity,

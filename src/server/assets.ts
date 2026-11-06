@@ -2,10 +2,12 @@
 // shape as data/assets.json, so the UI and domain code see one type everywhere.
 import type { Asset as AssetRow, PrismaClient } from '@/generated/prisma/client';
 import {
+  assetConditionSchema,
   assetSchema,
   assetStatusSchema,
   type Asset,
   type AssetCategory,
+  type AssetCondition,
   type AssetStatus,
 } from '@/data/schemas';
 import {
@@ -136,4 +138,40 @@ export async function seedAssets(
     await db.asset.createMany({ data: missing.map(toAssetRowData) });
   }
   return { created: missing.length, skipped: assets.length - missing.length };
+}
+
+/** Thrown inside the caller's transaction when the asset is no longer `returned`. */
+export class AssetNotReturnedError extends Error {
+  constructor(readonly assetId: string) {
+    super(`Asset ${assetId} is not returned`);
+    this.name = 'AssetNotReturnedError';
+  }
+}
+
+/**
+ * The second life's relisting (D22: `returned` → `available`), on the caller's `tx`: the
+ * condition and usage after the refurbishment plan. The transition is checked with
+ * `checkAssetStatusChange` and the values parsed before the write (D23); the write applies only
+ * while the asset is still `returned`, else it throws so the whole assessment rolls back.
+ */
+export async function relistReturnedAsset(
+  tx: TransactionClient,
+  input: { assetId: string; condition: AssetCondition; usageValue: number }
+): Promise<void> {
+  const from = assetStatusSchema.parse('returned');
+  const to = assetStatusSchema.parse('available');
+  const check = checkAssetStatusChange(from, to);
+  if (!check.ok) throw new Error(`relisting is not a D22 transition: ${check.reason.code}`);
+  if (!Number.isSafeInteger(input.usageValue) || input.usageValue < 0) {
+    throw new RangeError(`usage must be a whole number ≥ 0, got ${input.usageValue}`);
+  }
+  const { count } = await tx.asset.updateMany({
+    where: { id: input.assetId, status: from },
+    data: {
+      status: to,
+      condition: assetConditionSchema.parse(input.condition),
+      usage_value: input.usageValue,
+    },
+  });
+  if (count !== 1) throw new AssetNotReturnedError(input.assetId);
 }
