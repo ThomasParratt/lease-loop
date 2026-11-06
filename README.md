@@ -34,6 +34,7 @@ You should see the asset catalogue in English. Switch to Finnish, Swedish or Est
 | `npm run check:all`     | **Everything CI runs.** Run it before you push                 |
 | `npm run db:migrate`    | After you change `prisma/schema.prisma`: creates a migration   |
 | `npm run db:reset`      | Wipe the local database and seed it again                      |
+| `npm run audit:anchor`  | Have a timestamp authority sign the audit head (D81, network)  |
 | `npm run db:studio`     | Browse the database in your browser                            |
 
 ---
@@ -109,7 +110,7 @@ One page per slice under `docs/features/` ([template](docs/features/README.md));
 - [Circular impact and the passport](docs/features/circular-impact.md)
 - [Row schemas](docs/features/row-schemas.md)
 - [The look: tokens, the price tag, life stamps and drawings](docs/features/look.md)
-- [The tamper-evident audit chain](docs/features/audit-chain.md)
+- [The tamper-evident audit chain, signed and anchored outside the database](docs/features/audit-chain.md)
 - [Company signatories and the signing link](docs/features/signatories.md)
 - [Test isolation](docs/features/test-isolation.md)
 - [My leases](docs/features/my-leases.md), grown into the [user portal](docs/features/user-portal.md)

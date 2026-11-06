@@ -29,3 +29,7 @@ npm-debug.log*
 # Claude Code agent worktrees and per-person settings
 .claude/worktrees/
 .claude/settings.local.json
+
+# The audit anchors and timestamp receipts beside the local database (D81)
+*.anchors.jsonl
+audit-tsa/

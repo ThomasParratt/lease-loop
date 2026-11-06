@@ -2002,9 +2002,35 @@
                             "headHash": {
                               "type": "string",
                               "pattern": "^[0-9a-f]{64}$"
+                            },
+                            "signaturesChecked": {
+                              "type": "boolean"
+                            },
+                            "anchoredLength": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "publicKey": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^[A-Za-z0-9+/]+=*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
-                          "required": ["ok", "length", "headHash"],
+                          "required": [
+                            "ok",
+                            "length",
+                            "headHash",
+                            "signaturesChecked",
+                            "anchoredLength",
+                            "publicKey"
+                          ],
                           "additionalProperties": false
                         },
                         {
@@ -2025,11 +2051,26 @@
                                 "prev_hash_mismatch",
                                 "hash_mismatch",
                                 "unhashed_in_chain",
-                                "head_mismatch"
+                                "head_mismatch",
+                                "unsigned_in_chain",
+                                "signature_mismatch",
+                                "anchor_mismatch",
+                                "anchor_unreadable"
+                              ]
+                            },
+                            "publicKey": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^[A-Za-z0-9+/]+=*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
                               ]
                             }
                           },
-                          "required": ["ok", "brokenAt", "reason"],
+                          "required": ["ok", "brokenAt", "reason", "publicKey"],
                           "additionalProperties": false
                         }
                       ]

@@ -6,6 +6,7 @@ import { createTestDb } from '../../../../../tests/helpers/test-db';
 import { GENESIS_HASH } from '@/domain/audit';
 import { auditChainVerdictSchema } from '@/server/audit-schemas';
 import { withAudit } from '@/server/audit';
+import { auditSigner } from '@/server/audit-signing';
 import type { PrismaClient } from '@/server/prisma-client';
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown as PrismaClient }));
@@ -50,7 +51,14 @@ describe('GET /api/audit-log/verify', () => {
     const { status, body } = await verify();
     expect(status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data).toEqual({ ok: true, length: 0, headHash: GENESIS_HASH });
+    expect(body.data).toEqual({
+      ok: true,
+      length: 0,
+      headHash: GENESIS_HASH,
+      signaturesChecked: true,
+      anchoredLength: 0,
+      publicKey: auditSigner()!.publicKey,
+    });
   });
 
   it('answers an intact chain with its length and head, matching the contract', async () => {
@@ -58,7 +66,14 @@ describe('GET /api/audit-log/verify', () => {
     await write(2);
     const { body } = await verify();
     const newest = await holder.db.auditLog.findFirstOrThrow({ orderBy: { id: 'desc' } });
-    expect(body.data).toEqual({ ok: true, length: 2, headHash: newest.hash });
+    expect(body.data).toEqual({
+      ok: true,
+      length: 2,
+      headHash: newest.hash,
+      signaturesChecked: true,
+      anchoredLength: 2,
+      publicKey: auditSigner()!.publicKey,
+    });
     expect(auditChainVerdictSchema.parse(body.data)).toEqual(body.data);
   });
 
@@ -70,7 +85,12 @@ describe('GET /api/audit-log/verify', () => {
 
     const { status, body } = await verify();
     expect(status).toBe(200);
-    expect(body.data).toEqual({ ok: false, brokenAt: first.id, reason: 'hash_mismatch' });
+    expect(body.data).toEqual({
+      ok: false,
+      brokenAt: first.id,
+      reason: 'hash_mismatch',
+      publicKey: auditSigner()!.publicKey,
+    });
     expect(auditChainVerdictSchema.parse(body.data)).toEqual(body.data);
   });
 });

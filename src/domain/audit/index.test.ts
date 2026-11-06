@@ -7,5 +7,7 @@ describe('src/domain/audit index', () => {
     expect(typeof audit.canonicalJson).toBe('function');
     expect(typeof audit.hashAuditEntry).toBe('function');
     expect(audit.verifyAuditChain([]).ok).toBe(true);
+    expect(audit.verifySealedChain([], null, { checkSignature: null, anchors: [] }).ok).toBe(true);
+    expect(audit.parseAnchorLines('')).toEqual([]);
   });
 });
