@@ -16,6 +16,7 @@ import { exitContract, type ExitServiceRefusal } from '@/server/exits';
 const STATUS_OF: Partial<Record<ExitServiceRefusal['code'], number>> = {
   contract_not_found: 404,
   contract_not_active: 409,
+  asset_not_leased: 409,
   next_customer_not_found: 422,
 };
 

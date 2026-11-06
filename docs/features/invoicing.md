@@ -11,7 +11,7 @@ When a contract is signed, its whole invoice schedule is written in the same tra
 
 The net rent is locked at signing. Each invoice charges VAT at the rate in force on its own issue date, so a contract that runs across 1 January 2027 moves from 25.5 % to 26 % without anyone repricing it.
 
-A customer (or admin) can list a contract's invoices and pay one. Paying writes the audit row and emits `INVOICE_PAID`. The invoice table shows each invoice's status on the request's day, with one line explaining the VAT change.
+A customer (or admin) can list a contract's invoices and pay one. Paying writes the audit row and emits `INVOICE_PAID`. A payment is refused with a code, writing nothing, when the invoice is `cancelled` (409 `INVOICE_CANCELLED`, after an early exit), already paid (409 `INVOICE_ALREADY_PAID`) or dated before the contract was signed (422 `PAID_BEFORE_SIGNING`, the demo clock moved back); the day and both statuses are parsed before the write (D23, product review 9). The invoice table shows each invoice's status on the request's day, with one line explaining the VAT change.
 
 For an early exit, the outstanding balance after any number of rents comes month by month: the financed amount amortised at the band's interest rate.
 

@@ -2,6 +2,7 @@
 // The schedule is computed in src/domain/invoicing and written here at signing, inside the
 // signing transaction; paying an invoice is one audited change that emits INVOICE_PAID.
 import type { Invoice as InvoiceRow } from '@/generated/prisma/client';
+import { isoDateSchema } from '@/data/schemas';
 import type { ScheduledInvoice } from '@/domain/invoicing';
 import {
   invoiceKindSchema,
@@ -13,7 +14,7 @@ import { invoiceRowSchema } from '@/domain/rows/invoice';
 import type { AuthzRefusal } from '@/domain/authz/policy';
 import { withAudit, type TransactionClient } from './audit';
 import { authorize } from './authorize';
-import { contractCustomerId, listContracts } from './contracts';
+import { contractCustomerId, getContract, listContracts } from './contracts';
 import { emit } from './events';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
@@ -123,7 +124,7 @@ class LostPaymentRace extends Error {}
 
 export type PayInvoiceResult =
   | { ok: true; invoice: InvoiceView }
-  | { ok: false; reason: 'not_found' | 'already_paid' }
+  | { ok: false; reason: 'not_found' | 'already_paid' | 'cancelled' | 'paid_before_signing' }
   | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal };
 
 /**
@@ -142,9 +143,18 @@ export async function payInvoice(
       ? { ok: false, reason: 'not_found' }
       : { ok: false, reason: 'forbidden', refusal: auth.reason };
   }
+  // D23 and product review 9: the day and both statuses parsed before any write.
+  const paidOn = isoDateSchema.parse(input.paidOn);
+  const issued = invoiceStatusSchema.parse('issued');
+  const paid = invoiceStatusSchema.parse('paid');
   const existing = await db.invoice.findUnique({ where: { id: input.id } });
   if (!existing) return { ok: false, reason: 'not_found' };
-  if (existing.status === 'paid') return { ok: false, reason: 'already_paid' };
+  const status = invoiceStatusSchema.parse(existing.status);
+  if (status === 'cancelled') return { ok: false, reason: 'cancelled' };
+  if (status === paid) return { ok: false, reason: 'already_paid' };
+  // Paying early is allowed (an advance), but never before the contract existed.
+  const contract = await getContract(db, existing.contract_id);
+  if (contract && paidOn < contract.signedOn) return { ok: false, reason: 'paid_before_signing' };
 
   let row: InvoiceRow;
   try {
@@ -158,14 +168,14 @@ export async function payInvoice(
         details: {
           sequence: existing.sequence,
           grossCents: existing.gross_cents,
-          paidOn: input.paidOn,
+          paidOn,
         },
       },
       async (tx) => {
         // The status guard in the where makes a concurrent second payment a no-op, not a double.
         const { count } = await tx.invoice.updateMany({
-          where: { id: input.id, status: 'issued' },
-          data: { status: 'paid', paid_on: input.paidOn },
+          where: { id: input.id, status: issued },
+          data: { status: paid, paid_on: paidOn },
         });
         if (count === 0) throw new LostPaymentRace();
         await emit(tx, {
@@ -173,7 +183,7 @@ export async function payInvoice(
           invoiceId: input.id,
           contractId: existing.contract_id,
           amountCents: existing.gross_cents,
-          date: input.paidOn,
+          date: paidOn,
         });
         return tx.invoice.findUniqueOrThrow({ where: { id: input.id } });
       }

@@ -10,7 +10,8 @@ import { connection } from 'next/server';
 import { Notice, PageHeader } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { ADMIN_ACTOR, ANONYMOUS_ACTOR, readActor } from '@/server/actor';
+import { ADMIN_ACTOR, readActor } from '@/server/actor';
+import { authorize } from '@/server/authorize';
 import { listCustomers } from '@/server/customers';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -37,7 +38,14 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
   const isAdmin = actor === ADMIN_ACTOR;
   const title = t(isAdmin ? 'nav.leasesAdmin' : 'nav.leases');
 
-  if (actor === ANONYMOUS_ACTOR) {
+  // D73: authorized before any lease is read; a customer reads their own, the admin all.
+  const auth = await authorize(
+    db,
+    actor,
+    'read_leases',
+    isAdmin ? { none: true } : { customer: actor }
+  );
+  if (!auth.ok) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         <PageHeader title={title} />

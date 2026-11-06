@@ -74,7 +74,15 @@ export default async function SignPage({ params }: PageProps<'/[locale]/sign/[to
         {outcome.code === 'pending' ? (
           <SignForm
             token={token}
-            labels={{ sign: t('sign.sign'), decline: t('sign.decline'), error: t('sign.error') }}
+            labels={{ sign: t('sign.sign'), decline: t('sign.decline') }}
+            failures={{
+              error: t('sign.error'),
+              SIGNING_LINK_NOT_FOUND: t('sign.failure.SIGNING_LINK_NOT_FOUND'),
+              SIGNING_LINK_EXPIRED: t('sign.failure.SIGNING_LINK_EXPIRED'),
+              SIGNING_LINK_USED: t('sign.failure.SIGNING_LINK_USED'),
+              SIGNATORY_NOT_ACTIVE: t('sign.failure.SIGNATORY_NOT_ACTIVE'),
+              APPLICATION_NOT_PENDING: t('sign.failure.APPLICATION_NOT_PENDING'),
+            }}
           />
         ) : outcome.code === 'expired' ? (
           <Notice tone="warning">

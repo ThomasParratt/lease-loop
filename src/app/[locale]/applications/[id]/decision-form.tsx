@@ -4,16 +4,19 @@
 // re-render. A case waiting for the signatory is signed through the signing link (D46).
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { responseFailureText, type FailureLabels } from '@/components/api-failure';
 import { Button, Notice } from '@/components/ui';
 
 type DecisionFormProps = {
   applicationId: string;
   /** Who decides: the admin. */
   reviewer: string;
-  labels: { approve: string; reject: string; error: string };
+  labels: { approve: string; reject: string };
+  /** The refusal sentences by code (product review 5); `error` for anything else. */
+  failures: FailureLabels;
 };
 
-export function DecisionForm({ applicationId, reviewer, labels }: DecisionFormProps) {
+export function DecisionForm({ applicationId, reviewer, labels, failures }: DecisionFormProps) {
   const router = useRouter();
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -27,10 +30,10 @@ export function DecisionForm({ applicationId, reviewer, labels }: DecisionFormPr
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ decision, reviewedBy: reviewer }),
       });
-      if (!response.ok) throw new Error(`status ${response.status}`);
-      router.refresh();
+      if (!response.ok) setFailed(await responseFailureText(response, failures));
+      else router.refresh();
     } catch {
-      setFailed(labels.error);
+      setFailed(failures.error);
     } finally {
       setPending(null);
     }

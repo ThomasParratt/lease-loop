@@ -183,6 +183,45 @@ describe('payInvoice', () => {
     });
   });
 
+  it('answers cancelled for a cancelled rent, not already_paid, and writes nothing (product review 9)', async () => {
+    const [, second] = await listInvoices(db, contractId);
+    await db.invoice.update({ where: { id: second!.id }, data: { status: 'cancelled' } });
+    const before = await db.auditLog.count();
+    expect(await payInvoice(db, { id: second!.id, paidOn: '2026-11-06', actor: 'admin' })).toEqual({
+      ok: false,
+      reason: 'cancelled',
+    });
+    expect(await db.auditLog.count()).toBe(before);
+    expect((await listInvoices(db, contractId))[1]).toMatchObject({
+      status: 'cancelled',
+      paidOn: null,
+    });
+  });
+
+  it('refuses a payment dated before the contract was signed (the demo clock moved back, product review 9)', async () => {
+    const [first] = await listInvoices(db, contractId);
+    const before = await db.auditLog.count();
+    expect(
+      await payInvoice(db, { id: first!.id, paidOn: '2026-11-04', actor: 'cust-aino' })
+    ).toEqual({
+      ok: false,
+      reason: 'paid_before_signing',
+    });
+    expect(await db.auditLog.count()).toBe(before);
+    // The signing day itself is fine.
+    expect(
+      await payInvoice(db, { id: first!.id, paidOn: '2026-11-05', actor: 'cust-aino' })
+    ).toMatchObject({ ok: true, invoice: { status: 'paid', paidOn: '2026-11-05' } });
+  });
+
+  it('throws on a payment day that is not a real ISO day, before any write (D23)', async () => {
+    const [first] = await listInvoices(db, contractId);
+    await expect(
+      payInvoice(db, { id: first!.id, paidOn: '2026-02-30', actor: 'cust-aino' })
+    ).rejects.toThrow();
+    expect((await listInvoices(db, contractId))[0]?.status).toBe('issued');
+  });
+
   it('D73: anonymous and another customer are refused before anything is read or written', async () => {
     const [first] = await listInvoices(db, contractId);
     const before = await db.auditLog.count();

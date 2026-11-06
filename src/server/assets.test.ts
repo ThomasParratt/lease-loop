@@ -86,12 +86,36 @@ describe('changeAssetStatus', () => {
     expect(JSON.parse(audit.details_json ?? '')).toEqual({ from: 'available', to: 'reserved' });
   });
 
-  it('accepts leased and sold (D22), the statuses the data pack does not use', async () => {
+  it('refuses leased by hand and writes nothing: only signing leases an item (product review 4)', async () => {
     await seedAssets(db, dataPack);
-    for (const status of ['leased', 'sold'] as const) {
-      const result = await changeAssetStatus(db, { id: 'ebike-001', status, actor: 'admin' });
-      expect(result).toMatchObject({ ok: true, asset: { status } });
-    }
+    const result = await changeAssetStatus(db, {
+      id: 'ebike-001',
+      status: 'leased',
+      actor: 'admin',
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'transition_by_event_only', params: { from: 'available', to: 'leased' } },
+    });
+    expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).status).toBe(
+      'available'
+    );
+    expect(await db.auditLog.count()).toBe(0);
+  });
+
+  it('refuses returned by hand on a leased item, so an active contract keeps its asset (product review 4)', async () => {
+    await seedAssets(db, dataPack);
+    await db.asset.update({ where: { id: 'ebike-001' }, data: { status: 'leased' } });
+    const result = await changeAssetStatus(db, {
+      id: 'ebike-001',
+      status: 'returned',
+      actor: 'admin',
+    });
+    expect(result).toMatchObject({ ok: false, reason: { code: 'transition_by_event_only' } });
+    expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).status).toBe(
+      'leased'
+    );
+    expect(await db.auditLog.count()).toBe(0);
   });
 
   it('refuses anyone but admin and writes nothing (wave 1 finding 5)', async () => {
