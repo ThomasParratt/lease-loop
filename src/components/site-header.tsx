@@ -1,6 +1,6 @@
 // The top of every page, in two layers:
 // - the staff strip (teal): the demo tools a customer would never see in a real product,
-//   i.e. who you are acting as, the demo page, and the audit log for admin only;
+//   i.e. who you are acting as, the demo page and the audit log (for everyone, issue #35);
 // - the customer header (paper): the brand, the catalogue, how it works and the language.
 // A server component; the actor picker, the nav and the language switcher are small clients.
 import Link from 'next/link';
@@ -23,7 +23,7 @@ export function SiteHeader({ locale, t, actor, customers }: SiteHeaderProps) {
   const isAdmin = actor === ADMIN_ACTOR;
   const staffLinks = [
     { href: `/${locale}/demo`, label: t('nav.demo') },
-    ...(isAdmin ? [{ href: `/${locale}/audit`, label: t('nav.audit') }] : []),
+    { href: `/${locale}/audit`, label: t('nav.audit') },
   ];
   const mainLinks = [
     { href: `/${locale}/catalogue`, label: t('nav.catalogue') },

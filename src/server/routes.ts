@@ -20,6 +20,7 @@ import {
   invoiceStatusSchema,
 } from '@/domain/statuses';
 import { auditChainVerdictSchema } from './audit-schemas';
+import { demoCardParamsSchema, demoCardRunSchema } from './demo-cards-schemas';
 import {
   addSignatoryBodySchema,
   customerIdParamsSchema,
@@ -265,6 +266,15 @@ export const ROUTES: readonly RouteDefinition[] = [
     tag: 'demo',
     body: demoClockBodySchema,
     response: demoClockResponseSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/demo/cards/[id]/run',
+    summary:
+      "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records)",
+    tag: 'demo',
+    params: demoCardParamsSchema,
+    response: demoCardRunSchema,
   },
   {
     method: 'GET',

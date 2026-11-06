@@ -84,3 +84,17 @@ describe('readDemoClock', () => {
     expect(clock.today).toBe(clock.systemToday);
   });
 });
+
+describe('demoClockCookieHeader', () => {
+  it('sets the cookie to the day, for the whole site, http-only', async () => {
+    const { demoClockCookieHeader } = await import('./demo-clock');
+    expect(demoClockCookieHeader('2027-06-05')).toBe(
+      `${DEMO_CLOCK_COOKIE}=2027-06-05; Path=/; HttpOnly; SameSite=Lax`
+    );
+  });
+
+  it('clears it with null', async () => {
+    const { demoClockCookieHeader } = await import('./demo-clock');
+    expect(demoClockCookieHeader(null)).toMatch(new RegExp(`^${DEMO_CLOCK_COOKIE}=; .*Max-Age=0`));
+  });
+});
