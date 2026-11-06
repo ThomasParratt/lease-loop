@@ -546,7 +546,7 @@
   "exit.ended.title": "Det här avtalet har avslutats",
   "exit.ended.body": "Status: {status}. Avslutat {date}. Slutfakturan finns i listan nedan.",
   "exit.refusal.not_started": "Avtalet har inte börjat än, så det kan inte avslutas.",
-  "exit.refusal.usage_below_signing": "Den angivna användningen ({value} {unit}) är lägre än de {atSigning} {unit} varan hade när den hyrdes ut.",
+  "exit.refusal.usage_below_signing": "Den angivna användningen ({value}) är lägre än de {atSigning} varan hade när den hyrdes ut.",
   "signatories.notFound": "Den firmatecknaren finns inte längre i listan. Ladda om sidan.",
   "audit.chain.reason.head_mismatch": "de senaste posterna stämmer inte längre med det sparade huvudet (en post har raderats)",
   "contract.refusal.quote_not_yet_valid": "Offerten är daterad {quoteDate}, efter i dag. Ett avtal kan inte undertecknas före sin offert.",

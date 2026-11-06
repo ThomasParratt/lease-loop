@@ -15,6 +15,7 @@ import { getT, messages, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { ExitPreview } from '@/server/exits';
 import { authzRefusalKey } from './authz-refusal';
+import { exitRefusalValues } from './exit-refusal';
 import { ExitOptionList } from './exit-preview';
 import { Button, Field, Notice, inputClasses } from './ui';
 
@@ -88,7 +89,9 @@ export function ExitForm(props: ExitFormProps) {
     const authz = authzRefusalKey(details?.code);
     if (authz) return t(authz);
     const key = `exit.refusal.${String(details?.code)}`;
-    return key in messages.en ? t(key as MessageKey, details?.params) : t('exit.error');
+    return key in messages.en
+      ? t(key as MessageKey, exitRefusalValues(details?.params, t, locale))
+      : t('exit.error');
   }
 
   async function submit(event: React.FormEvent) {

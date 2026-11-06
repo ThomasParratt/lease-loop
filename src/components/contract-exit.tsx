@@ -5,13 +5,14 @@
 import type { Asset } from '@/data/schemas';
 import { assetConditionSchema } from '@/data/schemas';
 import { formatIsoDate } from '@/i18n/format';
-import type { Translate, TranslateValues } from '@/i18n/get-t';
+import type { Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import type { ContractView } from '@/server/contracts';
 import { listCustomers } from '@/server/customers';
 import { db } from '@/server/db';
 import { previewExit } from '@/server/exits';
 import { ExitForm } from './exit-form';
+import { exitRefusalValues } from './exit-refusal';
 import { Card, Notice } from './ui';
 
 type ContractExitProps = {
@@ -45,7 +46,10 @@ export async function ContractExit({ contract, asset, today, locale, t }: Contra
     return (
       <Card id="exit" title={t('exit.title')}>
         <Notice tone="info">
-          {t(`exit.refusal.${preview.reason.code}`, preview.reason.params as TranslateValues)}
+          {t(
+            `exit.refusal.${preview.reason.code}`,
+            exitRefusalValues(preview.reason.params as Record<string, unknown>, t, locale)
+          )}
         </Notice>
       </Card>
     );
