@@ -2,20 +2,13 @@
 
 // "Pay" on one invoice row: POST /api/invoices/:id/pay, then the page reloads with the invoice
 // paid. The server pays on its own day (the demo clock) as the actor of its cookie; the browser
-// sends nothing. A refusal comes back as a code, written from the message files.
+// sends nothing. A refusal comes back as a code, written by `payRefusalText` (pay-refusal.ts).
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { authzRefusalKey } from '@/components/authz-refusal';
-import { getT, type MessageKey } from '@/i18n/get-t';
+import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { payRefusalText } from './pay-refusal';
 import { Button } from './ui';
-
-/** The pay route's own refusal codes, each with a message key. */
-const REFUSALS: Record<string, MessageKey> = {
-  INVOICE_ALREADY_PAID: 'invoice.pay.refusal.already_paid',
-  INVOICE_CANCELLED: 'invoice.pay.refusal.cancelled',
-  PAID_BEFORE_SIGNING: 'invoice.pay.refusal.before_signing',
-};
 
 export function PayInvoiceButton({
   invoiceId,
@@ -39,10 +32,7 @@ export function PayInvoiceButton({
     }).catch(() => null);
     const body = response ? await response.json().catch(() => null) : null;
     if (!body?.success) {
-      const code: unknown = body?.error?.code;
-      const authz = authzRefusalKey(body?.error?.details?.code);
-      const own = typeof code === 'string' ? REFUSALS[code] : undefined;
-      setError(t(authz ?? own ?? 'invoice.pay.refusal.unknown'));
+      setError(payRefusalText(locale, body));
       setPending(false);
       return;
     }
