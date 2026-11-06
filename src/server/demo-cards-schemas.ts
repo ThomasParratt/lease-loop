@@ -71,10 +71,14 @@ export const demoCardSchema = z.discriminatedUnion('run', [
     /** Who the judge acts as on the landing page. */
     actor: z.string().min(1),
     assetId: z.string().min(1),
-    page: z.enum(['asset', 'passport']),
+    /** Where the judge lands: the assessment (card 9) or the passport (card 10). */
+    page: z.enum(['second_life', 'passport']),
+    /** A lease after the assessment (card 10): who quotes, applies and signs, on which days. */
+    lease: z.strictObject({ trip: demoTripSchema, signOn: isoDateSchema }).optional(),
   }),
 ]);
 export type DemoCard = z.infer<typeof demoCardSchema>;
+export type DemoTrip = z.infer<typeof demoTripSchema>;
 export type DemoCardInput = z.input<typeof demoCardSchema>;
 
 /** One thing the run did, as a code the page writes from the message files. */

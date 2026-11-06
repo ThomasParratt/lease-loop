@@ -4,7 +4,7 @@
 import type { MessageKey, Translate } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { ADMIN_ACTOR } from '@/server/actor';
-import type { DemoCard } from '@/server/demo-cards-schemas';
+import type { DemoCard, DemoTrip } from '@/server/demo-cards-schemas';
 import { formatParams } from './card-steps';
 import { CardRunForm } from './card-run-form';
 
@@ -24,17 +24,19 @@ export function cardInputs(
   locale: Locale
 ): string {
   const parts: string[] = [];
+  const lease = (trip: DemoTrip, signOn?: string) => {
+    const { customerId, assetId, quantity, termMonths, downPaymentCents, quoteOn } = trip;
+    const shown = { assetId, quantity, termMonths, downPaymentCents, quoteOn };
+    const customer = names.get(customerId) ?? customerId;
+    parts.push(t('demo.input.trip', formatParams({ ...shown, customer }, t, locale)));
+    if (signOn) parts.push(t('demo.input.signed', formatParams({ signOn }, t, locale)));
+  };
   if (card.run === 'asset') {
     const actor = card.actor === ADMIN_ACTOR ? t('actor.admin') : card.actor;
     parts.push(t('demo.input.asset', { assetId: card.assetId, actor }));
+    if (card.lease) lease(card.lease.trip, card.lease.signOn);
   } else {
-    const { customerId, assetId, quantity, termMonths, downPaymentCents, quoteOn } = card.trip;
-    const trip = { assetId, quantity, termMonths, downPaymentCents, quoteOn };
-    const customer = names.get(customerId) ?? customerId;
-    parts.push(t('demo.input.trip', formatParams({ ...trip, customer }, t, locale)));
-    if (card.run !== 'apply') {
-      parts.push(t('demo.input.signed', formatParams({ signOn: card.signOn }, t, locale)));
-    }
+    lease(card.trip, card.run === 'apply' ? undefined : card.signOn);
     if (card.run === 'exit_preview') {
       const exit = {
         rentsPaid: card.rentsPaid,

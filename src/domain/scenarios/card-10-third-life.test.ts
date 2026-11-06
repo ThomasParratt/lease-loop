@@ -63,5 +63,6 @@ describe('card 10: third life (ebike-008, two lives, good, 9 800 km)', () => {
     expect(co2.perLifeKg).toEqual([0, 29, 15]);
   });
 
-  it.todo('the passport page shows both lives and the CO2 for ebike-008 (wave 3 page)');
+  // The passport read on a database (both past lives, the third after the assessment, 58 kg) is
+  // src/server/scenarios/card-10.test.ts; the demo run that lands on it, src/server/demo-cards.test.ts.
 });

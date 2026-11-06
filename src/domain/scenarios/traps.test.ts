@@ -3,7 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildSchedule } from '../invoicing';
 import { listPriceOn } from '../price-list';
-import { applyFor, assetById, customerById, pack, quoteFor } from './fixtures';
+import { matchDemand } from '../second-life/match';
+import { applyFor, assessPackItem, assetById, customerById, pack, quoteFor } from './fixtures';
 
 const V1_DAY = '2026-11-05';
 const V2_DAY = '2026-11-06';
@@ -124,8 +125,25 @@ describe('trap: the twin pairs of the waiting list', () => {
     expect(ids.indexOf('wait-06')).toBeLessThan(ids.indexOf('wait-14'));
   });
 
-  it.todo('the matcher gives a fair-condition ebike to wait-02, never wait-13 (wave 3)');
-  it.todo('the matcher prefers wait-06 over wait-14, who signed up a day later (wave 3)');
+  it('the matcher gives a fair-condition ebike to wait-02, never wait-13', () => {
+    const match = matchDemand(assessPackItem('ebike-007', V2_DAY), pack.demand);
+    expect(match.winner).toMatchObject({ demandId: 'wait-02', condition: 'fair', upgrade: false });
+    // wait-13 fits only refurbished to good, so D13's first step puts it below.
+    const wait13 = match.ranking.find((r) => r.demandId === 'wait-13');
+    expect(wait13).toMatchObject({ upgrade: true, decidedBy: 'no_refurbishment' });
+  });
+
+  it('the matcher prefers wait-06 over wait-14, who signed up a day later: D13 by the lower id', () => {
+    // laptop-006 (good, 310 cycles) fits both at the same rent; wait-08 and wait-09 are needed
+    // sooner, so they are taken here to leave the twins at the top.
+    const match = matchDemand(assessPackItem('laptop-006', V2_DAY), pack.demand, [
+      'wait-08',
+      'wait-09',
+    ]);
+    expect(match.winner?.demandId).toBe('wait-06');
+    expect(match.ranking[1]).toMatchObject({ demandId: 'wait-14', decidedBy: 'id' });
+    expect(match.ranking[1]?.monthlyNetCents).toBe(match.winner?.monthlyNetCents);
+  });
 });
 
 describe('trap: the VAT boundary on 1 Jan 2027', () => {

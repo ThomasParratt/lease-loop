@@ -21,6 +21,7 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { isLocale, type Locale } from '@/i18n/locales';
 import { readPassport } from '@/server/asset-events';
+import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 
@@ -73,6 +74,14 @@ export default async function PassportPage({
   if (!result) notFound();
   const { asset, passport, co2 } = result;
   const kg = (value: number) => formatNumber(value, locale);
+  // A leased item's open life counts only its months so far: the total at the end of the
+  // current lease is the same read on the contract's last day.
+  const open = passport.lives.at(-1);
+  const lease =
+    asset.status === 'leased' && open?.end === null && open.contractId
+      ? await getContract(db, open.contractId)
+      : null;
+  const atLeaseEnd = lease ? await readPassport(db, id, lease.endDate) : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
@@ -102,6 +111,14 @@ export default async function PassportPage({
           <p className="mt-1 font-heading text-5xl font-semibold text-brand-text tabular-nums">
             {t('passport.kg', { kg: kg(co2.totalKg) })}
           </p>
+          {lease && atLeaseEnd && atLeaseEnd.co2.totalKg !== co2.totalKg ? (
+            <p className="mt-1 text-sm text-ink-muted">
+              {t('passport.co2AtLeaseEnd', {
+                kg: kg(atLeaseEnd.co2.totalKg),
+                date: formatIsoDate(lease.endDate, locale),
+              })}
+            </p>
+          ) : null}
           {/* The method, as on the landing page: on hover, not under everything else. */}
           <InfoPopover id="co2-method" label={t('impact.how.label')} className="mt-4">
             <p>

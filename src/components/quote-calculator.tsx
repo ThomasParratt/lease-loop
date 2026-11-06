@@ -385,7 +385,7 @@ function TermTable({
   const cell = 'px-4 py-3 text-right sm:px-6';
   return (
     <>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <caption className="sr-only">{t('pricing.compare.title')}</caption>
           <thead className="text-ink-muted">

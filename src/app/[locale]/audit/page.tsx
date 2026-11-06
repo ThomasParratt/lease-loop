@@ -48,7 +48,7 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
       ) : (
         <Card padded={false}>
           {/* The table scrolls sideways on a phone instead of squeezing the details. */}
-          <div className="overflow-x-auto" tabIndex={0} aria-labelledby="audit-caption">
+          <div className="relative overflow-x-auto" tabIndex={0} aria-labelledby="audit-caption">
             <table className="w-full text-left text-sm">
               <caption id="audit-caption" className="px-5 pt-4 pb-2 text-left text-ink-muted">
                 {t('audit.caption', { count: LIMIT })}

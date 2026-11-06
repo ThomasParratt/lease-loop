@@ -54,7 +54,7 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
           })}
         </Notice>
       ) : null}
-      <div className="overflow-x-auto rounded-lg ring-1 ring-line">
+      <div className="relative overflow-x-auto rounded-lg ring-1 ring-line">
         <table className="w-full text-sm">
           <caption className="sr-only">{t('invoice.caption')}</caption>
           <thead className="bg-raised text-left text-xs text-ink-muted">

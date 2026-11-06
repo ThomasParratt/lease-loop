@@ -11,6 +11,8 @@ import consumerLimitsJson from '../../../data/consumer-limits.json';
 import customersJson from '../../../data/customers.json';
 import priceListsJson from '../../../data/price-lists.json';
 import questionsJson from '../../../data/questions.json';
+import refurbishmentCostsJson from '../../../data/refurbishment-costs.json';
+import residualCurvesJson from '../../../data/residual-curves.json';
 import secondLifeDemandJson from '../../../data/second-life-demand.json';
 import termLimitsJson from '../../../data/term-limits.json';
 import vatRatesJson from '../../../data/vat-rates.json';
@@ -22,6 +24,8 @@ import {
   customersFileSchema,
   priceListsFileSchema,
   questionsFileSchema,
+  refurbishmentCostsSchema,
+  residualCurvesSchema,
   secondLifeDemandFileSchema,
   termLimitsSchema,
   vatRatesSchema,
@@ -29,6 +33,13 @@ import {
   type Customer,
 } from '@/data/schemas';
 import { priceQuote, type PricingData, type QuoteResult } from '../pricing';
+import {
+  assessReturn,
+  firstLeaseListPriceCents,
+  type AssessData,
+  type AssessInput,
+  type ReturnAssessmentResult,
+} from '../second-life/assess';
 import {
   answerProblem,
   answersFromCustomer,
@@ -81,6 +92,45 @@ function byId<T extends { id: string }>(rows: readonly T[], id: string, what: st
 }
 
 export const assetById = (id: string): Asset => byId(pack.assets, id, 'asset');
+
+/** The second-life data: the pack's curves and refurbishment costs, and the pricing above. */
+export const secondLifeData: AssessData = {
+  curves: residualCurvesSchema.parse(residualCurvesJson),
+  costs: refurbishmentCostsSchema.parse(refurbishmentCostsJson),
+  pricing,
+};
+
+/**
+ * Assesses a data-pack item on `isoDate` the way `assessAsset` does for an item that is not
+ * ours from new (D11, D60): its model-year age, at least one past life, and the earliest list
+ * price that has it. `over` replaces what the pack records (a drill's other condition or usage).
+ */
+export function assessPackItem(
+  assetId: string,
+  isoDate: string,
+  over: Partial<Pick<AssessInput, 'condition' | 'usage'>> = {},
+  data: AssessData = secondLifeData
+): ReturnAssessmentResult {
+  const asset = assetById(assetId);
+  const newPriceCents = firstLeaseListPriceCents(data.pricing.priceLists, assetId);
+  if (newPriceCents === null) throw new Error(`no list price for ${assetId}`);
+  return assessReturn(
+    {
+      assetId,
+      category: asset.category,
+      condition: over.condition ?? asset.condition,
+      usage: over.usage ?? asset.usage,
+      age: {
+        modelYear: asset.model_year,
+        previousLives: Math.max(1, asset.previous_lives),
+        leaseStart: isoDate,
+      },
+      newPriceCents,
+      isoDate,
+    },
+    data
+  );
+}
 export const customerById = (id: string): Customer => byId(pack.customers, id, 'customer');
 
 export type Deal = {

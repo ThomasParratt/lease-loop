@@ -6,9 +6,9 @@
 // a card's numbers (AGENTS.md rule 7). A card that already ran is refused and linked (D70).
 import { loadCustomers } from '@/data/load';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
+import type { MatchResult } from '@/domain/second-life/match';
 import { ADMIN_ACTOR } from './actor';
 import { createApplication, listApplications, type ApplicationView } from './applications';
-import { getAsset } from './assets';
 import { contractIdOfApplication, getContract, signContract } from './contracts';
 import {
   demoCardSchema,
@@ -16,12 +16,14 @@ import {
   type DemoCardId,
   type DemoCardInput,
   type DemoCardRun,
+  type DemoTrip as Trip,
   type DemoStep,
 } from './demo-cards-schemas';
 import { previewExit } from './exits';
 import { listInvoices, payInvoice } from './invoices';
 import type { PrismaClient } from './prisma-client';
 import { createQuote, getQuote, loadPricingData } from './quotes';
+import { assessAsset, latestAssessment } from './second-life';
 
 const AINO_EBIKE_36 = {
   customerId: 'cust-aino',
@@ -101,18 +103,27 @@ const CARD_INPUTS: readonly DemoCardInput[] = [
   {
     id: 9,
     run: 'asset',
-    clock: '2026-11-05',
+    clock: '2026-11-06',
     actor: ADMIN_ACTOR,
     assetId: 'ebike-007',
-    page: 'asset',
+    page: 'second_life',
   },
   {
     id: 10,
     run: 'asset',
-    clock: '2026-11-05',
+    clock: '2026-11-06',
     actor: ADMIN_ACTOR,
     assetId: 'ebike-008',
     page: 'passport',
+    lease: {
+      trip: {
+        customerId: 'cust-olavi',
+        assetId: 'ebike-008',
+        termMonths: 24,
+        quoteOn: '2026-11-06',
+      },
+      signOn: '2026-11-06',
+    },
   },
 ];
 
@@ -146,7 +157,6 @@ export type RunDemoCardResult =
       landing: string | null;
     };
 
-type Trip = Extract<DemoCard, { trip: unknown }>['trip'];
 type Earlier = { application: ApplicationView; contractId: string | null };
 
 /** Thrown inside a run when a service refuses; turned into `card_step_refused`. */
@@ -190,7 +200,7 @@ async function earlierRun(db: PrismaClient, trip: Trip): Promise<Earlier | null>
  */
 async function contractFor(
   db: PrismaClient,
-  card: Extract<DemoCard, { signOn: string }>,
+  card: { trip: Trip; signOn: string },
   earlier: Earlier | null,
   steps: DemoStep[]
 ): Promise<string | null> {
@@ -307,23 +317,73 @@ async function payRentsUpTo(db: PrismaClient, contractId: string, count: number,
   return { paidNow: toPay.length, grossCents: toPay.reduce((sum, i) => sum + i.grossCents, 0) };
 }
 
-/**
- * Cards 9 and 10, the extension point: what runs on a returned item before the judge lands on
- * its page. Today the item is already `returned` in the data pack and main has no assessment
- * yet, so it only says where things stand; the second-life slice's `assessAsset` plugs in here
- * once it is merged (docs/features/demo-cards.md, open questions).
- */
-export async function afterReturn(db: PrismaClient, card: DemoCard): Promise<DemoStep[]> {
-  if (card.run !== 'asset') return [];
-  const asset = await getAsset(db, card.assetId);
-  if (!asset) throw new StepRefused('asset', 'asset_not_found');
-  return [
-    {
-      code: 'asset_status',
-      params: { assetId: asset.id, status: asset.status, condition: asset.condition },
-      href: `/assets/${asset.id}`,
+/** The assessment's decision as one step: the winner and its rent, or the catalogue. */
+function decisionStep(match: MatchResult): DemoStep {
+  const { winner, relist } = match;
+  if (!winner) return { code: 'relisted_without_match', params: { condition: relist.condition } };
+  return {
+    code: 'relisted_for_winner',
+    params: {
+      demandId: winner.demandId,
+      condition: winner.condition,
+      termMonths: winner.termMonths,
+      monthlyNetCents: winner.monthlyNetCents,
     },
-  ];
+  };
+}
+
+/**
+ * Cards 9 and 10: what runs on a returned item before the judge lands on its page. The item is
+ * assessed and relisted as admin on the card's day (`assessAsset`, the route's own service);
+ * a card with a lease then quotes, applies and signs it as that customer. An item no longer
+ * `returned` that has an assessment was run before: the lease picks up where it stopped, and a
+ * card without one, or whose lease is signed, is refused and linked (D70).
+ */
+export async function afterReturn(
+  db: PrismaClient,
+  card: Extract<DemoCard, { run: 'asset' }>,
+  steps: DemoStep[]
+): Promise<{ alreadyRun: boolean }> {
+  const href = `/assets/${card.assetId}/second-life`;
+  const assessed = await assessAsset(db, {
+    assetId: card.assetId,
+    actor: card.actor,
+    today: card.clock,
+  });
+  if (assessed.ok) {
+    const { relist } = assessed.view.match;
+    steps.push({
+      code: 'asset_assessed',
+      params: {
+        assetId: card.assetId,
+        condition: assessed.view.assessment.returnedCondition,
+        refurbishmentCents: relist.plan.totalCents,
+        secondLifeFinancedCents: relist.secondLifeFinancedCents,
+        date: card.clock,
+      },
+      href,
+    });
+    steps.push({ ...decisionStep(assessed.view.match), href });
+  } else if (
+    assessed.reason.code !== 'asset_not_returned' ||
+    !(await latestAssessment(db, card.assetId))
+  ) {
+    throw new StepRefused('assessment', assessed.reason.code);
+  }
+
+  if (!card.lease) return { alreadyRun: !assessed.ok };
+  const earlier = await earlierRun(db, card.lease.trip);
+  if (earlier?.contractId) return { alreadyRun: true };
+  // The winner is a waiting-list entry, not a customer who can sign: the card's customer leases
+  // the item from the catalogue at the same second-life price.
+  const winner = (assessed.ok ? assessed.view : await latestAssessment(db, card.assetId))?.match
+    .winner;
+  steps.push({
+    code: 'leased_from_catalogue',
+    params: { demandId: winner?.demandId ?? '—', customer: card.lease.trip.customerId },
+  });
+  const contractId = await contractFor(db, card.lease, earlier, steps);
+  return { alreadyRun: contractId === null };
 }
 
 type Ran = { steps: DemoStep[]; landing: string } | { alreadyRun: string };
@@ -331,10 +391,10 @@ type Ran = { steps: DemoStep[]; landing: string } | { alreadyRun: string };
 async function runSteps(db: PrismaClient, card: DemoCard): Promise<Ran> {
   const steps: DemoStep[] = [];
   if (card.run === 'asset') {
-    steps.push(...(await afterReturn(db, card)));
-    const landing =
-      card.page === 'passport' ? `/assets/${card.assetId}/passport` : `/assets/${card.assetId}`;
-    return { steps, landing };
+    const { alreadyRun } = await afterReturn(db, card, steps);
+    const page = card.page === 'passport' ? 'passport' : 'second-life';
+    const landing = `/assets/${card.assetId}/${page}`;
+    return alreadyRun ? { alreadyRun: landing } : { steps, landing };
   }
 
   const earlier = await earlierRun(db, card.trip);
