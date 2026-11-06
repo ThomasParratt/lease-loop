@@ -5,7 +5,7 @@
 // gets a link to its signatory list (D46). The leases page mounts it for the acting customer,
 // /customers/[id] for the admin.
 import Link from 'next/link';
-import { Badge, Disclosure, Notice } from '@/components/ui';
+import { Badge, cx, Disclosure, Notice } from '@/components/ui';
 import { formatEuro } from '@/domain/money';
 import type { InvoiceGroups } from '@/domain/portal';
 import { formatIsoDate } from '@/i18n/format';
@@ -15,7 +15,7 @@ import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
 import type { InvoiceView } from '@/server/invoices';
 import { readPortal, type PortalContract } from './portal-data';
-import { ApplicationRow, ContractRow } from './rows';
+import { ApplicationCard, ContractRow } from './rows';
 
 type PortalProps = { customerId: string; today: string; locale: Locale; t: Translate };
 
@@ -59,13 +59,19 @@ export async function CustomerPortal({ customerId, today, locale, t }: PortalPro
         ) : (
           <ul className="space-y-3">
             {portal.contracts.map((entry) => (
-              <li key={entry.contract.id} className="space-y-2">
+              // One card per contract: the contract on top, its ways out in a strip under it
+              // inside the same frame, so each set of exit choices reads as that lease's.
+              <li
+                key={entry.contract.id}
+                className="overflow-hidden rounded-xl border border-line bg-raised shadow-card"
+              >
                 <ContractRow
                   contract={entry.contract}
                   asset={portal.assetById.get(entry.contract.assetId)}
                   customer={null}
                   locale={locale}
                   t={t}
+                  flat
                 />
                 <ExitChoicesLine entry={entry} locale={locale} t={t} />
               </li>
@@ -82,7 +88,7 @@ export async function CustomerPortal({ customerId, today, locale, t }: PortalPro
           <ul className="space-y-3">
             {portal.unsigned.map(({ application, asset }) => (
               <li key={application.id}>
-                <ApplicationRow
+                <ApplicationCard
                   application={application}
                   asset={asset}
                   customer={null}
@@ -109,7 +115,12 @@ function Total({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** The ways out of an active contract today, each a link to the contract page's exit section. */
+/**
+ * The ways out of an active contract today, as the footer of its card: a dashed rule, a door
+ * glyph and the label, then one pill per way out, each a link to the contract page's exit
+ * section. Leaving before the term ends is shown in the danger colours (it ends the lease
+ * early and has a cost); at the end of the term the pills are the brand's.
+ */
 function ExitChoicesLine({
   entry,
   locale,
@@ -123,28 +134,56 @@ function ExitChoicesLine({
   if (choices.code === 'contract_ended') return null;
   if (choices.code === 'not_started') {
     return (
-      <p className="px-3 text-sm text-ink-muted">
+      <p className="rule-dashed border-t-2 px-4 py-3 text-sm text-ink-muted">
         {t('portal.exit.not_started', { date: formatIsoDate(choices.params.startDate, locale) })}
       </p>
     );
   }
+  const early = choices.code === 'early_exit';
   return (
-    <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 text-sm">
-      <span className="text-ink-muted">
+    <div
+      className={cx(
+        'rule-dashed flex flex-wrap items-center gap-x-4 gap-y-2 border-t-2 px-4 py-3 text-sm',
+        early ? 'bg-danger-soft/50' : 'bg-muted/60'
+      )}
+    >
+      <p className={cx('flex items-center gap-2 font-semibold', early && 'text-danger-ink')}>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-4 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8" />
+          <path d="M10 12h10M17 9l3 3-3 3" />
+        </svg>
         {t(`portal.exit.${choices.code}`, {
           date: formatIsoDate(choices.params.endDate, locale),
         })}
-      </span>
-      {choices.params.modes.map((mode) => (
-        <Link
-          key={mode}
-          href={`/${locale}/contracts/${contract.id}#exit`}
-          className="font-bold text-brand-text underline-offset-2 hover:underline"
-        >
-          {t(`exit.mode.${mode}`)}
-        </Link>
-      ))}
-    </p>
+      </p>
+      <ul className="flex flex-wrap gap-2">
+        {choices.params.modes.map((mode) => (
+          <li key={mode}>
+            <Link
+              href={`/${locale}/contracts/${contract.id}?from=leases#exit`}
+              className={cx(
+                'inline-flex min-h-9 items-center rounded-full border-2 bg-raised px-3 font-bold transition-colors',
+                // A clear fill on hover: a tint was too close to the strip behind it to notice.
+                early
+                  ? 'border-danger-line text-danger-ink hover:border-danger-solid hover:bg-danger-solid hover:text-raised'
+                  : 'border-brand text-brand-text hover:bg-brand hover:text-brand-contrast'
+              )}
+            >
+              {t(`exit.mode.${mode}`)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -261,7 +300,7 @@ function InvoiceLine({
         </Badge>
         {status === 'due' || status === 'overdue' ? (
           <Link
-            href={`/${locale}/contracts/${invoice.contractId}`}
+            href={`/${locale}/contracts/${invoice.contractId}?from=leases`}
             className="font-bold text-brand-text underline-offset-2 hover:underline"
           >
             {t('portal.invoices.pay')}

@@ -376,6 +376,15 @@ export const ROUTES: readonly RouteDefinition[] = [
     response: applicationSchema,
   },
   {
+    method: 'POST',
+    path: '/api/applications/[id]/withdraw',
+    summary:
+      'The applicant (or the admin for them) withdraws an application not signed yet: approved, in manual review or awaiting the signatory (D87); 409 APPLICATION_NOT_WITHDRAWABLE when signed or final; 401 not signed in, 403 FORBIDDEN (D73)',
+    tag: 'applications',
+    params: applicationIdParamsSchema,
+    response: applicationSchema,
+  },
+  {
     method: 'GET',
     path: '/api/customers/[id]/signatories',
     summary:

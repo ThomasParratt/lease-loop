@@ -35,6 +35,7 @@ vi.mock('next/headers', () => ({
 
 const applications = await import('./applications/route');
 const decision = await import('./applications/[id]/decision/route');
+const withdraw = await import('./applications/[id]/withdraw/route');
 const contracts = await import('./contracts/route');
 const exit = await import('./contracts/[id]/exit/route');
 const pay = await import('./invoices/[id]/pay/route');
@@ -96,6 +97,8 @@ type WriteRoute = {
   name: string;
   /** The customer whose record it is; null for an admin-only action. */
   owner: string | null;
+  /** The admin's refusal where the admin may not act (signing is the customer's, D88). */
+  adminRefusal?: string;
   call: () => Promise<Response>;
 };
 
@@ -127,8 +130,15 @@ const ROUTES: WriteRoute[] = [
       ),
   },
   {
+    // D87: a signed application answers 409 to its owner and the admin, never 401/403.
+    name: 'POST /api/applications/[id]/withdraw',
+    owner: 'cust-aino',
+    call: () => withdraw.POST(post(), ctx({ id: records.applicationId })),
+  },
+  {
     name: 'POST /api/contracts',
     owner: 'cust-aino',
+    adminRefusal: 'customer_signs',
     call: () => contracts.POST(post({ applicationId: records.applicationId }), undefined),
   },
   {
@@ -210,11 +220,22 @@ describe.each(ROUTES)('$name (D73, D74)', (route) => {
     });
   });
 
-  it('the admin is not refused', async () => {
-    actAs('admin');
-    const response = await route.call();
-    expect([401, 403]).not.toContain(response.status);
-  });
+  if (route.adminRefusal) {
+    it(`the admin is 403 FORBIDDEN ${route.adminRefusal} and writes nothing`, async () => {
+      const { status: code, body } = await refusedWithoutWrites(route, 'admin');
+      expect(code).toBe(403);
+      expect(body.error).toMatchObject({
+        code: 'FORBIDDEN',
+        details: { code: route.adminRefusal },
+      });
+    });
+  } else {
+    it('the admin is not refused', async () => {
+      actAs('admin');
+      const response = await route.call();
+      expect([401, 403]).not.toContain(response.status);
+    });
+  }
 
   if (route.owner !== null) {
     it('the owner is not refused', async () => {

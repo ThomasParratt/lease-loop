@@ -14,7 +14,7 @@ import { parseEurosToCents } from '@/domain/question-flow/answers';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { formatBasisPoints, QuoteBreakdownList, refusalText } from './quote-breakdown';
 import { termControl } from './quote-terms';
-import { Button, Disclosure, Field, Money, Notice, PriceTag } from './ui';
+import { Button, cx, Disclosure, Field, Money, Notice, PriceTag } from './ui';
 
 export type QuotePreviewData = {
   today: string;
@@ -156,14 +156,37 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
   const quote = preview.quote;
   const money = (cents: number) => <Money cents={cents} locale={locale} />;
 
+  // The box keeps its full height on every screen. It stays pinned beside the item only while
+  // the whole of it fits in the window (24 px above and below); on a shorter window it scrolls
+  // with the page, so "Apply at this price" at its bottom is never cut off.
+  const boxRef = useRef<HTMLElement>(null);
+  const [fits, setFits] = useState(true);
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const check = () => setFits(box.offsetHeight + 48 <= window.innerHeight);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(box);
+    window.addEventListener('resize', check);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', check);
+    };
+  }, []);
+
   return (
     <div className="space-y-12">
       <div className="grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12">
         <div>{props.children}</div>
 
         <section
+          ref={boxRef}
           aria-labelledby={`${ids}-title`}
-          className="rounded-xl bg-raised p-4 shadow-panel sm:p-6 md:sticky md:top-6"
+          className={cx(
+            'rounded-xl bg-raised p-4 shadow-panel sm:p-6',
+            fits && 'md:sticky md:top-6'
+          )}
         >
           <h2 id={`${ids}-title`} className="sr-only">
             {t('pricing.calculator.title')}

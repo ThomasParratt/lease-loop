@@ -17,7 +17,7 @@ import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 import { CustomerPortal } from './portal';
 import { readLeases } from './portal-data';
-import { ApplicationRow, ContractRow } from './rows';
+import { ApplicationCard, ContractRow } from './rows';
 
 export async function generateMetadata({
   params,
@@ -105,7 +105,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
           <ul className="space-y-3">
             {unsigned.map(({ application, asset }) => (
               <li key={application.id}>
-                <ApplicationRow
+                <ApplicationCard
                   application={application}
                   asset={asset}
                   customer={nameOf(application.customerId)}

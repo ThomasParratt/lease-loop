@@ -13,6 +13,8 @@
 - **Worked through card 1.** Aino signs `ebike-003` on 5 Nov 2026: 36 rents, none paid. On 5 Nov her portal shows one active contract, one open invoice of €134.66 (13 466 cents: 10 730 net + 2 736 VAT at 25.5 %), next due 5 November 2026, 35 coming up; the contract row reads "Leave early (the term runs to 4 November 2029): Buy it · Give it back · Pass it on". Once she pays, nothing is open and the next due day is 5 December 2026.
 - **Worked through card 8.** The same contract exits early on 5 Jun 2027 after seven paid rents: seven under Paid, 29 under Cancelled, the early-exit invoice (€4 166.51, 416 651 cents, due the exit day) open; the contract row shows no choices any more.
 
+**One card per lease.** Each contract and its ways out are one framed card: the contract row on top, a dashed strip under it with a door glyph, the label and one pill per way out. Leaving before the end of the term is shown in the danger colours ("Leave early (the term runs to …)"), the end of the term in the brand's. Each application not signed yet is a card the same way, with "Cancel application" in its strip while it can be withdrawn (D87, `ApplicationCard`); a withdrawn one is not listed.
+
 ## Decisions
 
 D75 (the portal: what it shows and from where), D26 (who sees a customer's things), D17 (the actor), D35 (cancelled rents owe nothing), D14 and D16 (the ways out), D3 (issue and due on one day).

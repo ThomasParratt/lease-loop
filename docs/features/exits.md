@@ -64,6 +64,8 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 - **D77: the report checked against the asset at signing.** The asset row is not written during a lease, so it is the item as leased. The exit bills and records the worse of the reported condition and that one; a usage below the one at signing is refused `usage_below_signing { value, atSigning, unit }`. The admin's assessment then decides on the inspection ([second-life.md](second-life.md)).
 - A return or pass-on sets the asset `returned` with the (D77) condition and the reported usage, the state cards 9 and 10 start from. Pass-on writes `passed_on` in the passport with the next customer.
 
+**What the form asks.** "Give it back" and "Pass it on" ask "How is the item now?": the condition (starting at "Choose…") and the usage (empty), with a line saying they set what giving it back costs, and the exit cannot be sent until both are answered. Until then the return column is marked as an estimate from the item's last known state. "Buy it" asks for neither: the buy price is the D14 balance (or the frozen buyout) and does not depend on them, so the form says so and sends the item's last known values.
+
 ## Decisions
 
 - **D31** (decided 2026-11-06 as an assumption, stated in the README): the curve age of a first-life item from its lease start; **D11** (`ageInMonths`, from the model year) for an item with previous lives. `curveAgeInMonths` picks the rule.

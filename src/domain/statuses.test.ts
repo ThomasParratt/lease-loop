@@ -14,12 +14,13 @@ import {
 } from './statuses';
 
 describe('allowed values', () => {
-  it('application decisions are the four of D10', () => {
+  it('application decisions are the four of D10 and the withdrawal of D87', () => {
     expect(applicationDecisions).toEqual([
       'approved',
       'rejected',
       'manual_review',
       'awaiting_signatory',
+      'withdrawn',
     ]);
   });
 

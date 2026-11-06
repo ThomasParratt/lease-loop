@@ -4,6 +4,7 @@ import {
   answersSchema,
   applicationDecisionUpdateSchema,
   applicationRowSchema,
+  applicationWithdrawalSchema,
   MAX_ANSWERS,
   MAX_QUESTION_ID_LENGTH,
 } from './application';
@@ -76,6 +77,29 @@ describe('applicationDecisionUpdateSchema: a manual review or the signatory deci
     );
     expect(
       applicationDecisionUpdateSchema.safeParse({ ...update, decision: 'manual_review' }).success
+    ).toBe(false);
+  });
+});
+
+describe('applicationWithdrawalSchema: the applicant steps back (D87)', () => {
+  const withdrawal = {
+    decision: 'withdrawn',
+    reasons_json: JSON.stringify([
+      { code: 'withdrawn', params: { by: 'cust-aino', on: '2026-11-06' } },
+    ]),
+    decided_on: '2026-11-06',
+  };
+
+  it('accepts a withdrawal with its reason and day, and no reviewer', () => {
+    expect(applicationWithdrawalSchema.parse(withdrawal)).toEqual(withdrawal);
+  });
+
+  it('refuses any other decision, or a reviewer written with it', () => {
+    expect(
+      applicationWithdrawalSchema.safeParse({ ...withdrawal, decision: 'approved' }).success
+    ).toBe(false);
+    expect(
+      applicationWithdrawalSchema.safeParse({ ...withdrawal, reviewed_by: 'admin' }).success
     ).toBe(false);
   });
 });

@@ -55,6 +55,8 @@ type ExitOptionListProps = {
   t: Translate;
   /** The option the customer has chosen. */
   chosen?: boolean;
+  /** A short line under the title, e.g. that the numbers are an estimate until answered. */
+  note?: string;
 };
 
 const sign: Record<ExitLine['effect'], string> = {
@@ -65,13 +67,14 @@ const sign: Record<ExitLine['effect'], string> = {
   total: '=',
 };
 
-export function ExitOptionList({ title, option, locale, t, chosen }: ExitOptionListProps) {
+export function ExitOptionList({ title, option, locale, t, chosen, note }: ExitOptionListProps) {
   return (
     <section
       aria-label={title}
       className={cx('rounded-lg p-4 ring-1', chosen ? 'bg-raised ring-brand' : 'ring-line')}
     >
-      <h3 className="mb-3 font-medium">{title}</h3>
+      <h3 className={cx('font-medium', note ? 'mb-1' : 'mb-3')}>{title}</h3>
+      {note ? <p className="mb-3 text-xs text-ink-muted">{note}</p> : null}
       <ul className="space-y-2 text-sm">
         {option.lines.map((line, index) => {
           const amount = line.params.amountCents;

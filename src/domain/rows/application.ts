@@ -57,8 +57,15 @@ export const applicationRowSchema = z
 
 /** The columns a manual review or the signatory changes (D10). */
 export const applicationDecisionUpdateSchema = z.strictObject({
-  decision: applicationDecisionSchema.exclude(['manual_review']),
+  decision: applicationDecisionSchema.exclude(['manual_review', 'withdrawn']),
   reasons_json: jsonText(reasonsSchema),
   decided_on: isoDateSchema,
   reviewed_by: reviewerSchema,
+});
+
+/** The applicant withdraws an unsigned application (D87): the decision, its reason and day. */
+export const applicationWithdrawalSchema = z.strictObject({
+  decision: z.literal('withdrawn'),
+  reasons_json: jsonText(reasonsSchema),
+  decided_on: isoDateSchema,
 });

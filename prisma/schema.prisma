@@ -102,7 +102,7 @@ model Application {
   customer_id  String
   quote_id     String
   answers_json String // question id → answer
-  decision     String // approved | rejected | manual_review | awaiting_signatory
+  decision     String // approved | rejected | manual_review | awaiting_signatory | withdrawn
   reasons_json String // [{ code, params }]
   decided_on   String
   reviewed_by  String? // the actor who decided a manual review

@@ -16,6 +16,10 @@ The server (`signContract`) adds: the signer must be the application's customer 
 
 **Card 3** is on the page through `InvoiceTable` (the invoicing slice's component), which explains the VAT change between the December and January invoices. **Card 4**: a start on 31 Jan 2026 for 36 months ends on 30 Jan 2029; the February due dates are invoicing's.
 
+**Only the customer signs (D88).** The admin reviews and may apply on a customer's behalf (D47) but is refused `customer_signs` at signing; the application page shows the admin a note in place of the Sign button. Signing re-reads the application's decision inside its transaction, so an application withdrawn meanwhile (D87) is refused with `application_not_approved`.
+
+**"Price fixed on".** The contract's terms show the quote's day as "Price fixed on" instead of "Price list: Version 2"; the note under the price says the price was worked out with the prices in force that day (the list's number in brackets) and stays for the whole term, only the VAT following each invoice date.
+
 ## Decisions
 
 - D5: invoice 0 on the signing day, written by invoicing's handler from the event's `signedOn`.

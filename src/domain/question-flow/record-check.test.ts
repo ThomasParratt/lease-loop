@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from './answers';
-import { recordMismatches } from './record-check';
+import { nameWords, recordMismatches } from './record-check';
 
 let customers: Customer[];
 beforeAll(async () => {
@@ -121,5 +121,44 @@ describe('recordMismatches (D38)', () => {
       q_email: 'x@example.com',
     };
     expect(recordMismatches(kettu, answers)).toEqual(['q_email', 'q_can_sign', 'q_annual_revenue']);
+  });
+
+  it('Panu’s finding: a full name other than the record is named, so a person checks it', () => {
+    const answers = {
+      ...answersFromCustomer(customer('cust-aino')),
+      q_full_name: 'Maija Meikäläinen',
+    };
+    expect(recordMismatches(customer('cust-aino'), answers)).toEqual(['q_full_name']);
+  });
+
+  it('the same name typed differently is not a difference: case, spaces, accents, word order', () => {
+    const sanna = customer('cust-sanna'); // Sanna Mäkelä on record
+    for (const typed of ['sanna mäkelä', '  Sanna   Mäkelä ', 'Sanna Makela', 'Mäkelä Sanna']) {
+      const answers = { ...answersFromCustomer(sanna), q_full_name: typed };
+      expect(recordMismatches(sanna, answers), typed).toEqual([]);
+    }
+  });
+
+  it('a sole trader’s name is compared too (the record names the person)', () => {
+    const pekka = customer('cust-pekka');
+    const answers = { ...answersFromCustomer(pekka), q_full_name: 'Someone Else' };
+    expect(recordMismatches(pekka, answers)).toEqual(['q_full_name']);
+  });
+
+  it('a company’s record name is a company, never compared with a person’s name', () => {
+    const answers = { q_customer_type: 'company', q_full_name: 'Anyone' };
+    expect(recordMismatches(customer('cust-kettukoodi'), answers)).toEqual([]);
+  });
+});
+
+describe('nameWords', () => {
+  it('drops case, extra spaces and accents, and sorts the words', () => {
+    expect(nameWords('  Sanna   Mäkelä ')).toBe('makela sanna');
+    expect(nameWords('Mäkelä Sanna')).toBe(nameWords('sanna makela'));
+  });
+
+  it('keeps a hyphenated surname as one word and an empty name empty', () => {
+    expect(nameWords('Anna-Liisa Ström')).toBe('anna-liisa strom');
+    expect(nameWords('   ')).toBe('');
   });
 });

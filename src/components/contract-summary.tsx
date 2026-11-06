@@ -67,11 +67,9 @@ export function ContractSummary({ details, asset, locale, t }: ContractSummaryPr
             },
             { label: t('contract.startDate'), value: day(contract.startDate) },
             { label: t('contract.endDate'), value: day(contract.endDate) },
-            { label: t('quote.date'), value: day(quoteDate) },
-            {
-              label: t('quote.listVersion'),
-              value: t('quote.listVersionValue', { version: contract.priceListVersion }),
-            },
+            // The quote's day, when the price was fixed; the footnote under the price says what
+            // a price list is, so the bare "Price list: Version 2" is not shown here.
+            { label: t('contract.priceFixedOn'), value: day(quoteDate) },
           ]}
         />
       </Card>

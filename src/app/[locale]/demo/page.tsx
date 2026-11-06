@@ -5,7 +5,17 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AuditChainBadge } from '@/components/audit-chain-badge';
-import { Badge, Card, DateText, LinkButton, Notice, PageHeader, StaffNote } from '@/components/ui';
+import {
+  Badge,
+  buttonClasses,
+  Card,
+  DateText,
+  HashLink,
+  LinkButton,
+  Notice,
+  PageHeader,
+  StaffNote,
+} from '@/components/ui';
 import { loadCustomers } from '@/data/load';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
@@ -56,9 +66,11 @@ export default async function DemoPage({ params }: PageProps<'/[locale]/demo'>) 
         <ul className="flex flex-wrap gap-2">
           {tools.map((tool) => (
             <li key={tool.href}>
-              <LinkButton href={tool.href} variant="secondary" size="sm">
+              {/* HashLink scrolls on every click: a plain link does nothing when the URL
+                  already ends in the same hash, so a second "Audit log" click went dead. */}
+              <HashLink href={tool.href} className={buttonClasses('secondary', 'sm')}>
                 {tool.label}
-              </LinkButton>
+              </HashLink>
             </li>
           ))}
         </ul>
