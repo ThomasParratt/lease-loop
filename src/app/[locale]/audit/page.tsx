@@ -1,12 +1,15 @@
-// The audit page: the hash chain's state, then the newest 50 audit rows, newest first, as a table.
+// The audit page: the hash chain's state, then the newest 50 audit rows, newest first, as a table
+// whose rows open their details in a dock at the bottom of the screen (audit-table.tsx).
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AuditChainBadge } from '@/components/audit-chain-badge';
 import { Card, Notice, PageHeader, StaffNote } from '@/components/ui';
+import { AuditTable, type AuditTableRow } from './audit-table';
 import { formatTimestamp } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { auditDetailLines } from '@/domain/audit';
 import { listAuditLog, verifyAuditChain } from '@/server/audit';
 import { db } from '@/server/db';
 
@@ -28,13 +31,33 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
 
   const t = getT(locale);
   const [rows, verdict] = await Promise.all([listAuditLog(db, LIMIT), verifyAuditChain(db)]);
-  const headers = [
-    t('audit.col.when'),
-    t('audit.col.actor'),
-    t('audit.col.action'),
-    t('audit.col.entity'),
-    t('audit.col.details'),
-  ];
+  const tableRows: AuditTableRow[] = rows.map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    when: formatTimestamp(row.created_at, locale),
+    actor: row.actor,
+    action: row.action,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    lines: auditDetailLines(row.details),
+  }));
+  // `{id}` and `{count}` stay in the text; the table fills them per entry.
+  const labels = {
+    caption: t('audit.caption', { count: LIMIT }),
+    when: t('audit.col.when'),
+    who: t('audit.col.actor'),
+    action: t('audit.col.action'),
+    target: t('audit.col.entity'),
+    details: t('audit.col.details'),
+    none: t('audit.noDetails'),
+    view: t('audit.details.view'),
+    hide: t('audit.details.hide'),
+    entry: t('audit.details.entry', { id: '{id}' }),
+    close: t('audit.details.close', { id: '{id}' }),
+    closeAll: t('audit.details.closeAll'),
+    dock: t('audit.details.dock', { count: '{count}' }),
+    fields: t('audit.details.fields'),
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -47,52 +70,8 @@ export default async function AuditPage({ params }: PageProps<'/[locale]/audit'>
         <Notice tone="info">{t('audit.empty')}</Notice>
       ) : (
         <Card padded={false}>
-          {/* The table scrolls sideways on a phone instead of squeezing the details. */}
-          <div className="relative overflow-x-auto" tabIndex={0} aria-labelledby="audit-caption">
-            <table className="w-full text-left text-sm">
-              <caption id="audit-caption" className="px-5 pt-4 pb-2 text-left text-ink-muted">
-                {t('audit.caption', { count: LIMIT })}
-              </caption>
-              <thead className="border-b border-line">
-                <tr>
-                  {headers.map((header) => (
-                    <th
-                      key={header}
-                      scope="col"
-                      className="px-5 py-3 font-semibold whitespace-nowrap"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((row) => (
-                  <tr key={row.id} className="align-top">
-                    <td className="px-5 py-3 whitespace-nowrap tabular-nums">
-                      <time dateTime={row.created_at}>
-                        {formatTimestamp(row.created_at, locale)}
-                      </time>
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">{row.actor}</td>
-                    <td className="px-5 py-3 font-mono text-xs">{row.action}</td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      {row.entity_type} <span className="font-mono text-xs">{row.entity_id}</span>
-                    </td>
-                    <td className="min-w-64 px-5 py-3">
-                      {row.details === null ? (
-                        <span className="text-ink-muted">{t('audit.noDetails')}</span>
-                      ) : (
-                        <code className="font-mono text-xs break-all">
-                          {JSON.stringify(row.details)}
-                        </code>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* The table scrolls sideways on a phone instead of squeezing the columns. */}
+          <AuditTable rows={tableRows} labels={labels} />
         </Card>
       )}
     </div>

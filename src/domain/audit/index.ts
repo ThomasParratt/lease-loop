@@ -1,5 +1,6 @@
 // The audit chain: canonical JSON, the row hash and the verifier (docs/features/audit-chain.md).
 export { canonicalJson } from './canonical';
+export { auditDetailLines, type AuditDetailLine } from './details';
 export {
   GENESIS_HASH,
   hashAuditEntry,
