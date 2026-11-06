@@ -204,6 +204,14 @@
   "invoice.col.vat": "KM",
   "invoice.col.gross": "Kokku",
   "invoice.col.status": "Olek",
+  "invoice.col.action": "Toiming",
+  "invoice.pay.button": "Maksa",
+  "invoice.pay.pending": "Maksmine…",
+  "invoice.pay.label": "Maksa arve {sequence}",
+  "invoice.pay.refusal.already_paid": "See arve on juba makstud.",
+  "invoice.pay.refusal.cancelled": "See arve on tühistatud ja seda ei pea maksma.",
+  "invoice.pay.refusal.before_signing": "Makset ei saa dateerida enne lepingu algust. Liiguta demokella edasi.",
+  "invoice.pay.refusal.unknown": "Makse ei õnnestunud. Proovi uuesti.",
   "invoice.periodRange": "{start} – {end}",
   "invoice.kind.down_payment": "Sissemakse",
   "invoice.vatRatePercent": "{rate} %",
@@ -730,6 +738,7 @@
   "portal.customers.open": "Ava kliendi leht",
   "portal.customer.title": "Klient",
   "portal.customer.intro": "Kõik selle kliendi andmed ühes kohas: lepingud, taotlused ja arved.",
+  "portal.signatoriesLink": "Kes võib ettevõtte nimel allkirjastada",
   "portal.customer.notAllowed": "Seda lehte näevad ainult klient ise ja administraator.",
   "portal.customer.notFound": "Klienti ei leitud."
 }

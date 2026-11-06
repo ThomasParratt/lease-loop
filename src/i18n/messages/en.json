@@ -204,6 +204,14 @@
   "invoice.col.vat": "VAT",
   "invoice.col.gross": "Total",
   "invoice.col.status": "Status",
+  "invoice.col.action": "Action",
+  "invoice.pay.button": "Pay",
+  "invoice.pay.pending": "Paying…",
+  "invoice.pay.label": "Pay invoice {sequence}",
+  "invoice.pay.refusal.already_paid": "This invoice is already paid.",
+  "invoice.pay.refusal.cancelled": "This invoice was cancelled and is not owed.",
+  "invoice.pay.refusal.before_signing": "A payment cannot be dated before the contract starts. Move the demo clock forward.",
+  "invoice.pay.refusal.unknown": "The payment did not go through. Try again.",
   "invoice.periodRange": "{start} – {end}",
   "invoice.kind.down_payment": "Down payment",
   "invoice.vatRatePercent": "{rate} %",
@@ -730,6 +738,7 @@
   "portal.customers.open": "Open their page",
   "portal.customer.title": "Customer",
   "portal.customer.intro": "Everything of this customer in one place: contracts, applications and invoices.",
+  "portal.signatoriesLink": "Who may sign for the company",
   "portal.customer.notAllowed": "Only the customer themself and the admin see this page.",
   "portal.customer.notFound": "That customer was not found."
 }

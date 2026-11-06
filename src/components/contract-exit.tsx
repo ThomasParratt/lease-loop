@@ -1,7 +1,9 @@
 // The exit section of the contract page (docs/features/exits.md), self-contained so the page
 // mounts it with one line. For an active contract: the exit plan previewed on the request's day
 // with the catalogue's last known condition and usage, and the form that posts the exit. Once
-// the contract has ended: its status and end day. A server component.
+// the contract has ended: its status and end day, and while the item waits as returned, the way
+// to its second life (the assessment and the waiting list). A server component.
+import Link from 'next/link';
 import type { Asset } from '@/data/schemas';
 import { assetConditionSchema } from '@/data/schemas';
 import { formatIsoDate } from '@/i18n/format';
@@ -32,6 +34,14 @@ export async function ContractExit({ contract, asset, today, locale, t }: Contra
           status: t(`contract.status.${contract.status}`),
           date: formatIsoDate(contract.endedOn, locale),
         })}
+        {asset?.status === 'returned' ? (
+          <Link
+            href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}
+            className="mt-2 block font-bold text-brand-text underline decoration-2 underline-offset-4"
+          >
+            {t('secondLife.link')}
+          </Link>
+        ) : null}
       </Notice>
     );
   }

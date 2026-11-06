@@ -204,6 +204,14 @@
   "invoice.col.vat": "ALV",
   "invoice.col.gross": "Yhteensä",
   "invoice.col.status": "Tila",
+  "invoice.col.action": "Toiminto",
+  "invoice.pay.button": "Maksa",
+  "invoice.pay.pending": "Maksetaan…",
+  "invoice.pay.label": "Maksa lasku {sequence}",
+  "invoice.pay.refusal.already_paid": "Tämä lasku on jo maksettu.",
+  "invoice.pay.refusal.cancelled": "Tämä lasku on peruttu, eikä sitä tarvitse maksaa.",
+  "invoice.pay.refusal.before_signing": "Maksua ei voi päivätä ennen sopimuksen alkua. Siirrä demokelloa eteenpäin.",
+  "invoice.pay.refusal.unknown": "Maksu ei onnistunut. Yritä uudelleen.",
   "invoice.periodRange": "{start} – {end}",
   "invoice.kind.down_payment": "Käsiraha",
   "invoice.vatRatePercent": "{rate} %",
@@ -730,6 +738,7 @@
   "portal.customers.open": "Avaa asiakkaan sivu",
   "portal.customer.title": "Asiakas",
   "portal.customer.intro": "Kaikki tämän asiakkaan tiedot yhdessä paikassa: sopimukset, hakemukset ja laskut.",
+  "portal.signatoriesLink": "Kuka saa allekirjoittaa yrityksen puolesta",
   "portal.customer.notAllowed": "Vain asiakas itse ja ylläpitäjä näkevät tämän sivun.",
   "portal.customer.notFound": "Asiakasta ei löytynyt."
 }

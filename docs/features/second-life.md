@@ -54,7 +54,7 @@ D12 (re-pricing), D77 (the inspection wins over the report), D13 (matchmaking), 
 - `src/domain/second-life/assess.ts`, `match.ts` and their tests.
 - `src/server/second-life.ts` (`assessAsset`, `previewAssessment`, `latestAssessment`, `toAssessmentResponse`), `src/server/second-life-price.ts` (`pricingForAsset`, read by `quotes.ts`, `contracts.ts`, the preview route and the price page), `src/server/second-life-schemas.ts`.
 - `src/app/api/assets/[id]/assessments/route.ts` (`POST`, admin, 201) and its row in `src/server/routes.ts`; `docs/openapi.json`.
-- `src/app/[locale]/assets/[id]/second-life/page.tsx` and `assess-button.tsx`; the note and link on `src/app/[locale]/assets/[id]/page.tsx`.
+- `src/app/[locale]/assets/[id]/second-life/page.tsx` and `assess-button.tsx`; the note and link on `src/app/[locale]/assets/[id]/page.tsx`. While an item waits as returned, the second-life page is also linked from its greyed card in the catalogue (`src/components/model-card.tsx`), its passport and the ended contract's exit notice (`src/components/contract-exit.tsx`), so the assessment is reached without the demo button.
 - `prisma/schema.prisma` and the migration `second_life_assessment` (D65); `src/domain/rows/return-assessment.ts`.
 
 ## Tests that pin the numbers
