@@ -318,7 +318,15 @@ describe('GET /api/applications/[id]', () => {
 });
 
 describe('POST /api/applications/[id]/decision', () => {
-  async function pending(customerId: string, answers = answersOf(customerId)) {
+  // A case a person must decide: an e-mail other than the record's (D38). Haapala's small lease
+  // is no PEP case any more, since the PEP question is hidden below 10 000 € (D82).
+  async function pending(
+    customerId: string,
+    answers: ReturnType<typeof answersOf> = {
+      ...answersOf(customerId),
+      q_email: 'someone-else@example.com',
+    }
+  ) {
     const created = await applyAs(customerId, answers);
     return created.body.data?.id as string;
   }
@@ -364,7 +372,7 @@ describe('POST /api/applications/[id]/decision', () => {
   });
 
   it('an approved application is 409 APPLICATION_NOT_PENDING; an unknown id is 404', async () => {
-    const id = await pending('cust-aino');
+    const id = await pending('cust-aino', answersOf('cust-aino'));
     actAs('admin');
     expectRefusal(
       await postDecision(id, { decision: 'rejected', reviewedBy: 'admin' }),

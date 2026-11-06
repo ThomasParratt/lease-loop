@@ -241,7 +241,6 @@ describe('drill: a company applicant for each category through the decision', ()
   it.each([
     ['cust-kettukoodi', 'approved', 'all_checks_passed'],
     ['cust-norvi', 'awaiting_signatory', 'signatory_needed'],
-    ['cust-haapala', 'manual_review', 'pep'],
     ['cust-broken-id', 'rejected', 'invalid_business_id'],
   ])('%s gets %s for an e-bike, a laptop and a farm machine', (customerId, decision, reason) => {
     for (const assetId of items) {
@@ -256,5 +255,23 @@ describe('drill: a company applicant for each category through the decision', ()
       // No company is asked a consumer's age question.
       expect(applied.askedIds.some((id) => id.includes('birth'))).toBe(false);
     }
+  });
+
+  it('cust-haapala, a PEP on record, is checked as a PEP only where the question is asked (D82)', () => {
+    const decided = items.map((assetId) => {
+      const applied = applyFor(customerById('cust-haapala'), {
+        assetId,
+        termMonths: 36,
+        isoDate: '2026-11-06',
+      });
+      if (!applied.ok) throw new Error(`${assetId}: ${applied.step}`);
+      return [assetId, applied.result.decision, applied.askedIds.includes('q_pep')];
+    });
+    // The e-bike and the laptop are under 10 000 € financed: no PEP question, no PEP check.
+    expect(decided).toEqual([
+      ['ebike-004', 'approved', false],
+      ['laptop-001', 'approved', false],
+      ['farm-003', 'manual_review', true],
+    ]);
   });
 });

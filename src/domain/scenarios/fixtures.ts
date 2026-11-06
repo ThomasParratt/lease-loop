@@ -210,7 +210,6 @@ export function applyFor(
         quote.quote.vatRateBasisPoints
       ),
       financedLimits,
-      knownPep: customer.is_pep,
       recordMismatches: recordMismatches(customer, answers),
       quantity: quote.quote.quantity,
       consumerLimits: pack.consumerLimits,

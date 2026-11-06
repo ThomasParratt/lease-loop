@@ -60,15 +60,15 @@ The applicant is a customer we know, and only that customer applies in their own
 
 ### Eligibility (D9)
 
-| Rule (id in `questions.json`) | Check                                                                          | Reason code                                 |
-| ----------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------- |
-| `min_age`                     | consumers and sole traders are 18 on the start date                            | `too_young` { birthDate, eighteenOn }       |
-| `residency`                   | country FI, SE or EE: the answer, else the record's country (a company)        | `residency_not_allowed` { country }         |
-| `affordability`               | consumers: gross rent × 100 ≤ net income × 30 (when the income was asked)      | `unaffordable` { gross, max, income cents } |
-| `business_id`                 | sole traders and companies: the Y-tunnus check digit                           | `invalid_business_id` { businessId }        |
-| `financed_limits`             | financed within the coefficient table, 30 000 to 25 000 000                    | `financed_out_of_range` { … }               |
-| `pep_manual_review`           | a PEP (answered yes, or known from the customer record) is never auto-approved | `pep` → `manual_review`                     |
-| (D10)                         | a company applicant who cannot sign                                            | `signatory_needed` → `awaiting_signatory`   |
+| Rule (id in `questions.json`) | Check                                                                                          | Reason code                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `min_age`                     | consumers and sole traders are 18 on the start date                                            | `too_young` { birthDate, eighteenOn }       |
+| `residency`                   | country FI, SE or EE: the answer, else the record's country (a company)                        | `residency_not_allowed` { country }         |
+| `affordability`               | consumers: gross rent × 100 ≤ net income × 30 (when the income was asked)                      | `unaffordable` { gross, max, income cents } |
+| `business_id`                 | sole traders and companies: the Y-tunnus check digit                                           | `invalid_business_id` { businessId }        |
+| `financed_limits`             | financed within the coefficient table, 30 000 to 25 000 000                                    | `financed_out_of_range` { … }               |
+| `pep_manual_review`           | a PEP (answered yes; the question is asked from 10 000 € financed, D82) is never auto-approved | `pep` → `manual_review`                     |
+| (D10)                         | a company applicant who cannot sign                                                            | `signatory_needed` → `awaiting_signatory`   |
 
 Order: any failed rule → `rejected`, with **every** failure listed; else PEP → `manual_review`; else cannot sign → `awaiting_signatory`; else `approved` with `all_checks_passed`.
 
@@ -92,14 +92,14 @@ At 36 and 48 months the age is the only reason; at 24 both reasons are listed. O
 
 After the rules pass, `plausibilityHolds` (`plausibility.ts`) adds reasons that send the case to `manual_review`, after `pep` and the record differences; a failed rule still rejects first. The consumer limits are a team file beside the pack, `data/consumer-limits.json` (`consumerLimitsSchema`): e-bike 2, laptop 2, farm machine 1; farm machines always checked; income ceiling 10 000 000.
 
-| Hold (decision)                         | When                                                                                      | Reason code                                                      |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Consumer quantity (D48)                 | a consumer, more units than the category's cap (unreachable since D8: one item per quote) | `quantity_over_consumer_cap { category, quantity, maxQuantity }` |
-| Category (D49)                          | a consumer, a category flagged `consumer_manual_review` (farm machines)                   | `category_needs_review { category }`                             |
-| Income (D50)                            | a monthly net income above 10 000 000                                                     | `income_implausible { incomeCents, ceilingCents }`               |
-| Revenue (D51)                           | a company whose revenue (asked from 5 000 000) is below the financed sum                  | `revenue_below_financed { revenueCents, financedCents }`         |
-| Owners (D52)                            | "(NN %)" shares summing over 100 %, or a name twice                                       | `owners_implausible { reason: over_100 \| duplicate }`           |
-| PEP denied (D58, in `recordMismatches`) | a PEP on record answers "no"                                                              | `answer_differs_from_record { question: q_pep }` beside `pep`    |
+| Hold (decision)                         | When                                                                                      | Reason code                                                                                    |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Consumer quantity (D48)                 | a consumer, more units than the category's cap (unreachable since D8: one item per quote) | `quantity_over_consumer_cap { category, quantity, maxQuantity }`                               |
+| Category (D49)                          | a consumer, a category flagged `consumer_manual_review` (farm machines)                   | `category_needs_review { category }`                                                           |
+| Income (D50)                            | a monthly net income above 10 000 000                                                     | `income_implausible { incomeCents, ceilingCents }`                                             |
+| Revenue (D51)                           | a company whose revenue (asked from 5 000 000) is below the financed sum                  | `revenue_below_financed { revenueCents, financedCents }`                                       |
+| Owners (D52)                            | "(NN %)" shares summing over 100 %, or a name twice                                       | `owners_implausible { reason: over_100 \| duplicate }`                                         |
+| PEP denied (D58, in `recordMismatches`) | a PEP on record answers "no"                                                              | `answer_differs_from_record { question: q_pep }` (no `pep`: the decision uses the answer, D82) |
 
 Worked on the pack: the consumer cap is unit-tested in `src/domain/question-flow/plausibility.test.ts` only, since a quote is one item (D8). Aino with **`farm-003`** gets `category_needs_review`. Aino with an income of **1 000 000 000** gets `income_implausible { 1 000 000 000, 10 000 000 }`; with an income of 1 cent she is still `rejected` (`unaffordable`). Kettukoodi with **`farm-002` and 9 500 000 down** (5 000 000 financed) and revenue **1** gets `revenue_below_financed { 1, 5 000 000 }`; revenue 5 000 000 passes. Owners `A (60 %)`, `B (41 %)` → `over_100`; `Jussi Haapala (60 %)`, `jussi haapala (40 %)` → `duplicate`; Haapala's own 60 % + 40 % and free text without shares pass. Card 6 (a company, one bike) and card 7 (a company, a farm machine) are unchanged.
 
@@ -138,8 +138,9 @@ Typo Trading Oy (`cust-broken-id`) has **1234567-8**: 1·7 + 2·9 + 3·10 + 4·5
 - **D55, D56** quotes are anonymous; one pending or approved application per quote (`QUOTE_IN_USE`).
 - **D57** only the applicant and the admin read an application through the API; others get 404.
 - **D58** a PEP on record answering "no" is a record difference too.
+- **D82** only what the customer answered decides: the PEP question is hidden below 10 000 € financed, so no PEP check runs there, even for a PEP on record (Haapala's e-bike and laptop are approved; card 7's farm machine is asked and goes to review). Prefill (`answersFromCustomer`) may fill any answer, `q_pep` included, but the server's `pruneAnswers` drops every answer to a hidden question before the decision, so only visible ones, which the customer sees and can change, reach it; a company's residency uses its registered country, which the organisers allow.
 - **D59** the age is checked again on the contract's start day at signing.
-- Inside the slice (see `docs/log/wave1-questions.md`): `customer_type` follows the applicant's answer; a PEP known from the record counts below 10 000 EUR; affordability only where the bank asks for income; a failed rule always rejects.
+- Inside the slice (see `docs/log/wave1-questions.md`): `customer_type` follows the applicant's answer; a PEP known from the record no longer counts below 10 000 EUR (D82, the organisers' rule: a hidden question's rule does not run); affordability only where the bank asks for income; a failed rule always rejects.
 
 ## Pure functions
 
@@ -165,7 +166,7 @@ isValidBusinessId(value: string): boolean;
 businessIdCheckDigit(sevenDigits: string): number | null;
 
 // answers.ts
-eligibilityInputFromAnswers({ context, answers, startDate, grossMonthlyRentCents, financedLimits?, knownPep?, recordMismatches? }): EligibilityInput;
+eligibilityInputFromAnswers({ context, answers, startDate, grossMonthlyRentCents, financedLimits?, recordMismatches? }): EligibilityInput;
 validateAnswer(question: Question, answer: Answer): boolean; // the shape only
 answerProblem(question, answer, { today, answers?, applicantEmail? }): // null, or
   { code: 'invalid' } | { code: 'birth_date_out_of_range'; params: { earliest; latest } } | { code: 'signatory_is_applicant' };
@@ -243,7 +244,6 @@ mayReadApplication(actor, application): boolean; // the applicant or admin (D57)
 ## Open questions
 
 - The signatory signs through the signing link (D46); no e-mail is sent in the demo, the decision page shows the link in a demo outbox. See [signatories.md](signatories.md) for what production replaces.
-- Should a PEP below 10 000 EUR (not asked by the bank, known from the record) go to manual review? We say yes; the bank's targeting suggests the question only matters from 10 000 EUR.
 - Affordability uses the chosen term's gross rent; the page could suggest the shortest term that passes (Mikko's 36 months).
 - The form should still disable its button while sending: a double submit now gets 409 `QUOTE_IN_USE` for the second request (D56).
 - `grossFromNetCents` is a local copy until the money/VAT helper on main replaces it.

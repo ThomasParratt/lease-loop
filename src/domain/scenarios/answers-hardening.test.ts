@@ -199,11 +199,13 @@ describe('the customer type and the record (D38)', () => {
     );
   });
 
-  it('the record says PEP and the answer says no: manual review, and the "no" is named (card 7)', () => {
+  it('the record says PEP and the answer says no: manual review, and the "no" is named (card 7, D58, D82)', () => {
     const farm = { assetId: 'farm-002', termMonths: 48, downPaymentCents: 2_000_000, isoDate: DAY };
     const app = applyFor(haapala, farm, { answers: { q_pep: 'no' } });
-    expect(outcome(app)).toBe('manual_review:pep+answer_differs_from_record');
-    expect(app.ok && app.result.reasons[1]).toEqual({
+    // The decision uses the answer (D82), so no `pep` reason; the difference from the record is
+    // the recheck of known data (D38, D58), and a person looks at it.
+    expect(outcome(app)).toBe('manual_review:answer_differs_from_record');
+    expect(app.ok && app.result.reasons[0]).toEqual({
       code: 'answer_differs_from_record',
       params: { question: 'q_pep' },
     });
