@@ -56,7 +56,7 @@ Routes: `GET`/`POST /api/customers/[id]/signatories`, `POST /api/customers/[id]/
 - `src/domain/signatories/mandates.ts`, `src/domain/rows/signatory.ts`, `src/domain/question-flow/signatory.ts` and their tests
 - `src/server/signatories.ts`, `signatory-schemas.ts`, `signatory-responses.ts`, the token path in `applications.ts` (`recordSignatoryDecision`)
 - `src/app/api/customers/[id]/signatories/…`, `src/app/api/sign/[token]/route.ts`
-- `src/app/[locale]/sign/[token]/` (the signing page), `src/app/[locale]/customers/[id]/signatories/` (the list), the demo outbox on `src/app/[locale]/applications/[id]/page.tsx`
+- `src/app/[locale]/sign/[token]/` (the signing page), `src/app/[locale]/customers/[id]/signatories/` (the list, linked as "Who may sign for the company" from a company's portal, `src/app/[locale]/leases/portal.tsx`, on My leases and on the admin's customer page), the demo outbox on `src/app/[locale]/applications/[id]/page.tsx`
 
 ## Tests that pin the numbers
 

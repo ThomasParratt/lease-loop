@@ -42,6 +42,7 @@ Server reads (each table through its owner, team rule 3):
 
 ## Open questions
 
-- The Pay link opens the contract page, not the invoice itself: the invoice table has no anchor per invoice yet.
+- The Pay link opens the contract page, not the invoice itself: the invoice table has no anchor per invoice yet. Paying happens there, with the Pay button on each owed row (invoicing).
+- A company's portal links to its signatory list (D46).
 - The admin's portal of a company shows the company's contracts; the signatories page stays separate (`/customers/[id]/signatories`).
 - "Next due" is the earliest unpaid due day, so with an overdue invoice it is in the past; a separate "overdue since" line would be clearer.

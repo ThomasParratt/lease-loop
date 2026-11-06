@@ -113,7 +113,8 @@ type UnavailableCardProps = { asset: Asset; locale: Locale; t: Translate };
 /**
  * A returned or leased unit at the bottom of the catalogue: greyed out under its status, with
  * no price (a returned unit is re-priced before its next life; a leased one belongs to
- * someone). It links straight to its passport: its lives and the CO2 they saved.
+ * someone). It links straight to its passport: its lives and the CO2 they saved. A returned
+ * unit also links to its second life, where it is assessed and matched to the waiting list.
  */
 export function UnavailableCard({ asset, locale, t }: UnavailableCardProps) {
   const headingId = `unit-${asset.id}`;
@@ -158,6 +159,15 @@ export function UnavailableCard({ asset, locale, t }: UnavailableCardProps) {
               {t('catalogue.card.unavailableHint')}
             </span>
           </p>
+          {asset.status === 'returned' ? (
+            // Above the card's stretched passport link, so it takes its own clicks.
+            <Link
+              href={`/${locale}/assets/${asset.id}/second-life`}
+              className="relative z-10 mt-3 inline-block rounded text-sm font-bold text-brand-text underline decoration-2 underline-offset-4"
+            >
+              {t('secondLife.link')}
+            </Link>
+          ) : null}
         </div>
       </div>
     </article>

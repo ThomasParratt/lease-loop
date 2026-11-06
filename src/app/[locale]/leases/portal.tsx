@@ -1,8 +1,9 @@
 // The customer portal (D75): everything of one customer in one place. The totals line, the
 // contracts with the ways out that apply today (links to the contract page's exit section),
 // the applications not signed yet, and every invoice across the contracts: open first, with a
-// Pay link to the contract page where paying lives, then upcoming, paid and cancelled. The
-// leases page mounts it for the acting customer, /customers/[id] for the admin.
+// Pay link to the contract page where paying lives, then upcoming, paid and cancelled. A company
+// gets a link to its signatory list (D46). The leases page mounts it for the acting customer,
+// /customers/[id] for the admin.
 import Link from 'next/link';
 import { Badge, Disclosure, Notice } from '@/components/ui';
 import { formatEuro } from '@/domain/money';
@@ -10,6 +11,8 @@ import type { InvoiceGroups } from '@/domain/portal';
 import { formatIsoDate } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { getCustomer } from '@/server/customers';
+import { db } from '@/server/db';
 import type { InvoiceView } from '@/server/invoices';
 import { readPortal, type PortalContract } from './portal-data';
 import { ApplicationRow, ContractRow } from './rows';
@@ -17,13 +20,26 @@ import { ApplicationRow, ContractRow } from './rows';
 type PortalProps = { customerId: string; today: string; locale: Locale; t: Translate };
 
 export async function CustomerPortal({ customerId, today, locale, t }: PortalProps) {
-  const portal = await readPortal(customerId, today);
+  const [portal, customer] = await Promise.all([
+    readPortal(customerId, today),
+    getCustomer(db, customerId),
+  ]);
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const day = (iso: string) => formatIsoDate(iso, locale);
   const { invoices } = portal;
 
   return (
     <div className="space-y-10">
+      {customer?.type === 'company' ? (
+        <p>
+          <Link
+            href={`/${locale}/customers/${encodeURIComponent(customer.id)}/signatories`}
+            className="font-bold text-brand-text underline-offset-2 hover:underline"
+          >
+            {t('portal.signatoriesLink')}
+          </Link>
+        </p>
+      ) : null}
       <dl className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-raised p-4 shadow-card sm:grid-cols-4">
         <Total label={t('portal.totals.active')} value={String(portal.activeCount)} />
         <Total label={t('portal.totals.openCount')} value={String(invoices.open.length)} />

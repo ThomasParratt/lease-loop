@@ -204,6 +204,14 @@
   "invoice.col.vat": "Moms",
   "invoice.col.gross": "Totalt",
   "invoice.col.status": "Status",
+  "invoice.col.action": "Åtgärd",
+  "invoice.pay.button": "Betala",
+  "invoice.pay.pending": "Betalar…",
+  "invoice.pay.label": "Betala faktura {sequence}",
+  "invoice.pay.refusal.already_paid": "Den här fakturan är redan betald.",
+  "invoice.pay.refusal.cancelled": "Den här fakturan har makulerats och ska inte betalas.",
+  "invoice.pay.refusal.before_signing": "En betalning kan inte dateras före avtalets start. Flytta demoklockan framåt.",
+  "invoice.pay.refusal.unknown": "Betalningen gick inte igenom. Försök igen.",
   "invoice.periodRange": "{start} – {end}",
   "invoice.kind.down_payment": "Handpenning",
   "invoice.vatRatePercent": "{rate} %",
@@ -730,6 +738,7 @@
   "portal.customers.open": "Öppna kundens sida",
   "portal.customer.title": "Kund",
   "portal.customer.intro": "Allt om den här kunden på ett ställe: avtal, ansökningar och fakturor.",
+  "portal.signatoriesLink": "Vem får teckna för företaget",
   "portal.customer.notAllowed": "Bara kunden själv och administratören ser den här sidan.",
   "portal.customer.notFound": "Kunden hittades inte."
 }

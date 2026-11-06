@@ -11,7 +11,7 @@ When a contract is signed, its whole invoice schedule is written in the same tra
 
 The net rent is locked at signing. Each invoice charges VAT at the rate in force on its own issue date, so a contract that runs across 1 January 2027 moves from 25.5 % to 26 % without anyone repricing it.
 
-A customer (or admin) can list a contract's invoices and pay one. Paying writes the audit row and emits `INVOICE_PAID`. A payment is refused with a code, writing nothing, when the invoice is `cancelled` (409 `INVOICE_CANCELLED`, after an early exit), already paid (409 `INVOICE_ALREADY_PAID`) or dated before the contract was signed (422 `PAID_BEFORE_SIGNING`, the demo clock moved back); the day and both statuses are parsed before the write (D23, product review 9). The invoice table shows each invoice's status on the request's day, with one line explaining the VAT change.
+A customer (or admin) can list a contract's invoices and pay one. Paying writes the audit row and emits `INVOICE_PAID`. A payment is refused with a code, writing nothing, when the invoice is `cancelled` (409 `INVOICE_CANCELLED`, after an early exit), already paid (409 `INVOICE_ALREADY_PAID`) or dated before the contract was signed (422 `PAID_BEFORE_SIGNING`, the demo clock moved back); the day and both statuses are parsed before the write (D23, product review 9). The invoice table shows each invoice's status on the request's day, with one line explaining the VAT change, and a "Pay" button on every invoice still owed (`src/components/pay-invoice-button.tsx`): it posts to the pay route with no body and reloads the page; a refusal is written from the message files (`invoice.pay.refusal.*`).
 
 For an early exit, the outstanding balance after any number of rents comes month by month: the financed amount amortised at the band's interest rate.
 
@@ -112,7 +112,7 @@ handleContractSigned(tx, event, vatRates?): Promise<number>   // event.signedOn 
 - `src/domain/invoicing/`: `dates.ts`, `schedule.ts`, `balance.ts`, `status.ts`, `index.ts`, each with a `.test.ts`, plus `schedule.property.test.ts`.
 - `src/server/invoices.ts`, `src/server/invoice-handlers.ts` and their tests; `src/server/event-handlers.ts`, the registration module (one import line per slice).
 - `src/app/api/invoices/route.ts`, `src/app/api/invoices/[id]/pay/route.ts`; their rows in `src/server/routes.ts`; `docs/openapi.json`.
-- `src/components/invoice-table.tsx`; `invoice.*` keys in the four message files.
+- `src/components/invoice-table.tsx`, `src/components/pay-invoice-button.tsx`; `invoice.*` keys in the four message files.
 - `tests/helpers/invoice-fixture.ts`: a card 1 contract row (with its quote and application) for the server tests.
 
 ## Tests that pin the numbers

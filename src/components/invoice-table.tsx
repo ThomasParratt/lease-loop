@@ -1,6 +1,8 @@
 // A contract's invoices as a table: sequence, period, due day, net, VAT rate, VAT, gross and
-// the status on `today`, with one line explaining a VAT rate change between rows (D2). A server
-// component: the contract page passes the contract id, the request's day and the language.
+// the status on `today`, with one line explaining a VAT rate change between rows (D2), and a
+// "Pay" button on every invoice still owed. A server component: the contract page passes the
+// contract id, the request's day and the language; only a viewer the page let in (the
+// contract's customer or admin, D73) sees the table, the same people the pay route allows.
 import { loadVatRates } from '@/data/load';
 import { firstVatChange, invoiceStatusOn, scheduleTotals } from '@/domain/invoicing';
 import { formatEuro } from '@/domain/money';
@@ -9,6 +11,7 @@ import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { db } from '@/server/db';
 import { listInvoices } from '@/server/invoices';
+import { PayInvoiceButton } from './pay-invoice-button';
 import { Badge, DateText, Money, Notice } from './ui';
 
 type InvoiceTableProps = {
@@ -83,6 +86,9 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
               <th scope="col" className={cell}>
                 {t('invoice.col.status')}
               </th>
+              <th scope="col" className={cell}>
+                <span className="sr-only">{t('invoice.col.action')}</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -124,6 +130,15 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
                       {t(`invoice.status.${status}`)}
                     </Badge>
                   </td>
+                  <td className={cell}>
+                    {status === 'paid' || status === 'cancelled' ? null : (
+                      <PayInvoiceButton
+                        invoiceId={invoice.id}
+                        sequence={invoice.sequence}
+                        locale={locale}
+                      />
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -143,6 +158,7 @@ export async function InvoiceTable({ contractId, today, locale, t }: InvoiceTabl
               <td className={number}>
                 <Money cents={totals.grossCents} locale={locale} />
               </td>
+              <td className={cell} />
               <td className={cell} />
             </tr>
           </tfoot>
