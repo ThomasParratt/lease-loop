@@ -105,6 +105,7 @@ One page per feature slice under `docs/features/` (template: [docs/features/READ
 - [Exits: buy out, return, pass on and the early exit](docs/features/exits.md) (wave 2): the D14 early exit line by line, the market value by the residual curve, the refurbishment plan, the contract page section (card 8; the exits cards 9 and 10 start from)
 - [The look: tokens, the price tag, life stamps and drawings](docs/features/look.md): one warm look for every page through colour roles, the price tag, the life stamp and a drawing per kind of item; the demo tools in their own strip above the customer header (D21)
 - [The tamper-evident audit chain](docs/features/audit-chain.md) (wave 2): every audit row hash-chained to the one before it in the same transaction, the verifier, the chain badge with the head hash and the `demo:tamper` script
+- [My leases](docs/features/my-leases.md): the acting customer's contracts and unsigned applications in the top navigation (every one for admin), so any contract is two clicks away
 
 ## Team notes
 

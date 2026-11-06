@@ -248,6 +248,21 @@ export async function getContract(
   return row ? toContractView(row) : null;
 }
 
+/**
+ * The contracts of one customer (`{ customerId }`) or, without it, every contract (admin),
+ * newest signing first and then by number. For the My leases page.
+ */
+export async function listContracts(
+  db: PrismaClient,
+  filter: { customerId?: string }
+): Promise<ContractView[]> {
+  const rows = await db.contract.findMany({
+    where: filter.customerId ? { customer_id: filter.customerId } : {},
+    orderBy: [{ signed_on: 'desc' }, { number: 'desc' }],
+  });
+  return rows.map(toContractView);
+}
+
 /** The customer of a contract, for the access checks. Null for an unknown contract. */
 export async function contractCustomerId(db: PrismaClient, id: string): Promise<string | null> {
   const row = await db.contract.findUnique({ where: { id }, select: { customer_id: true } });

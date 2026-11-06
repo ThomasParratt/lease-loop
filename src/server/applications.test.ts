@@ -5,7 +5,13 @@ import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { resetDb } from '../../tests/helpers/reset-db';
-import { createApplication, decideApplication, flowSetupFor, getApplication } from './applications';
+import {
+  createApplication,
+  decideApplication,
+  flowSetupFor,
+  getApplication,
+  listApplications,
+} from './applications';
 import { seedAssets } from './assets';
 import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
@@ -353,5 +359,24 @@ describe('getApplication', () => {
     if (!created.ok) throw new Error('setup');
     expect(await getApplication(db, created.application.id)).toEqual(created.application);
     expect(await getApplication(db, 'nope')).toBeNull();
+  });
+});
+
+describe('listApplications', () => {
+  it('gives one customer their own applications, newest first, and admin all (My leases)', async () => {
+    const aino = await apply(await card1(), 'cust-aino');
+    const mikko = await apply(await card5(), 'cust-mikko');
+    const ainoAgain = await apply(await card1(), 'cust-aino');
+    if (!aino.ok || !mikko.ok || !ainoAgain.ok) throw new Error('application refused');
+
+    expect((await listApplications(db, { customerId: 'cust-aino' })).map((a) => a.id)).toEqual([
+      ainoAgain.application.id,
+      aino.application.id,
+    ]);
+    expect((await listApplications(db, { customerId: 'cust-mikko' })).map((a) => a.id)).toEqual([
+      mikko.application.id,
+    ]);
+    expect(await listApplications(db, { customerId: 'cust-nobody' })).toEqual([]);
+    expect(await listApplications(db, {})).toHaveLength(3);
   });
 });
