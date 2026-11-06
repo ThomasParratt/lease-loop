@@ -5,7 +5,7 @@
 // took (codes written from the message files) and links the page where the numbers are compared.
 // A second click is refused by the server and links what the first run made (D70).
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Button, LinkButton, Notice } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
@@ -32,8 +32,16 @@ async function runCard(cardId: number): Promise<Outcome> {
   return { kind: 'refused', line, landing: details.landing ?? null };
 }
 
+const noSubscription = () => () => {};
+
 export function CardRunForm({ cardId, locale }: { cardId: number; locale: Locale }) {
   const router = useRouter();
+  // False in the server HTML and until hydration: a click before then would be lost.
+  const hydrated = useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false
+  );
   const t = getT(locale);
   const [pending, setPending] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -54,7 +62,13 @@ export function CardRunForm({ cardId, locale }: { cardId: number; locale: Locale
   const landing = outcome && outcome.kind !== 'error' ? outcome.landing : null;
   return (
     <div className="space-y-3">
-      <Button size="sm" pending={pending} pendingLabel={t('demo.run.pending')} onClick={run}>
+      <Button
+        size="sm"
+        pending={pending}
+        pendingLabel={t('demo.run.pending')}
+        disabled={!hydrated}
+        onClick={run}
+      >
         {t('demo.run.button', { id: cardId })}
       </Button>
 

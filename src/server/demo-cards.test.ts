@@ -10,6 +10,8 @@ import { resetDb } from '../../tests/helpers/reset-db';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { withProductionHandlers } from '../../tests/helpers/with-handlers';
 import { getApplication } from './applications';
+import { readPassport } from './asset-events';
+import { getAsset } from './assets';
 import { verifyAuditChain } from './audit';
 import { getContract } from './contracts';
 import { DEMO_CARD_IDS, demoCardRunSchema } from './demo-cards-schemas';
@@ -17,6 +19,7 @@ import { DEMO_CARDS, runDemoCard, type RunDemoCardResult } from './demo-cards';
 import { exitContract } from './exits';
 import { listInvoices } from './invoices';
 import type { PrismaClient } from './prisma-client';
+import { assessAsset, latestAssessment } from './second-life';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -156,24 +159,66 @@ describe('runDemoCard', () => {
     expect(run.steps[1]?.params).toEqual({ count: 7, grossCents: 2 * 13_466 + 5 * 13_520 });
   });
 
-  it.each([
-    [9, 'ebike-007', '/assets/ebike-007'],
-    [10, 'ebike-008', '/assets/ebike-008/passport'],
-  ] as const)(
-    'card %i: writes nothing, says %s is returned, lands on %s',
-    async (id, asset, landing) => {
-      const before = await db.auditLog.count();
-      const run = ran(await runDemoCard(db, id));
-      expect(run).toMatchObject({ actor: 'admin', landing });
-      expect(run.steps).toEqual([
-        expect.objectContaining({
-          code: 'asset_status',
-          params: expect.objectContaining({ assetId: asset, status: 'returned' }),
-        }),
-      ]);
-      expect(await db.auditLog.count()).toBe(before);
-    }
-  );
+  it('card 9: assesses ebike-007 as admin, relists it fair for wait-02 at 8 710 a month', async () => {
+    const run = ran(await runDemoCard(db, 9));
+    expect(run).toMatchObject({
+      today: '2026-11-06',
+      actor: 'admin',
+      landing: '/assets/ebike-007/second-life',
+    });
+    expect(codes(run)).toEqual(['asset_assessed', 'relisted_for_winner']);
+    // The numbers src/domain/scenarios/card-09-second-life.test.ts pins on the pack.
+    expect(run.steps[0]?.params).toMatchObject({
+      assetId: 'ebike-007',
+      condition: 'fair',
+      refurbishmentCents: 39_500,
+      secondLifeFinancedCents: 155_476,
+    });
+    expect(run.steps[1]?.params).toEqual({
+      demandId: 'wait-02',
+      condition: 'fair',
+      termMonths: 12,
+      monthlyNetCents: 8_710,
+    });
+    const assessed = await latestAssessment(db, 'ebike-007');
+    expect(assessed?.match.ranking.map((r) => r.demandId).slice(0, 2)).toEqual([
+      'wait-02',
+      'wait-13',
+    ]);
+    expect((await getAsset(db, 'ebike-007'))?.status).toBe('available');
+    expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
+  });
+
+  it('card 10: assesses ebike-008, leases it 24 months at 1 359, three lives and 58 kg', async () => {
+    const run = ran(await runDemoCard(db, 10));
+    expect(run).toMatchObject({ today: '2026-11-06', landing: '/assets/ebike-008/passport' });
+    expect(codes(run)).toEqual([
+      'asset_assessed',
+      'relisted_for_winner',
+      'leased_from_catalogue',
+      'quote_created',
+      'application_decided',
+      'application_reason',
+      'contract_signed',
+    ]);
+    // The numbers src/server/scenarios/card-10.test.ts pins.
+    expect(run.steps[0]?.params).toMatchObject({ secondLifeFinancedCents: 37_101 });
+    expect(run.steps[1]?.params).toMatchObject({ demandId: 'wait-05', condition: 'good' });
+    // wait-05 is a waiting-list entry with no customer record: Olavi leases it from the catalogue.
+    expect(run.steps[2]).toEqual({
+      code: 'leased_from_catalogue',
+      params: { demandId: 'wait-05', customer: 'cust-olavi' },
+    });
+    const signed = run.steps.at(-1)!;
+    expect(signed.params).toMatchObject({ monthlyNetCents: 1_359 });
+    const contract = await getContract(db, idOf(signed.href!));
+    expect([contract?.financedCents, contract?.monthlyNetCents]).toEqual([37_101, 1_359]);
+    const read = await readPassport(db, 'ebike-008', contract!.endDate);
+    expect(read?.passport.lives).toHaveLength(3);
+    expect(read?.co2.perLifeKg).toEqual([0, 29, 29]);
+    expect(read?.co2.totalKg).toBe(58);
+    expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
+  });
 });
 
 describe('a second click (D70)', () => {
@@ -200,6 +245,35 @@ describe('a second click (D70)', () => {
     expect(again.landing).toBe(first.landing);
     expect(codes(again)).toEqual(['contract_reused', 'exit_previewed']);
     expect(await db.auditLog.count()).toBe(afterEight);
+  });
+
+  it.each([
+    [9, '/assets/ebike-007/second-life'],
+    [10, '/assets/ebike-008/passport'],
+  ] as const)('card %i again is refused, links %s and writes nothing', async (id, landing) => {
+    ran(await runDemoCard(db, id));
+    const before = await db.auditLog.count();
+    expect(await runDemoCard(db, id)).toEqual({
+      ok: false,
+      reason: { code: 'card_already_run', params: { cardId: id } },
+      today: '2026-11-06',
+      actor: 'admin',
+      landing,
+    });
+    expect(await db.auditLog.count()).toBe(before);
+  });
+
+  it('card 10 picks up a run stopped after the assessment: no second assessment, it signs', async () => {
+    const assessed = await assessAsset(db, {
+      assetId: 'ebike-008',
+      actor: 'admin',
+      today: '2026-11-06',
+    });
+    expect(assessed.ok).toBe(true);
+    const run = ran(await runDemoCard(db, 10));
+    expect(codes(run)).not.toContain('asset_assessed');
+    expect(codes(run).at(-1)).toBe('contract_signed');
+    expect(run.steps.at(-1)?.params).toMatchObject({ monthlyNetCents: 1_359 });
   });
 
   it('signs an approved application an earlier run left unsigned, instead of refusing', async () => {

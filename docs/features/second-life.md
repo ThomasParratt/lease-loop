@@ -63,6 +63,9 @@ D12 (re-pricing), D13 (matchmaking), D15 (CO2), D16 and D66 (the contract chain)
 - `src/domain/scenarios/card-09-second-life.test.ts`: the five card 9 steps, no todos left.
 - `src/server/scenarios/card-09.test.ts`: on a migrated database, the preview writes nothing; the assessment row, the events, the asset available fair at 0 km; a quote at 12 months is 8 710 on 155 476 with the live list's version; admin only, returned only; an entry matched to another item is passed over; an unreadable stored row reads as none.
 - `src/server/scenarios/card-10.test.ts`: ebike-008 assessed (37 101, wait-05), leased for 24 months at 1 359, three lives and 58 kg; card 1's bike returned, assessed and leased again with `previous_contract_id`.
+- `src/domain/scenarios/traps.test.ts`: the twin pairs through `matchDemand`: `wait-02` over `wait-13` (`no_refurbishment`), `wait-06` over `wait-14` (`id`) on `laptop-006`.
+- `src/domain/scenarios/drills.test.ts`: a returned laptop (data wipe, battery at 500 cycles, `wait-08`), a waiting list nobody fits (each verdict's failing step, relisted at good), an entry already matched.
+- `src/server/demo-cards.test.ts`: cards 9 and 10 from the demo button: 155 476 and `wait-02` at 8 710; 37 101 leased at 1 359, three lives, 58 kg; a second click refused.
 
 ## Open questions
 
