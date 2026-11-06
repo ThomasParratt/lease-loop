@@ -1,5 +1,5 @@
 // Zod schemas of the second-life route (contract first): `POST /api/assets/[id]/assessments`
-// assesses a returned asset on the request's day and relists it (admin only, D12, D13, D61).
+// assesses a returned asset on the request's day and relists it (admin only, D86, D13, D61).
 // The row that uses them is in routes.ts. The day and the actor are the server's; the optional
 // body is the admin's inspection (D77), each field defaulting to the stored (reported) value.
 import { z } from 'zod';
@@ -18,7 +18,7 @@ const outcomeSchema = z.object({
   params: z.record(z.string(), z.unknown()),
 });
 
-/** The success `data`: the decision and its numbers; the full D12 options and D13 steps too. */
+/** The success `data`: the decision and its numbers; the full D86 options and D13 steps too. */
 export const assessmentResponseSchema = z.object({
   id: z.string(),
   assetId: z.string(),
@@ -63,6 +63,16 @@ const optionSchema = z
     plan: planSchema,
     marketValue: z.object({ valueCents: cents, ageMonths: z.number().int() }).loose(),
     secondLifeFinancedCents: cents,
+    // D86: absent on a row stored before it (the page then shows no comparison).
+    comparison: z
+      .object({
+        valueGainCents: z.number().int(),
+        extraCostCents: z.number().int(),
+        netGainCents: z.number().int(),
+        worthIt: z.boolean(),
+      })
+      .nullable()
+      .optional(),
     rents: z.array(
       z.object({ termMonths: z.number().int(), monthlyNetCents: cents.nullable() }).loose()
     ),

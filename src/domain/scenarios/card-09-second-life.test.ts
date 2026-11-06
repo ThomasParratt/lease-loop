@@ -116,30 +116,49 @@ describe('card 9: second life (ebike-007, fair, 18 400 km)', () => {
     expect(option('good').plan.totalCents - option('fair').plan.totalCents).toBe(12_000);
   });
 
-  it('as is, it matches wait-02 (fair, 12 months, up to 9 000): 155 476 financed, 8 710 a month', () => {
-    // 549 000 × 32.5 % (46 months) × 0.65 × 1.00 = 115 976 + 39 500 = 155 476 (band A);
-    // × 0.056022 = 8 710.08 → 8 710, under wait-02's 9 000.
-    expect(option('fair').secondLifeFinancedCents).toBe(155_476);
+  it('as is, it matches wait-02 (fair, 12 months, up to 9 000): 115 976 financed, 6 497 a month', () => {
+    // D86: the price is the market value, 549 000 × 32.5 % (46 months) × 0.65 × 1.00 = 115 976
+    // (band A), nothing added; × 0.056022 = 6 497.20 → 6 497, under wait-02's 9 000.
+    expect(option('fair').secondLifeFinancedCents).toBe(115_976);
     expect(match.winner).toMatchObject({
       demandId: 'wait-02',
       condition: 'fair',
       upgrade: false,
       termMonths: 12,
-      monthlyNetCents: 8_710,
+      monthlyNetCents: 6_497,
     });
     expect(match.decision.code).toBe('relist_for_winner');
     expect(match.relist.condition).toBe('fair');
   });
 
   it('refurbished to good, it matches wait-13 (good, 24 months, up to 9 000) and ranks second', () => {
-    // 549 000 × 32.5 % × 0.85 × 1.00 = 151 661 + 51 500 = 203 161 (band B); × 0.035532 = 7 219.
-    expect(option('good').secondLifeFinancedCents).toBe(203_161);
+    // 549 000 × 32.5 % × 0.85 × 1.00 = 151 661 (band A); × 0.036637 = 5 556.40 → 5 556.
+    expect(option('good').secondLifeFinancedCents).toBe(151_661);
     expect(match.ranking[1]).toMatchObject({
       demandId: 'wait-13',
       condition: 'good',
       upgrade: true,
-      monthlyNetCents: 7_219,
+      monthlyNetCents: 5_556,
       decidedBy: 'no_refurbishment',
     });
+  });
+
+  it("the twins: D13's first step still decides, wait-02 takes it as returned", () => {
+    expect(match.ranking.map((r) => [r.demandId, r.decidedBy])).toEqual([
+      ['wait-02', null],
+      ['wait-13', 'no_refurbishment'],
+      ['wait-03', 'needed_by'],
+      ['wait-04', 'needed_by'],
+    ]);
+  });
+
+  it('refurbish or not: good gains 35 685 for 12 000 more, worth it, but nobody needs it', () => {
+    expect(option('good').comparison).toMatchObject({
+      valueGainCents: 35_685,
+      extraCostCents: 12_000,
+      worthIt: true,
+    });
+    // The winner takes it fair, so the item is relisted as returned (D61 kept for a winner).
+    expect(match.relist.plan.totalCents).toBe(39_500);
   });
 });

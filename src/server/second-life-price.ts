@@ -1,5 +1,5 @@
-// The second-life price of a relisted item (D12), read by the quote and the signing: the
-// latest assessment's financed amount replaces the asset's list price in every price list, so
+// The second-life price of a relisted item (D12; D86: the market value after the plan), read by
+// the quote and the signing: the latest assessment's financed amount replaces the asset's list price in every price list, so
 // `priceQuote` puts it through the normal band and factor and the quote keeps the live list's
 // version (it says which list was live; the amount is the assessment's). An item never
 // assessed keeps its list price. Kept apart from second-life.ts so quotes.ts can import it

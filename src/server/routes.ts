@@ -465,7 +465,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/assets/[id]/assessments',
     summary:
-      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); an optional body is the inspection (D77); 401 not signed in, 403 FORBIDDEN (D73, D74)",
+      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D86: the market value), the waiting-list match (D13), the asset available (admin); an optional body is the inspection (D77); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'second-life',
     params: assessmentParamsSchema,
     body: assessmentBodySchema,

@@ -179,14 +179,19 @@ describe('drill: a returned laptop through the assessment and the waiting list',
     expect(assessed.options[0]!.plan.usageAfter.value).toBe(780);
   });
 
-  it('only laptop entries are weighed; the winner takes it fair, the good-only twins are over budget', () => {
+  it('only laptop entries are weighed; the winner takes it fair, the good-only twins rank below', () => {
     const laptopIds = pack.demand.filter((d) => d.category === 'laptop').map((d) => d.id);
     const weighed = match.verdicts.filter((v) => v.outcome.code !== 'other_category');
     expect(weighed.map((v) => v.demandId)).toEqual(laptopIds);
     expect(match.winner).toMatchObject({ demandId: 'wait-08', condition: 'fair', upgrade: false });
-    for (const id of ['wait-06', 'wait-14']) {
-      expect(match.verdicts.find((v) => v.demandId === id)?.outcome.code).toBe('over_budget');
-    }
+    // D86: good is 57 352, 2 101 for 24 months, under the twins' 2 500; they tie but for the id.
+    expect(match.ranking.map((r) => [r.demandId, r.decidedBy])).toEqual([
+      ['wait-08', null],
+      ['wait-09', 'no_refurbishment'],
+      ['wait-06', 'needed_by'],
+      ['wait-14', 'id'],
+      ['wait-07', 'needed_by'],
+    ]);
   });
 
   it('a lighter-used laptop (good, 100 cycles) skips the battery and goes to another entry', () => {
@@ -226,11 +231,12 @@ describe('drill: a waiting list where nobody fits', () => {
     expect(taken.winner).toBeNull();
   });
 
-  it('with no winner the item is relisted at good for the catalogue (D61)', () => {
+  it('with no winner the item is relisted at the largest net gain, like new (D86)', () => {
     expect(match.winner).toBeNull();
     expect(match.ranking).toEqual([]);
     expect(match.decision.code).toBe('relist_without_match');
-    expect(match.relist.condition).toBe('good');
+    // like new: +53 528 of value for +20 000 of work beats good's +35 685 for +12 000.
+    expect(match.relist.condition).toBe('like_new');
   });
 
   it('an empty waiting list gives the same decision', () => {

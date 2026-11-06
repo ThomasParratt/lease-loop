@@ -1,7 +1,8 @@
 // Card 9 on a real migrated database: `ebike-007` came back fair with 18 400 km. Assessed on
 // 6 Nov 2026 it is relisted as returned (no refurbishment beyond the mandatory steps) for
-// wait-02, at 155 476 financed (D83: the new battery resets the usage the value counts, the
-// odometer keeps its 18 400 km), and a quote at wait-02's term gives the matched rent.
+// wait-02, at 115 976 financed (D86: the market value, nothing added; D83: the new battery
+// resets the usage the value counts, the odometer keeps its 18 400 km), and a quote at
+// wait-02's term gives the matched rent.
 import { refusal } from '../../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
@@ -51,7 +52,7 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     expect((await getAsset(db, 'ebike-007'))?.status).toBe('returned');
   });
 
-  it('assessing writes the row, the passport and the asset available at 155 476', async () => {
+  it('assessing writes the row, the passport and the asset available at its market value 115 976 (D86)', async () => {
     const result = await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
     if (!result.ok) throw new Error(result.reason.code);
     const row = await db.returnAssessment.findFirstOrThrow({ where: { asset_id: 'ebike-007' } });
@@ -62,7 +63,7 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
       refurbish: false,
       new_condition: 'fair',
       market_value_cents: 115_976,
-      second_life_financed_cents: 155_476,
+      second_life_financed_cents: 115_976,
       matched_demand_id: 'wait-02',
     });
     expect(JSON.parse(row.refurbishment_json)).toEqual([
@@ -91,7 +92,7 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
   });
 
-  it("a quote at the winner's term gives the matched rent: 8 710 net for 12 months", async () => {
+  it("a quote at the winner's term gives the matched rent: 6 497 net for 12 months", async () => {
     await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
     const quote = await createQuote(db, {
       assetId: 'ebike-007',
@@ -102,10 +103,10 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     });
     if (!quote.ok) throw new Error(quote.reason.code);
     expect(quote.quote.breakdown).toMatchObject({
-      unitListPriceCents: 155_476,
-      financedCents: 155_476,
+      unitListPriceCents: 115_976,
+      financedCents: 115_976,
       band: 'A',
-      monthlyNetCents: 8_710,
+      monthlyNetCents: 6_497,
       // The live list's version: the amount is the assessment's, the list is v2 on 6 Nov.
       priceListVersion: 2,
     });

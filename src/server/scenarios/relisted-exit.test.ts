@@ -39,7 +39,7 @@ async function relistAndLease(assetId: string, termMonths: number) {
 describe('an early return of a relisted item (finding 1)', () => {
   it('card 9: ebike-007 (relisted fair) returned on 2027-11-06 is valued from 549 000 at 58 months', async () => {
     const { contract } = await relistAndLease('ebike-007', 24);
-    expect(contract.unitListPriceCents).toBe(155_476);
+    expect(contract.unitListPriceCents).toBe(115_976);
     const preview = await previewExit(
       db,
       {
@@ -65,9 +65,9 @@ describe('an early return of a relisted item (finding 1)', () => {
     expect(steps.map((l) => l.params.step)).toEqual(['safety_inspection']);
   });
 
-  it("card 10: ebike-008's exit preview starts from 179 900 (v1) at 70 months, not 37 101", async () => {
+  it("card 10: ebike-008's exit preview starts from 179 900 (v1) at 70 months, not 32 601", async () => {
     const { contract } = await relistAndLease('ebike-008', 24);
-    expect(contract.unitListPriceCents).toBe(37_101);
+    expect(contract.unitListPriceCents).toBe(32_601);
     const preview = await previewExit(
       db,
       {
@@ -81,7 +81,7 @@ describe('an early return of a relisted item (finding 1)', () => {
     const value = marketValueOf(preview.preview.return.lines);
     expect(value?.ageMonths).toBe(70);
     // 179 900 × 25 % × 0.85 (good) × 82 % (9 steps of 1 000 km) = 31 348; aged again from the
-    // second-life price 37 101 it was 6 465.
+    // second-life price 32 601 it would be 5 681 (37 101 and 6 465 before D86).
     expect(value?.amountCents).toBe(31_348);
   });
 });
