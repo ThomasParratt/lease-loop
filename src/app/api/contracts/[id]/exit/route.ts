@@ -2,7 +2,8 @@
 // body: { "mode": "return", "condition": "good", "usage": { "unit": "km", "value": 1800 } }
 // Buys out, returns or passes on the contract on the request's day (the demo clock, never a
 // date from the body): sets the status and end day, emits the event, bills the exit and
-// cancels the unpaid rents, all in one audited transaction. The customer or admin only,
+// cancels the unpaid rents, all in one audited transaction; a pass-on also stores the next
+// customer's quote in it (D90). The customer or admin only,
 // authorized first (D73, D74).
 import { isAuthzRefusal } from '@/domain/authz/policy';
 import { readActor } from '@/server/actor';
@@ -46,6 +47,11 @@ export const POST = handleRoute(
       if (isAuthzRefusal(result.reason)) return forbiddenResponse(result.reason);
       return refused(STATUS_OF[result.reason.code] ?? 422, result.reason);
     }
-    return ok({ contract: result.contract, plan: result.plan });
+    // D90: a pass-on answers with the next customer's new quote.
+    return ok({
+      contract: result.contract,
+      plan: result.plan,
+      ...(result.nextQuoteId ? { nextQuoteId: result.nextQuoteId } : {}),
+    });
   }
 );

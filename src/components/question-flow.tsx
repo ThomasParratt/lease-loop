@@ -131,6 +131,8 @@ export function QuestionFlow(props: QuestionFlowProps) {
       return labels.notSignatory;
     }
     if (code === 'NOT_APPLICANT' || code === 'FORBIDDEN') return labels.notApplicant;
+    // D90: a pass-on's quote held for another customer (the page refuses it up front too).
+    if (code === 'QUOTE_RESERVED_FOR_ANOTHER_CUSTOMER') return labels.notApplicant;
     const { questionId, problem } = body.error?.details ?? {};
     if (problem && questionId) {
       return labels.answerRefused

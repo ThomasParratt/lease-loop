@@ -194,7 +194,7 @@ describe('each category through the exit', () => {
 });
 
 describe('the other exit modes', () => {
-  it('passed on: the item comes back returned and is assessed like a return', async () => {
+  it('passed on (D90): the item goes straight to the next person, held for them, nothing to assess', async () => {
     const contract = await lease('ebike-003', 'cust-aino', 24, '2026-11-05');
     await giveBack(
       contract,
@@ -204,7 +204,9 @@ describe('the other exit modes', () => {
       'pass_on',
       'cust-lena'
     );
-    await pageThenAssess('ebike-003', contract.endDate);
+    expect((await getAsset(holder.db, 'ebike-003'))?.status).toBe('reserved');
+    const preview = await previewAssessment(holder.db, 'ebike-003', contract.endDate);
+    expect(preview).toMatchObject({ ok: false, reason: { code: 'asset_not_returned' } });
   });
 
   it('bought: the item left the loop, the page has nothing to preview and the route says 409', async () => {

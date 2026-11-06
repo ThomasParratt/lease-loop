@@ -66,6 +66,19 @@ describe('earlyExitCost, card 8 (card 1 ended in month 7)', () => {
     expect(cost.remainingRentsNetCents).toBe(311_170);
   });
 
+  it('D90: pass on = 330 675 − 259 230 = 71 445, no refurbishment line; the return keeps 4 500', () => {
+    expect(cost.passOn.totalCents).toBe(71_445);
+    expect(cost.passOn.lines.map((l) => l.code)).not.toContain('refurb_fixed');
+    expect(cost.passOn.lines.map((l) => l.code)).not.toContain('refurb_upgrade');
+    expect(cost.passOn.lines.at(-2)).toEqual({
+      code: 'refurb_waived',
+      effect: 'add',
+      params: { amountCents: 0 },
+    });
+    expect(cost.return.lines.map((l) => l.code)).toContain('refurb_fixed');
+    expect(cost.return.totalCents - cost.passOn.totalCents).toBe(4_500);
+  });
+
   it('return = 330 675 − market value 259 230 + safety inspection 4 500 = 75 945', () => {
     // D31 (provisional): a first-life item is aged from its lease start, 7 months, 80 % on the
     // curve. 389 000 × 80 % × 0.85 (good) × 0.98 (1 800 km) = 259 229.6 → 259 230.

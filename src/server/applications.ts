@@ -91,6 +91,8 @@ export async function flowSetupFor(
       setup: FlowSetup;
       quote: { monthlyNetCents: number; vatRateBp: number; quantity: number };
       customer: Customer;
+      /** D90: the named next customer the quote is held for, or null for anyone. */
+      reservedFor: string | null;
     }
   | { ok: false; reason: 'quote_not_found' | 'customer_not_found' }
 > {
@@ -119,6 +121,7 @@ export async function flowSetupFor(
       quantity: deal.quantity,
     },
     customer,
+    reservedFor: quote.customerId,
   };
 }
 
@@ -143,6 +146,7 @@ export type CreateApplicationResult =
         | 'quote_expired'
         | 'quote_not_yet_valid'
         | 'not_applicant'
+        | 'quote_reserved_for_another_customer'
         | 'incomplete_answers'
         | 'invalid_answer'
         | 'quote_in_use';
@@ -201,6 +205,10 @@ export async function createApplication(
   if (!namesApplicant(input)) return { ok: false, reason: 'not_applicant' };
   const found = await flowSetupFor(db, input.quoteId, input.customerId);
   if (!found.ok) return found;
+  // D90: a pass-on's quote is held for the customer it named; nobody else may apply for it.
+  if (found.reservedFor !== null && found.reservedFor !== input.customerId) {
+    return { ok: false, reason: 'quote_reserved_for_another_customer' };
+  }
   const { context, quoteDate, quoteValidUntil } = found.setup;
   if (quoteValidUntil < input.today) return { ok: false, reason: 'quote_expired' };
   if (input.today < quoteDate) return { ok: false, reason: 'quote_not_yet_valid' };

@@ -68,6 +68,8 @@ export const exitPreviewResponseSchema = z.object({
   monthsPaid: z.number().int().nonnegative(),
   buy: exitOptionSchema,
   return: exitOptionSchema,
+  /** D90: the return without the refurbishment. */
+  passOn: exitOptionSchema,
   invoice: exitInvoiceSchema.nullable(),
   cancelInvoiceIds: z.array(z.string()),
 });
@@ -76,4 +78,6 @@ export const exitPreviewResponseSchema = z.object({
 export const exitResponseSchema = z.object({
   contract: contractViewSchema,
   plan: exitPreviewResponseSchema,
+  /** D90: a pass-on's new quote for the next customer. */
+  nextQuoteId: z.string().optional(),
 });

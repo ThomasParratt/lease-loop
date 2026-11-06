@@ -14,6 +14,12 @@ describe('quoteRowSchema: the stored quote (D7), on the worked example (card 1)'
     expect(quoteRowSchema.safeParse(row).success).toBe(true);
   });
 
+  it('takes the named next customer of a pass-on, or none (D90)', () => {
+    expect(refuses({ ...quoteRow(), customer_id: 'cust-lena' })).toBe(false);
+    expect(refuses({ ...quoteRow(), customer_id: null })).toBe(false);
+    expect(refuses({ ...quoteRow(), customer_id: '' })).toBe(true);
+  });
+
   it('refuses an unknown column, so a typo fails before the write', () => {
     expect(refuses({ ...quoteRow(), monthly_nett_cents: 10730 })).toBe(true);
   });

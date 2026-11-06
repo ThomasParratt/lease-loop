@@ -7,7 +7,7 @@ import { listAssets } from '@/server/assets';
 import { listContracts, type ContractView } from '@/server/contracts';
 import { db } from '@/server/db';
 import { listCustomerInvoices } from '@/server/invoices';
-import { getQuote } from '@/server/quotes';
+import { getQuote, listReservedQuotesFor, type StoredQuote } from '@/server/quotes';
 
 export type UnsignedApplication = { application: ApplicationView; asset: Asset | undefined };
 
@@ -30,17 +30,28 @@ export async function readLeases(filter: { customerId?: string }) {
         return { application, asset: quote ? assetById.get(quote.breakdown.assetId) : undefined };
       })
   );
-  return { contracts, unsigned, assetById };
+  return { contracts, unsigned, assetById, applications };
 }
+
+/** D90: an offer a pass-on made for this customer, with its item. */
+export type PassedOnOffer = { quote: StoredQuote; asset: Asset | undefined };
 
 export type PortalContract = { contract: ContractView; choices: ExitChoices };
 
 /** Everything of one customer on `today`: the leases, each contract's exit choices, the invoices. */
 export async function readPortal(customerId: string, today: string) {
-  const [leases, invoices] = await Promise.all([
+  const [leases, invoices, held] = await Promise.all([
     readLeases({ customerId }),
     listCustomerInvoices(db, { customerId }),
+    listReservedQuotesFor(db, customerId, today),
   ]);
+  // D90: the quotes a pass-on holds for this customer that they have not applied for yet.
+  const applied = new Set(
+    leases.applications.filter((a) => a.decision !== 'withdrawn').map((a) => a.quoteId)
+  );
+  const offers: PassedOnOffer[] = held
+    .filter((q) => !applied.has(q.id))
+    .map((quote) => ({ quote, asset: leases.assetById.get(quote.breakdown.assetId) }));
   const contracts: PortalContract[] = leases.contracts.map((contract) => ({
     contract,
     choices: endOfTermChoices(contract, today),
@@ -49,6 +60,7 @@ export async function readPortal(customerId: string, today: string) {
   return {
     ...leases,
     contracts,
+    offers,
     invoices: groupInvoices(invoices, today),
     numberOf,
     activeCount: leases.contracts.filter((c) => c.status === 'active').length,

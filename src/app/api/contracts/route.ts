@@ -15,6 +15,7 @@ import { todayForRequest } from '@/server/demo-clock';
 const STATUS_OF: Partial<Record<SignContractRefusal['code'], number>> = {
   application_not_found: 404,
   already_signed: 409,
+  quote_reserved_for_another_customer: 403,
   asset_not_available: 409,
   not_enough_units: 409,
 };

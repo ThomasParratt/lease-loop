@@ -88,6 +88,8 @@ model Quote {
   monthly_net_cents    Int
   buyout_cents         Int
   vat_rate_bp_at_quote Int
+  // D90: the named next customer of a pass-on; only they may apply. Null: anyone (D55).
+  customer_id          String?
   created_at           DateTime @default(now())
 
   asset        Asset         @relation(fields: [asset_id], references: [id])

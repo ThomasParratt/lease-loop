@@ -47,6 +47,10 @@ export default async function ApplyPage({ params }: PageProps<'/[locale]/apply/[
   if (!customer) return page(<Notice tone="warning">{t('apply.chooseActor')}</Notice>);
   const found = await flowSetupFor(db, quoteId, customer.id);
   if (!found.ok) return page(<Notice tone="warning">{t('apply.quoteNotFound')}</Notice>);
+  // D90: a pass-on's quote is held for the customer it named.
+  if (found.reservedFor !== null && found.reservedFor !== customer.id) {
+    return page(<Notice tone="warning">{t('apply.quoteReserved')}</Notice>);
+  }
   const { context } = found.setup;
   // The quote the price page stored when the customer pressed "Apply at this price" (D7).
   const [quote, today, priceLists] = await Promise.all([

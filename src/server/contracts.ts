@@ -52,7 +52,8 @@ export type SignContractRefusal =
   | SignRefusal
   | { code: 'application_not_found'; params: { applicationId: string } }
   | AuthzRefusal
-  | { code: 'already_signed'; params: { applicationId: string } };
+  | { code: 'already_signed'; params: { applicationId: string } }
+  | { code: 'quote_reserved_for_another_customer'; params: { quoteId: string } };
 
 /** Thrown inside the signing transaction when the application is no longer approved (D87). */
 class ApplicationMovedOn extends Error {
@@ -156,8 +157,18 @@ export async function signContract(
 
   const stored = await getQuote(db, application.quoteId);
   if (!stored) throw new Error(`Application ${applicationId} names a missing quote`);
+  // D90: a pass-on's quote is held for the customer it named; only their application signs it.
+  if (stored.customerId !== null && stored.customerId !== application.customerId) {
+    return {
+      ok: false,
+      reason: { code: 'quote_reserved_for_another_customer', params: { quoteId: stored.id } },
+    };
+  }
   const asset = await getAsset(db, stored.breakdown.assetId);
   if (!asset) throw new Error(`Quote ${stored.id} names a missing asset`);
+  // D90: the item a pass-on reserved for this quote's customer counts as available to them.
+  const heldForSigner = stored.customerId !== null;
+  const assetStatus = heldForSigner && asset.status === 'reserved' ? 'available' : asset.status;
   // D12: a relisted item's quote was priced on its second-life amount; the price lock compares
   // with the same amount (src/server/second-life-price.ts).
   const pricing = await pricingForAsset(db, asset.id, data ?? (await loadPricingData()));
@@ -175,7 +186,7 @@ export async function signContract(
     applicationId,
     customerId: application.customerId,
     decision: application.decision,
-    assetStatus: asset.status,
+    assetStatus,
     quote: { ...stored.breakdown, isoDate: stored.quoteDate, validUntil: stored.validUntil },
     quoteStatus,
     currentMonthlyNetCents: repricedMonthlyNet(stored, quoteStatus, today, pricing),
@@ -210,7 +221,9 @@ export async function signContract(
         // transaction so a withdrawal and a signing at the same instant leave one winner.
         const still = await getApplication(tx, applicationId);
         if (still?.decision !== 'approved') throw new ApplicationMovedOn(still?.decision ?? '');
-        await leaseAvailableAsset(tx, contract.assetId);
+        // D90: a quote held for its named customer leases the item reserved for them; the
+        // application could only be made by that customer (applications.ts).
+        await leaseAvailableAsset(tx, contract.assetId, heldForSigner);
         // The row's own rules (D27): the frozen price, the term's last day, the status.
         const created = await tx.contract.create({
           data: parseRow('contract', contractRowSchema, {
