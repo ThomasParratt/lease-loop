@@ -43,7 +43,7 @@ export async function ContractExit({ contract, asset, today, locale, t }: Contra
   );
   if (!preview.ok) {
     return (
-      <Card title={t('exit.title')}>
+      <Card id="exit" title={t('exit.title')}>
         <Notice tone="info">{t(`exit.refusal.${preview.reason.code}`)}</Notice>
       </Card>
     );
@@ -53,7 +53,7 @@ export async function ContractExit({ contract, asset, today, locale, t }: Contra
     .map((customer) => ({ id: customer.id, name: customer.name }));
 
   return (
-    <Card title={t('exit.title')}>
+    <Card id="exit" title={t('exit.title')}>
       <ExitForm
         contractId={contract.id}
         locale={locale}

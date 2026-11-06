@@ -109,7 +109,7 @@ One page per slice under `docs/features/` ([template](docs/features/README.md));
 - [The tamper-evident audit chain](docs/features/audit-chain.md)
 - [Company signatories and the signing link](docs/features/signatories.md)
 - [Test isolation](docs/features/test-isolation.md)
-- [My leases](docs/features/my-leases.md)
+- [My leases](docs/features/my-leases.md), grown into the [user portal](docs/features/user-portal.md)
 - [Second life: assessment, matchmaking and re-pricing](docs/features/second-life.md)
 - [Demo cards: one button per scenario card](docs/features/demo-cards.md)
 

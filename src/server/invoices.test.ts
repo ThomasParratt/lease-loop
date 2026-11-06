@@ -13,6 +13,7 @@ import { onEvent } from './events';
 import {
   contractCustomerId,
   invoiceCustomerId,
+  listCustomerInvoices,
   listInvoices,
   payInvoice,
   writeSchedule,
@@ -79,6 +80,52 @@ describe('writeSchedule and listInvoices', () => {
       )
       // P2002: Prisma's unique-constraint violation on (contract_id, sequence).
     ).rejects.toMatchObject({ code: 'P2002' });
+  });
+});
+
+describe('listCustomerInvoices', () => {
+  it('gives Aino every invoice of her contracts, newest due first, and nobody else any', async () => {
+    const invoices = await listCustomerInvoices(db, { customerId: 'cust-aino' });
+    expect(invoices).toHaveLength(36);
+    expect(invoices.every((i) => i.contractId === contractId)).toBe(true);
+    expect(invoices[0]).toMatchObject({ sequence: 36, dueDate: '2029-10-05' });
+    expect(invoices.at(-1)).toMatchObject({ sequence: 1, dueDate: '2026-11-05' });
+    expect(await listCustomerInvoices(db, { customerId: 'cust-nobody' })).toEqual([]);
+  });
+
+  it('spans every contract of the customer', async () => {
+    const second = await insertContract(db);
+    expect(second.contractId).not.toBe(contractId);
+    const [first] = await listInvoices(db, contractId);
+    await withAudit(
+      db,
+      {
+        actor: 'test',
+        action: 'contract.signed',
+        entityType: 'contract',
+        entityId: second.contractId,
+      },
+      (tx) =>
+        writeSchedule(tx, second.contractId, [
+          {
+            sequence: 1,
+            kind: 'rent',
+            periodStart: first!.periodStart,
+            periodEnd: first!.periodEnd,
+            issueDate: first!.issueDate,
+            dueDate: first!.dueDate,
+            netCents: first!.netCents,
+            vatRateBasisPoints: first!.vatRateBasisPoints,
+            vatCents: first!.vatCents,
+            grossCents: first!.grossCents,
+          },
+        ])
+    );
+    const invoices = await listCustomerInvoices(db, { customerId: 'cust-aino' });
+    expect(new Set(invoices.map((i) => i.contractId))).toEqual(
+      new Set([contractId, second.contractId])
+    );
+    expect(invoices).toHaveLength(37);
   });
 });
 
