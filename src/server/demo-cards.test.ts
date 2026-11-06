@@ -162,7 +162,7 @@ describe('runDemoCard', () => {
     expect(run.steps[1]?.params).toEqual({ count: 7, grossCents: 2 * 13_466 + 5 * 13_520 });
   });
 
-  it('card 9: assesses ebike-007 as admin, relists it fair for wait-02 at 8 710 a month', async () => {
+  it('card 9: assesses ebike-007 as admin, relists it fair for wait-02 at 6 497 a month', async () => {
     const run = ran(await runDemoCard(db, 9));
     expect(run).toMatchObject({
       today: '2026-11-06',
@@ -175,13 +175,13 @@ describe('runDemoCard', () => {
       assetId: 'ebike-007',
       condition: 'fair',
       refurbishmentCents: 39_500,
-      secondLifeFinancedCents: 155_476,
+      secondLifeFinancedCents: 115_976,
     });
     expect(run.steps[1]?.params).toEqual({
       demandId: 'wait-02',
       condition: 'fair',
       termMonths: 12,
-      monthlyNetCents: 8_710,
+      monthlyNetCents: 6_497,
     });
     const assessed = await latestAssessment(db, 'ebike-007');
     expect(assessed?.match.ranking.map((r) => r.demandId).slice(0, 2)).toEqual([
@@ -192,7 +192,7 @@ describe('runDemoCard', () => {
     expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
   });
 
-  it('card 10: assesses ebike-008, leases it 24 months at 1 359, three lives and 58 kg', async () => {
+  it('card 10: assesses ebike-008, leases it 24 months at 1 194, three lives and 58 kg', async () => {
     const run = ran(await runDemoCard(db, 10));
     expect(run).toMatchObject({ today: '2026-11-06', landing: '/assets/ebike-008/passport' });
     expect(codes(run)).toEqual([
@@ -205,7 +205,7 @@ describe('runDemoCard', () => {
       'contract_signed',
     ]);
     // The numbers src/server/scenarios/card-10.test.ts pins.
-    expect(run.steps[0]?.params).toMatchObject({ secondLifeFinancedCents: 37_101 });
+    expect(run.steps[0]?.params).toMatchObject({ secondLifeFinancedCents: 32_601 });
     expect(run.steps[1]?.params).toMatchObject({ demandId: 'wait-05', condition: 'good' });
     // wait-05 is a waiting-list entry with no customer record: Olavi leases it from the catalogue.
     expect(run.steps[2]).toEqual({
@@ -213,9 +213,9 @@ describe('runDemoCard', () => {
       params: { demandId: 'wait-05', customer: 'cust-olavi' },
     });
     const signed = run.steps.at(-1)!;
-    expect(signed.params).toMatchObject({ monthlyNetCents: 1_359 });
+    expect(signed.params).toMatchObject({ monthlyNetCents: 1_194 });
     const contract = await getContract(db, idOf(signed.href!));
-    expect([contract?.financedCents, contract?.monthlyNetCents]).toEqual([37_101, 1_359]);
+    expect([contract?.financedCents, contract?.monthlyNetCents]).toEqual([32_601, 1_194]);
     const read = await readPassport(db, 'ebike-008', contract!.endDate);
     expect(read?.passport.lives).toHaveLength(3);
     expect(read?.co2.perLifeKg).toEqual([0, 29, 29]);
@@ -276,7 +276,7 @@ describe('a second click (D70)', () => {
     const run = ran(await runDemoCard(db, 10));
     expect(codes(run)).not.toContain('asset_assessed');
     expect(codes(run).at(-1)).toBe('contract_signed');
-    expect(run.steps.at(-1)?.params).toMatchObject({ monthlyNetCents: 1_359 });
+    expect(run.steps.at(-1)?.params).toMatchObject({ monthlyNetCents: 1_194 });
   });
 
   it('signs an approved application an earlier run left unsigned, instead of refusing', async () => {

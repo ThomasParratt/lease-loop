@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { passportFor, type PassportEvent } from '../passport';
 import { co2Method, co2SavedForAsset } from '../second-life/co2';
-import { assetById, pack, quoteFor } from './fixtures';
+import { matchDemand } from '../second-life/match';
+import { assessPackItem, assetById, pack, quoteFor } from './fixtures';
 
 const ebike = assetById('ebike-008');
 const thirdLife: PassportEvent[] = [
@@ -29,6 +30,18 @@ describe('card 10: third life (ebike-008, two lives, good, 9 800 km)', () => {
     });
     const q = quoteFor({ assetId: 'ebike-008', termMonths: 24, isoDate: '2026-11-05' });
     expect(q.ok && q.quote.unitListPriceCents).toBe(179_900);
+  });
+
+  it('is relisted good at its market value 32 601 (D86) and leased for 24 months at 1 194', () => {
+    const assessed = assessPackItem('ebike-008', '2026-11-06');
+    const match = matchDemand(assessed, pack.demand);
+    // 179 900 × 26 % × 0.85 × 82 % = 32 601; the 4 500 inspection is the lessor's cost.
+    expect(match.relist).toMatchObject({ condition: 'good', secondLifeFinancedCents: 32_601 });
+    expect(match.winner?.demandId).toBe('wait-05');
+    // 32 601 (band A) × 0.036637 = 1 194.40 → 1 194.
+    expect(match.relist.rents.find((r) => r.termMonths === 24)?.monthlyNetCents).toBe(1_194);
+    // Like new: +3 836 of value for +8 000 of work, not worth it.
+    expect(assessed.options[1]?.comparison?.worthIt).toBe(false);
   });
 
   it('the passport has both past lives, undated and estimated, then the logged third life', () => {

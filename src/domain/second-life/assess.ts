@@ -1,5 +1,6 @@
-// The assessment of a returned item (smart problem 3, D12): what each way of relisting it
-// costs and what it would rent for.
+// The assessment of a returned item (smart problem 3, D86, which replaced D12's price): what
+// each way of relisting it costs, what it is worth, whether the refurbishment pays for itself,
+// and what it would rent for.
 //
 // The options: stay as returned (only the mandatory fixed steps of the refurbishment plan), or
 // climb to each higher condition the cost table has upgrades for, up to like new. For each:
@@ -9,11 +10,16 @@
 //   adjustment on the usage since the last battery after the plan (D83, the organisers' answer
 //   of 6 Nov 2026, 10:35: `resets_usage` resets the usage adjustment, so a new battery puts it
 //   at 0; the total usage never resets and stays for the passport; replaces D79);
-// - the second-life financed amount, D12: market value + refurbishment cost;
+// - the second-life financed amount, D86: the market value after the plan, nothing added. The
+//   refurbishment is the lessor's cost, not part of what the item is worth: the value after the
+//   plan already counts the improvement (D12 added the cost on top, so the customer paid twice);
+// - refurbish or not, D86 (the organisers' framing, 6 Nov 2026, 10:35: compare the gain with
+//   what it costs): the value gained over the as-returned option against the extra cost over
+//   its plan. The mandatory steps are in every plan, the as-returned one too, so they cancel;
 // - the monthly net rent for each allowed term (D43), priced by `priceQuote` itself on that
 //   amount, so a quote made later on the relisted item gives exactly the same rent.
 // Money: every amount is integer cents, rounded half up once inside the functions it comes
-// from (the market value once, the rent once); the D12 sum adds whole cents.
+// from (the market value once, the rent once); the comparison subtracts whole cents.
 import type {
   AssetCategory,
   AssetCondition,
@@ -79,10 +85,41 @@ export type ReturnOption = {
   upgrade: boolean;
   plan: RefurbishmentPlan;
   marketValue: MarketValue;
-  /** D12: market value + refurbishment cost. */
+  /** D86: the market value after the plan, nothing added (D12 added the refurbishment cost). */
   secondLifeFinancedCents: number;
+  /** D86: refurbish or not, against the as-returned option; null on the as-returned option. */
+  comparison: RefurbishComparison | null;
   rents: TermRent[];
 };
+
+/** D86: what refurbishing beyond the as-returned plan gains against what it costs. */
+export type RefurbishComparison = {
+  /** The market value over the as-returned option's. */
+  valueGainCents: number;
+  /** The plan's cost over the as-returned plan's (the mandatory steps are in both). */
+  extraCostCents: number;
+  /** Gain − extra cost: what the no-winner decision ranks (D86). */
+  netGainCents: number;
+  /** Gain ≥ extra cost: the refurbishment pays for itself. */
+  worthIt: boolean;
+};
+
+type ValueAndCost = { valueCents: number; costCents: number };
+
+/** D86: the organisers' refurbish-or-not comparison of `option` against `asReturned`. */
+export function compareToAsReturned(
+  asReturned: ValueAndCost,
+  option: ValueAndCost
+): RefurbishComparison {
+  const valueGainCents = option.valueCents - asReturned.valueCents;
+  const extraCostCents = option.costCents - asReturned.costCents;
+  return {
+    valueGainCents,
+    extraCostCents,
+    netGainCents: valueGainCents - extraCostCents,
+    worthIt: valueGainCents >= extraCostCents,
+  };
+}
 
 export type ReturnAssessmentResult = {
   assetId: string;
@@ -99,7 +136,7 @@ export { firstLeaseListPriceCents } from './first-lease';
 
 /**
  * The pricing data with `assetId` priced at `cents` in every price list: how a relisted item is
- * quoted on its second-life amount (D12) while the quote keeps the live list's version.
+ * quoted on its second-life amount (D86) while the quote keeps the live list's version.
  */
 export function withSecondLifePrice(
   pricing: PricingData,
@@ -169,13 +206,24 @@ export function assessReturn(input: AssessInput, data: AssessData): ReturnAssess
       },
       data.curves
     );
-    const secondLifeFinancedCents = marketValue.valueCents + plan.totalCents;
+    // D86: the price is the market value; the plan's cost is the lessor's.
+    const secondLifeFinancedCents = marketValue.valueCents;
+    const asReturned = options[0];
     options.push({
       condition: plan.conditionAfter,
       upgrade: plan.upgradeCents > 0,
       plan,
       marketValue,
       secondLifeFinancedCents,
+      comparison: asReturned
+        ? compareToAsReturned(
+            {
+              valueCents: asReturned.marketValue.valueCents,
+              costCents: asReturned.plan.totalCents,
+            },
+            { valueCents: marketValue.valueCents, costCents: plan.totalCents }
+          )
+        : null,
       rents: rentsFor(input, data, secondLifeFinancedCents),
     });
   }

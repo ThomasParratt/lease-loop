@@ -66,19 +66,19 @@ describe('card 10: ebike-008, two lives, good, 9 800 km', () => {
       today: '2026-11-06',
     });
     if (!assessed.ok) throw new Error(assessed.reason.code);
-    // 179 900 (v1) × 26 % (58 months) × 0.85 × 82 % (9 steps of 1 000 km) = 32 601 + 4 500.
+    // 179 900 (v1) × 26 % (58 months) × 0.85 × 82 % (9 steps of 1 000 km) = 32 601; D86: the price is that value, the 4 500 inspection is our cost.
     expect(assessed.view.match.relist).toMatchObject({
       condition: 'good',
       upgrade: false,
-      secondLifeFinancedCents: 37_101,
+      secondLifeFinancedCents: 32_601,
     });
     expect(assessed.view.match.winner?.demandId).toBe('wait-05');
 
     const olavi = 'cust-olavi';
     const trip = { customerId: olavi, assetId: 'ebike-008', termMonths: 24, quoteOn: '2026-11-06' };
     const { contract } = await signedContract(db, trip);
-    // 37 101 × 0.036637 = 1 359.27 → 1 359 (band A).
-    expect([contract.financedCents, contract.monthlyNetCents]).toEqual([37_101, 1_359]);
+    // 32 601 × 0.036637 = 1 194.40 → 1 194 (band A).
+    expect([contract.financedCents, contract.monthlyNetCents]).toEqual([32_601, 1_194]);
     expect((await getAsset(db, 'ebike-008'))?.status).toBe('leased');
 
     const read = await readPassport(db, 'ebike-008', contract.endDate);

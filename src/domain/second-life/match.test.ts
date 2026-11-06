@@ -8,7 +8,7 @@ import {
   residualCurvesSchema,
   type SecondLifeRequest,
 } from '@/data/schemas';
-import { pack, pricing } from '../scenarios/fixtures';
+import { assessPackItem, pack, pricing } from '../scenarios/fixtures';
 import { assessReturn, type AssessData, type AssessInput } from './assess';
 import { matchDemand } from './match';
 
@@ -42,30 +42,46 @@ describe('matchDemand on the pack (card 9)', () => {
   const match = matchDemand(assessed, pack.demand);
   const verdict = (id: string) => match.verdicts.find((v) => v.demandId === id)!;
 
-  it('wait-02 is matched as returned: fair is enough, 8 710 a month for 12 months', () => {
+  it('wait-02 is matched as returned: fair is enough, 6 497 a month for 12 months', () => {
+    // D86: 115 976 (the market value, band A) × 0.056022 = 6 497.20 → 6 497.
     expect(verdict('wait-02').outcome).toEqual({
       code: 'candidate',
       params: {
         condition: 'fair',
         upgrade: false,
         termMonths: 12,
-        monthlyNetCents: 8_710,
+        monthlyNetCents: 6_497,
         maxMonthlyNetCents: 9_000,
-        totalRentCents: 104_520,
+        totalRentCents: 77_964,
       },
     });
   });
 
-  it('wait-13 is matched only refurbished to good: 7 219 a month for 24 months', () => {
+  it('wait-13 is matched only refurbished to good: 5 556 a month for 24 months', () => {
+    // 151 661 (band A) × 0.036637 = 5 556.40 → 5 556.
     expect(verdict('wait-13').outcome).toEqual({
       code: 'candidate',
       params: {
         condition: 'good',
         upgrade: true,
         termMonths: 24,
-        monthlyNetCents: 7_219,
+        monthlyNetCents: 5_556,
         maxMonthlyNetCents: 9_000,
-        totalRentCents: 173_256,
+        totalRentCents: 133_344,
+      },
+    });
+  });
+
+  it('D86 brings wait-03 in: like new 169 504 × 0.028625 = 4 852 for 36 months, under 6 000', () => {
+    expect(verdict('wait-03').outcome).toEqual({
+      code: 'candidate',
+      params: {
+        condition: 'like_new',
+        upgrade: true,
+        termMonths: 36,
+        monthlyNetCents: 4_852,
+        maxMonthlyNetCents: 6_000,
+        totalRentCents: 174_672,
       },
     });
   });
@@ -73,14 +89,13 @@ describe('matchDemand on the pack (card 9)', () => {
   it('names the failing step of every other entry', () => {
     expect(verdict('wait-01').outcome).toMatchObject({
       code: 'over_budget',
-      params: { monthlyNetCents: 7_219, maxMonthlyNetCents: 4_500, shortCents: 2_719 },
+      params: { monthlyNetCents: 5_556, maxMonthlyNetCents: 4_500, shortCents: 1_056 },
     });
-    // D83: like new is 229 004 (band B), 6 317 for 36 months, 317 over wait-03's 6 000.
-    expect(verdict('wait-03').outcome).toMatchObject({
+    // good for 12 months: 151 661 × 0.056022 = 8 496.35 → 8 496, 4 996 over wait-05's 3 500.
+    expect(verdict('wait-05').outcome).toMatchObject({
       code: 'over_budget',
-      params: { condition: 'like_new', termMonths: 36, monthlyNetCents: 6_317, shortCents: 317 },
+      params: { condition: 'good', termMonths: 12, monthlyNetCents: 8_496, shortCents: 4_996 },
     });
-    expect(verdict('wait-05').outcome.code).toBe('over_budget');
     expect(verdict('wait-06').outcome).toEqual({
       code: 'other_category',
       params: { category: 'laptop' },
@@ -91,17 +106,18 @@ describe('matchDemand on the pack (card 9)', () => {
     expect(match.ranking.map((r) => [r.demandId, r.decidedBy])).toEqual([
       ['wait-02', null],
       ['wait-13', 'no_refurbishment'],
+      ['wait-03', 'needed_by'],
       ['wait-04', 'needed_by'],
     ]);
     expect(match.winner?.demandId).toBe('wait-02');
   });
 
-  it('decides not to refurbish beyond the mandatory steps: relisted fair at 155 476', () => {
+  it('decides not to refurbish beyond the mandatory steps: relisted fair at 115 976', () => {
     expect(match.decision).toEqual({
       code: 'relist_for_winner',
       params: { condition: 'fair', upgrade: false, demandId: 'wait-02' },
     });
-    expect(match.relist.secondLifeFinancedCents).toBe(155_476);
+    expect(match.relist.secondLifeFinancedCents).toBe(115_976);
   });
 
   it('without wait-02 the item is refurbished to good for wait-13 (earliest need)', () => {
@@ -110,13 +126,13 @@ describe('matchDemand on the pack (card 9)', () => {
       pack.demand.filter((d) => d.id !== 'wait-02')
     );
     expect(match2.winner?.demandId).toBe('wait-13');
-    expect(match2.ranking[1]).toMatchObject({ demandId: 'wait-04', decidedBy: 'needed_by' });
+    expect(match2.ranking[1]).toMatchObject({ demandId: 'wait-03', decidedBy: 'needed_by' });
     expect(match2.decision.params).toMatchObject({ condition: 'good', upgrade: true });
   });
 });
 
 describe('matchDemand on other data', () => {
-  it('a category with no demand relists at the floor, good (D61), with no winner', () => {
+  it('no winner (D86): relisted at the largest net gain, like new (+33 528 against good +23 685)', () => {
     const match = matchDemand(
       assessed,
       pack.demand.filter((d) => d.category !== 'e_bike')
@@ -125,18 +141,59 @@ describe('matchDemand on other data', () => {
     expect(match.ranking).toEqual([]);
     expect(match.decision).toEqual({
       code: 'relist_without_match',
-      params: { condition: 'good', upgrade: true },
+      params: { condition: 'like_new', upgrade: true },
     });
-    expect(match.relist.condition).toBe('good');
+    expect(match.relist.secondLifeFinancedCents).toBe(169_504);
+  });
+
+  it('no winner and no positive net gain: relisted as returned (card 10, good)', () => {
+    const ebike008 = assessReturn(
+      {
+        assetId: 'ebike-008',
+        category: 'e_bike',
+        condition: 'good',
+        usage: { unit: 'km', value: 9_800 },
+        age: { modelYear: 2022, previousLives: 2, leaseStart: '2022-01-01' },
+        newPriceCents: 179_900,
+        isoDate: '2026-11-06',
+      },
+      data
+    );
+    // like new gains 3 836 for 8 000 more: −4 164, so it stays good.
+    expect(matchDemand(ebike008, []).decision).toEqual({
+      code: 'relist_without_match',
+      params: { condition: 'good', upgrade: false },
+    });
+  });
+
+  it('no winner: never relisted below good, the data note (D61), even when that costs more', () => {
+    // Every condition worth the same: each upgrade only loses its cost.
+    const curves = structuredClone(data.curves);
+    curves.condition_multiplier = { poor: 0.65, fair: 0.65, good: 0.65, like_new: 0.65, new: 0.65 };
+    const flat = assessReturn(ebike007, { ...data, curves });
+    expect(flat.options[1]!.comparison).toMatchObject({ valueGainCents: 0, worthIt: false });
+    const match = matchDemand(flat, []);
+    // Good (−12 000) loses the least of the conditions the catalogue may lease; fair is out.
+    expect(match.decision.params).toEqual({ condition: 'good', upgrade: true });
+  });
+
+  it('no winner: an option no term can price is skipped (laptop-006 good, 27 577 < 30 000)', () => {
+    const laptop = assessPackItem('laptop-006', '2026-11-06');
+    expect(laptop.options[0]!.rents.every((r) => r.monthlyNetCents === null)).toBe(true);
+    // Like new loses 1 756 (3 244 of value for 5 000 more), but it is the one that can be leased.
+    expect(matchDemand(laptop, []).relist).toMatchObject({
+      condition: 'like_new',
+      secondLifeFinancedCents: 30_821,
+    });
   });
 
   it('a budget one cent short is out, by one cent', () => {
-    const match = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 8_709 })]);
+    const match = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 6_496 })]);
     expect(match.verdicts[0]!.outcome).toMatchObject({
       code: 'over_budget',
       params: { shortCents: 1 },
     });
-    const exact = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 8_710 })]);
+    const exact = matchDemand(assessed, [entry({ id: 'a', max_monthly_net_rent_cents: 6_497 })]);
     expect(exact.winner?.demandId).toBe('a');
   });
 
@@ -158,7 +215,7 @@ describe('matchDemand on other data', () => {
       entry({ id: 'w-a', preferred_term_months: 12 }),
       entry({ id: 'w-b', preferred_term_months: 24 }),
     ]);
-    // 24 × 5 696 = 136 704 beats 12 × 8 710 = 104 520.
+    // 24 × 4 249 = 101 976 beats 12 × 6 497 = 77 964.
     expect(match.ranking.map((r) => [r.demandId, r.decidedBy])).toEqual([
       ['w-b', null],
       ['w-a', 'total_rent'],
@@ -200,8 +257,10 @@ describe('matchDemand: who is still waiting (D62)', () => {
       code: 'expired',
       params: { neededBy: '2026-11-10', isoDate: '2026-11-11' },
     });
-    // wait-13 (same day) is expired too, wait-03 is over budget: wait-04 is left.
-    expect(match.winner?.demandId).toBe('wait-04');
+    // wait-13 (same day) is expired too; D86 put wait-03 (like new, 4 852 ≤ 6 000, needed by
+    // 2026-12-15) in budget, so it beats wait-04 (2027-01-05) on the need date.
+    expect(match.winner?.demandId).toBe('wait-03');
+    expect(match.ranking[1]).toMatchObject({ demandId: 'wait-04', decidedBy: 'needed_by' });
   });
 
   it('needed on the assessment day itself still counts', () => {
@@ -234,7 +293,7 @@ describe('card 10 on a later clock (D62)', () => {
     );
     const match = matchDemand(ebike008, pack.demand);
     expect(match.verdicts.find((v) => v.demandId === 'wait-05')!.outcome.code).toBe('expired');
-    // wait-02 and wait-13 tie on the first two steps; 24 × 1 359 beats 12 × 2 078.
+    // wait-02 and wait-13 tie on the first two steps; 24 × 1 194 beats 12 × 1 826 (D86).
     expect(match.ranking.slice(0, 2).map((r) => [r.demandId, r.decidedBy])).toEqual([
       ['wait-13', null],
       ['wait-02', 'total_rent'],

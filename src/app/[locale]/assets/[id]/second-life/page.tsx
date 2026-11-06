@@ -104,7 +104,7 @@ function OptionsTable({
       padded={false}
       className="relative overflow-x-auto"
     >
-      <table className="w-full min-w-[40rem] text-left text-sm">
+      <table className="w-full min-w-[52rem] text-left text-sm">
         <thead className="border-b border-line text-ink-muted">
           <tr>
             <th scope="col" className="px-4 py-3">
@@ -115,6 +115,9 @@ function OptionsTable({
             </th>
             <th scope="col" className="px-4 py-3 text-right">
               {t('secondLife.options.value')}
+            </th>
+            <th scope="col" className="px-4 py-3">
+              {t('secondLife.options.compare')}
             </th>
             <th scope="col" className="px-4 py-3 text-right">
               {t('secondLife.options.price')}
@@ -143,6 +146,26 @@ function OptionsTable({
               </td>
               <td className="px-4 py-3 text-right align-top">
                 <Money cents={o.marketValue.valueCents} locale={locale} />
+              </td>
+              <td className="px-4 py-3 align-top">
+                {/* D86: the organisers' refurbish-or-not test; a row stored before it has none. */}
+                {o.comparison ? (
+                  <>
+                    {t('secondLife.options.compareLine', {
+                      gain: euro(o.comparison.valueGainCents),
+                      cost: euro(o.comparison.extraCostCents),
+                    })}{' '}
+                    <Badge tone={o.comparison.worthIt ? 'success' : 'warning'}>
+                      {t(
+                        o.comparison.worthIt
+                          ? 'secondLife.options.worthIt'
+                          : 'secondLife.options.notWorthIt'
+                      )}
+                    </Badge>
+                  </>
+                ) : (
+                  <span className="text-ink-muted">{t('secondLife.options.compareBase')}</span>
+                )}
               </td>
               <td className="px-4 py-3 text-right align-top font-bold">
                 <Money cents={o.secondLifeFinancedCents} locale={locale} />

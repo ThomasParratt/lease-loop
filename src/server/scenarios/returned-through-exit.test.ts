@@ -153,7 +153,9 @@ describe('card 1: ebike-003 leased and given back through the exit', () => {
       actor: 'cust-lena',
     });
     expect(quote.ok).toBe(true);
-  });
+    // The file's first test warms the database and the modules: 0.7 s alone, over the 5 s
+    // default under the coverage run's load (seen in `npm run check:all`).
+  }, 20_000);
 
   it('given back on the day it was signed (age 0): the preview and the relist still work', async () => {
     const contract = await lease('ebike-003', 'cust-aino', 36, '2026-11-05');

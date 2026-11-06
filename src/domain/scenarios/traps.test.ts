@@ -134,9 +134,10 @@ describe('trap: the twin pairs of the waiting list', () => {
   });
 
   it('the matcher prefers wait-06 over wait-14, who signed up a day later: D13 by the lower id', () => {
-    // laptop-006 (good, 310 cycles) fits both at the same rent; wait-08 and wait-09 are needed
-    // sooner, so they are taken here to leave the twins at the top.
-    const match = matchDemand(assessPackItem('laptop-006', V2_DAY), pack.demand, [
+    // laptop-007 (fair, 780 cycles) refurbished to good fits both at the same rent (D86: 57 352,
+    // 2 101 for 24 months; laptop-006 good is 27 577, under band A's minimum); wait-08 and
+    // wait-09 are matched sooner, so they are taken here to leave the twins at the top.
+    const match = matchDemand(assessPackItem('laptop-007', V2_DAY), pack.demand, [
       'wait-08',
       'wait-09',
     ]);

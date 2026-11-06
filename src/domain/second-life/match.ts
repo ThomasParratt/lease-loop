@@ -12,10 +12,14 @@
 // 2. The ranking of the candidates, D13: no refurbishment beyond the mandatory steps first,
 //    then the earliest `needed_by`, then the highest total rent over the term, then the lower
 //    id. Each row names the step that put it below the row above.
-// 3. The decision (D61): the winner's condition; with no winner, the item is relisted at the
-//    floor for an unknown customer, good (or as returned when that is better). So the item is
-//    refurbished beyond the mandatory steps only when the winner needs it, which by step one
-//    means nobody was matched without it, or when no-one is waiting and it is below good.
+// 3. The decision (D61, D86): the winner's condition. With no winner (D86, replacing D61's
+//    "relist at good"), the option with the largest net gain (value gain − extra cost over the
+//    as-returned option, `comparison`), as returned when none is positive, and never below the
+//    catalogue floor, good (the cost table's note): among the options at or above
+//    max(as returned, good), the largest net gain wins, the lower condition on a tie. So the
+//    item is refurbished beyond the mandatory steps when the winner needs it, which by step
+//    one means nobody was matched without it, or with no-one waiting when the work pays for
+//    itself or the item is below good.
 import type { AssetCategory, AssetCondition, SecondLifeRequest } from '@/data/schemas';
 import {
   CONDITION_ORDER,
@@ -159,6 +163,26 @@ function firstDifference(a: Candidate, b: Candidate): { step: RankStep; sign: nu
 }
 
 /**
+ * D86 with no winner: among the options the catalogue may lease (at or above max(as returned,
+ * good), with a rent on some term), the largest net gain over the as-returned option; the lower
+ * condition on a tie, so the as-returned option (net 0) wins when nothing is positive.
+ */
+function bestWithoutMatch(
+  options: readonly ReturnOption[],
+  returned: AssetCondition
+): ReturnOption {
+  const floor = conditionRank(atLeast(returned, RELIST_FLOOR));
+  const net = (o: ReturnOption) => o.comparison?.netGainCents ?? 0;
+  // At or above the floor and priced on at least one term: an option under band A's minimum
+  // financed amount cannot be leased at all (laptop-006, good: 27 577 < 30 000).
+  const leasable = options.filter(
+    (o) => conditionRank(o.condition) >= floor && o.rents.some((r) => r.monthlyNetCents !== null)
+  );
+  if (leasable.length === 0) return options.at(-1)!;
+  return leasable.reduce((best, o) => (net(o) > net(best) ? o : best));
+}
+
+/**
  * D13 and D61 over `demand`, for the assessed item. `taken`: the entries an earlier assessment
  * already matched, so one entry never wins two items (D62).
  */
@@ -188,9 +212,9 @@ export function matchDemand(
   }));
   const winner = ranking[0] ?? null;
 
-  const condition = winner ? winner.condition : atLeast(assessed.returnedCondition, RELIST_FLOOR);
-  const relist =
-    assessed.options.find((o) => o.condition === condition) ?? assessed.options.at(-1)!;
+  const relist = winner
+    ? (assessed.options.find((o) => o.condition === winner.condition) ?? assessed.options.at(-1)!)
+    : bestWithoutMatch(assessed.options, assessed.returnedCondition);
   const decision: MatchDecision = winner
     ? {
         code: 'relist_for_winner',
