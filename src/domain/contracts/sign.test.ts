@@ -306,12 +306,33 @@ describe('planContract refusals (codes with params)', () => {
   });
 });
 
-describe('planContract quantity (D8, issue #13)', () => {
-  it('carries the quote quantity into the contract and the event unchanged', () => {
+describe('planContract quantity: no more units than signing can lock (D76, issue #13)', () => {
+  it('signs a quantity of 1 and carries it into the contract and the event', () => {
+    const plan = signed(planContract(input()));
+    expect(plan.contract.quantity).toBe(1);
+    expect(plan.event.quantity).toBe(1);
+  });
+
+  it('refuses card 6, 4 × ebike-004, with not_enough_units: one row, one unit', () => {
     const quote = { ...card1Quote, assetId: 'ebike-004', quantity: 4, monthlyNetCents: 58_993 };
-    const plan = signed(planContract(input({ quote })));
-    expect(plan.contract.quantity).toBe(4);
-    expect(plan.event.quantity).toBe(4);
+    expect(planContract(input({ quote }))).toEqual({
+      ok: false,
+      reason: { code: 'not_enough_units', params: { requested: 4, available: 1 } },
+    });
+  });
+
+  it('refuses 2 for a single unit, the smallest overselling', () => {
+    const plan = planContract(input({ quote: { ...card1Quote, quantity: 2 } }));
+    expect(plan.ok || plan.reason).toEqual({
+      code: 'not_enough_units',
+      params: { requested: 2, available: 1 },
+    });
+  });
+
+  it('checks the asset first, so a taken item reads as taken, not as short', () => {
+    const quote = { ...card1Quote, quantity: 3 };
+    const plan = planContract(input({ quote, assetStatus: 'leased' }));
+    expect(plan.ok || plan.reason.code).toBe('asset_not_available');
   });
 });
 

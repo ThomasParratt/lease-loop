@@ -56,5 +56,5 @@ The race write is not a `CONTRACT_SIGNED` handler on the bus, though D22 says th
 
 ## Open questions
 
-- **D8, quantity (issue #13).** The contract carries the quote's quantity into the row and the event unchanged and locks only the one asset row named by the quote. N units on one row are locked as one row until D8 is decided: a fleet of four `ebike-004` takes the single `ebike-004` out of the catalogue and the other three are "to be delivered".
+- **D8, quantity (issue #13).** Signing refuses a quantity above one with `not_enough_units` (D76), since it locks only the one asset row named by the quote; a quote still prices a fleet. N units on one row are locked as one row until D8 is decided: a fleet of four `ebike-004` takes the single `ebike-004` out of the catalogue and the other three are "to be delivered".
 - **Who signs an `awaiting_signatory` application.** Signing refuses everything but `approved`; the application slice's decision route lets the named signatory approve first (D10). Whether the signatory should then also be allowed to sign the contract (today only the applicant customer or admin may, and the Sign form follows that) is open: the signatory is not a customer in the data pack.

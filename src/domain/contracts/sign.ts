@@ -17,6 +17,12 @@ import { contractNumber } from './number';
  */
 export const START_MONTHS_MAX = 12;
 
+/**
+ * The units one contract can lock at signing: its one asset row (D76). Raised only when issue #13
+ * gives a contract several rows of identical units.
+ */
+export const UNITS_PER_CONTRACT = 1;
+
 export type PlanContractInput = {
   /** The new contract's id, chosen by the caller so the event can name it. */
   contractId: string;
@@ -78,6 +84,7 @@ export type SignRefusal =
   | { code: 'application_not_approved'; params: { decision: string } }
   | { code: 'quote_expired'; params: { validUntil: string } }
   | { code: 'asset_not_available'; params: { status: string } }
+  | { code: 'not_enough_units'; params: { requested: number; available: number } }
   | { code: 'start_before_signing'; params: { signedOn: string; startDate: string } }
   | {
       code: 'start_too_far';
@@ -114,6 +121,18 @@ export function planContract(input: PlanContractInput): PlanContractResult {
   }
   if (assetStatus !== 'available') {
     return { ok: false, reason: { code: 'asset_not_available', params: { status: assetStatus } } };
+  }
+  // D76: a contract holds one asset row and signing locks exactly that row, so it can deliver
+  // one unit. A quote may still price a fleet (D8, card 6's band on the total), but signing
+  // refuses more units than it can lock, until issue #13 lets one contract hold N rows.
+  if (quote.quantity > UNITS_PER_CONTRACT) {
+    return {
+      ok: false,
+      reason: {
+        code: 'not_enough_units',
+        params: { requested: quote.quantity, available: UNITS_PER_CONTRACT },
+      },
+    };
   }
   // ISO days compare correctly as strings.
   if (startDate < signedOn) {

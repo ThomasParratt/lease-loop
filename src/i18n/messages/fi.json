@@ -385,6 +385,7 @@
   "contract.refusal.application_not_approved": "Hakemusta ei voi vielä allekirjoittaa: sen päätös on \"{decision}\".",
   "contract.refusal.quote_expired": "Tarjous oli voimassa {validUntil} asti. Pyydä uusi tarjous tämän päivän hinnalla allekirjoittaaksesi.",
   "contract.refusal.asset_not_available": "Valitettavasti tämä tuote vuokrattiin juuri toiselle.",
+  "contract.refusal.not_enough_units": "Tämä vuokrasopimus koskee {requested} kappaletta, mutta yhteen sopimukseen mahtuu toistaiseksi vain {available}. Vuokraa ne yksi kerrallaan tai kysy meiltä kalustosopimusta.",
   "contract.refusal.start_before_signing": "Vuokrakausi ei voi alkaa ({startDate}) ennen allekirjoituspäivää ({signedOn}).",
   "contract.refusal.start_too_far": "Vuokrakauden on alettava {maxMonths} kuukauden kuluessa allekirjoituksesta, viimeistään {maxStartDate}.",
   "contract.refusal.too_young_at_start": "Sinun on oltava 18-vuotias vuokrakauden alkaessa. Valitse alkupäivä {adultFrom} tai sen jälkeen.",

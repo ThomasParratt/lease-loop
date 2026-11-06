@@ -16,6 +16,7 @@ const STATUS_OF: Partial<Record<SignContractRefusal['code'], number>> = {
   application_not_found: 404,
   already_signed: 409,
   asset_not_available: 409,
+  not_enough_units: 409,
 };
 
 const refused = (status: number, reason: SignContractRefusal) =>
