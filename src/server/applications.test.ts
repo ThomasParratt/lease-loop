@@ -1,4 +1,5 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
+import { forbidden } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
@@ -204,8 +205,11 @@ describe('createApplication', () => {
       today: TODAY,
       actor: 'cust-mikko',
     });
-    expect(result).toEqual({ ok: false, reason: 'not_applicant' });
-    for (const actor of ['admin', 'anonymous']) {
+    expect(result).toEqual(forbidden('not_owner', 'apply'));
+    for (const [actor, expected] of [
+      ['admin', { ok: false, reason: 'not_applicant' }],
+      ['anonymous', forbidden('not_signed_in', 'apply')],
+    ] as const) {
       const other = await createApplication(db, {
         quoteId: await card1(),
         customerId: 'cust-aino',
@@ -213,7 +217,7 @@ describe('createApplication', () => {
         today: TODAY,
         actor,
       });
-      expect(other, actor).toEqual({ ok: false, reason: 'not_applicant' });
+      expect(other, actor).toEqual(expected);
     }
     expect(await db.application.count()).toBe(0);
     expect(await db.auditLog.count()).toBe(0);
@@ -303,7 +307,7 @@ describe('createApplication', () => {
     ).toEqual({ ok: false, reason: 'not_applicant' });
     expect(
       await createApplication(db, { ...base, actor: 'cust-mikko', onBehalfOf: 'cust-aino' })
-    ).toEqual({ ok: false, reason: 'not_applicant' });
+    ).toEqual(forbidden('not_owner', 'apply'));
     expect(await db.application.count()).toBe(0);
   });
 
@@ -348,10 +352,9 @@ describe('decideApplication (D10)', () => {
   it('only an admin decides a manual review', async () => {
     const created = await apply(await card7(), 'cust-haapala');
     if (!created.ok) throw new Error('setup');
-    expect(await decide(created.application.id, 'approved', 'cust-haapala')).toEqual({
-      ok: false,
-      reason: 'admin_only',
-    });
+    expect(await decide(created.application.id, 'approved', 'cust-haapala')).toEqual(
+      forbidden('admin_only', 'decide_application')
+    );
   });
 
   it('a PEP case that also needs a signatory waits for the signing link after the review', async () => {
@@ -476,7 +479,7 @@ describe('the signing link (D39, D46), card 6', () => {
     });
   });
 
-  it('review finding 1: the company account posting a decision gets not_signatory; the admin too', async () => {
+  it('review finding 1: the company account posting a decision gets signatory_required; the admin too', async () => {
     const { id } = await norviWaits();
     for (const actor of ['cust-norvi', 'admin']) {
       const result = await decideApplication(db, {
@@ -486,7 +489,7 @@ describe('the signing link (D39, D46), card 6', () => {
         today: TODAY,
         actor,
       });
-      expect(result, actor).toEqual({ ok: false, reason: 'not_signatory' });
+      expect(result, actor).toEqual(forbidden('signatory_required', 'decide_application'));
     }
     expect((await getApplication(db, id))?.decision).toBe('awaiting_signatory');
     expect(await db.auditLog.count({ where: { action: 'application.decided' } })).toBe(0);

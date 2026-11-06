@@ -1,27 +1,34 @@
 // POST /api/assets/:id/assessments   (no body)
 // Assesses a returned asset on the request's day (the demo clock, never a date from the
 // browser) and relists it: the assessment row, the passport events and the asset available at
-// its second-life price, in one audited transaction (D12, D13, D61). Admin only.
+// its second-life price, in one audited transaction (D12, D13, D61). Admin only, authorized
+// first (D73, D74).
+import { isAuthzRefusal, type AuthzRefusalCode } from '@/domain/authz/policy';
 import { readActor } from '@/server/actor';
 import { fail, handleRoute, ok } from '@/server/api-response';
+import { authorize, forbiddenResponse } from '@/server/authorize';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 import { assessAsset, toAssessmentResponse, type AssessRefusal } from '@/server/second-life';
 import { assessmentParamsSchema } from '@/server/second-life-schemas';
 
-const STATUS_OF: Record<AssessRefusal['code'], number> = {
-  admin_only: 403,
+const STATUS_OF: Record<Exclude<AssessRefusal['code'], AuthzRefusalCode>, number> = {
   asset_not_found: 404,
   asset_not_returned: 409,
   no_list_price: 422,
+  demand_taken: 409,
 };
 
 export const POST = handleRoute(
   async (_request, { params }: RouteContext<'/api/assets/[id]/assessments'>) => {
     const { id } = assessmentParamsSchema.parse(await params);
-    const [today, actor] = await Promise.all([todayForRequest(), readActor(db)]);
-    const result = await assessAsset(db, { assetId: id, actor, today });
+    const actor = await readActor(db);
+    const auth = await authorize(db, actor, 'assess_asset', { none: true });
+    if (!auth.ok && auth.reason.code !== 'not_found') return forbiddenResponse(auth.reason);
+
+    const result = await assessAsset(db, { assetId: id, actor, today: await todayForRequest() });
     if (!result.ok) {
+      if (isAuthzRefusal(result.reason)) return forbiddenResponse(result.reason);
       return fail(
         STATUS_OF[result.reason.code],
         'ASSESSMENT_REFUSED',

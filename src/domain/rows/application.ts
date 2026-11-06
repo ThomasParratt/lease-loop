@@ -8,11 +8,16 @@ import { idSchema, isoDateSchema, jsonText, ON_VALID_FIELDS, outcomeSchema } fro
 export const answerSchema = z.union([z.string().max(500), z.array(z.string().max(200)).max(20)]);
 
 /**
- * At most this many answers in one application. The bank has 19 questions and an id is at
- * most 20 characters; 64 leaves room for the bank to grow while a body of ten thousand keys
- * is refused before anything is read.
+ * At most this many answers in one application. The bank has 19 questions; 64 leaves room for
+ * the bank to grow while a body of ten thousand keys is refused before anything is read.
  */
 export const MAX_ANSWERS = 64;
+
+/**
+ * The longest question id (wave 3 finding 11: a limit of its own, not `MAX_ANSWERS`). The
+ * bank's longest id is 20 characters.
+ */
+export const MAX_QUESTION_ID_LENGTH = 64;
 
 /** Question id → answer. */
 export const answersSchema = z
@@ -20,7 +25,7 @@ export const answersSchema = z
     z
       .string()
       .regex(/^q_[a-z0-9_]+$/)
-      .max(MAX_ANSWERS),
+      .max(MAX_QUESTION_ID_LENGTH),
     answerSchema
   )
   .refine((answers) => Object.keys(answers).length <= MAX_ANSWERS, {

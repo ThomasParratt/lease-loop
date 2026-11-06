@@ -1,9 +1,11 @@
 // GET /api/invoices?contractId=…
-// A contract's invoices in sequence order. Only the contract's customer or admin may read them.
-import { ADMIN_ACTOR, readActor } from '@/server/actor';
+// A contract's invoices in sequence order. Only the contract's customer or admin may read them
+// (D73, D74).
+import { readActor } from '@/server/actor';
 import { fail, handleRoute, ok } from '@/server/api-response';
+import { authorize, refusalResponse } from '@/server/authorize';
 import { db } from '@/server/db';
-import { contractCustomerId, listInvoices } from '@/server/invoices';
+import { listInvoices } from '@/server/invoices';
 import { listInvoicesQuerySchema } from '@/server/routes';
 
 export const GET = handleRoute(async (request) => {
@@ -12,12 +14,9 @@ export const GET = handleRoute(async (request) => {
     contractId: searchParams.get('contractId') ?? undefined,
   });
 
-  const customerId = await contractCustomerId(db, contractId);
-  if (customerId === null) return fail(404, 'CONTRACT_NOT_FOUND', 'No such contract');
-  const actor = await readActor(db);
-  if (actor !== ADMIN_ACTOR && actor !== customerId) {
-    return fail(403, 'FORBIDDEN', 'Only the customer of this contract may see its invoices');
+  const auth = await authorize(db, await readActor(db), 'read_contract', { contract: contractId });
+  if (!auth.ok) {
+    return refusalResponse(auth.reason, () => fail(404, 'CONTRACT_NOT_FOUND', 'No such contract'));
   }
-
   return ok(await listInvoices(db, contractId));
 });

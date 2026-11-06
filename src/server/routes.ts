@@ -244,7 +244,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'PATCH',
     path: '/api/assets/[id]/status',
-    summary: "Admin only: change an asset's status along D22's transitions, audited",
+    summary:
+      "Admin only: change an asset's status along D22's transitions, audited; 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'assets',
     params: assetIdParamsSchema,
     body: changeAssetStatusBodySchema,
@@ -271,7 +272,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/demo/cards/[id]/run',
     summary:
-      "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records)",
+      "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records); 404 while DEMO_TOOLS is off (D74)",
     tag: 'demo',
     params: demoCardParamsSchema,
     response: demoCardRunSchema,
@@ -294,7 +295,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'GET',
     path: '/api/invoices',
-    summary: "A contract's invoices in sequence order (the contract's customer or admin)",
+    summary:
+      "A contract's invoices in sequence order (the contract's customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'invoices',
     query: listInvoicesQuerySchema,
     response: z.array(invoiceViewSchema),
@@ -303,7 +305,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/invoices/[id]/pay',
     summary:
-      "Pay an invoice on the request's day: audited, emits INVOICE_PAID (the contract's customer or admin)",
+      "Pay an invoice on the request's day: audited, emits INVOICE_PAID (the contract's customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'invoices',
     params: invoiceIdParamsSchema,
     response: invoiceViewSchema,
@@ -337,7 +339,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/applications',
     summary:
-      'Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9); the admin only with onBehalfOf (D47); 409 QUOTE_IN_USE while another application holds the quote (D56)',
+      'Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9); the admin only with onBehalfOf (D47); 409 QUOTE_IN_USE while another application holds the quote (D56); 401 not signed in, 403 FORBIDDEN (D73, D74)',
     tag: 'applications',
     body: createApplicationBodySchema,
     response: applicationSchema,
@@ -347,7 +349,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'GET',
     path: '/api/applications/[id]',
     summary:
-      'An application with its decision and reasons as codes with params (the applicant or admin; 404 for anyone else)',
+      'An application with its decision and reasons as codes with params (the applicant or admin; 404 for another customer, D57); 401 not signed in, 403 FORBIDDEN (D73, D74)',
     tag: 'applications',
     params: applicationIdParamsSchema,
     response: applicationSchema,
@@ -356,7 +358,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/applications/[id]/decision',
     summary:
-      'An admin decides a manual review (D10); an awaiting_signatory case answers 403 NOT_SIGNATORY: it is signed through the link (D46)',
+      'An admin decides a manual review (D10); an awaiting_signatory case is refused (signatory_required): it is signed through the link (D46); 401 not signed in, 403 FORBIDDEN (D73, D74)',
     tag: 'applications',
     params: applicationIdParamsSchema,
     body: decideApplicationBodySchema,
@@ -366,7 +368,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'GET',
     path: '/api/customers/[id]/signatories',
     summary:
-      "The company's signatory list with each entry's state today (the company or admin, D46)",
+      "The company's signatory list with each entry's state today (the company or admin, D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'signatories',
     params: customerIdParamsSchema,
     response: signatoryListSchema,
@@ -375,7 +377,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/customers/[id]/signatories',
     summary:
-      "Add a signatory, valid from validFrom up to validTo (the company's own signatory or admin, D46)",
+      "Add a signatory, valid from validFrom up to validTo (the company's own signatory or admin, D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'signatories',
     params: customerIdParamsSchema,
     body: addSignatoryBodySchema,
@@ -385,7 +387,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'POST',
     path: '/api/customers/[id]/signatories/[signatoryId]/revoke',
-    summary: "End a signatory's right today; the last active one cannot be revoked (D46)",
+    summary:
+      "End a signatory's right today; the last active one cannot be revoked (D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'signatories',
     params: signatoryParamsSchema,
     response: signatorySchema,
@@ -412,7 +415,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/contracts',
     summary:
-      "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin)",
+      "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'contracts',
     body: signContractBodySchema,
     response: contractResponseSchema,
@@ -421,7 +424,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'GET',
     path: '/api/contracts/[id]',
-    summary: "A contract with its frozen price and why it holds (the contract's customer or admin)",
+    summary:
+      "A contract with its frozen price and why it holds (the contract's customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'contracts',
     params: contractIdParamsSchema,
     response: contractResponseSchema,
@@ -430,7 +434,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'GET',
     path: '/api/contracts/[id]/exit-preview',
     summary:
-      "What buying, returning or passing on would cost on the request's day, line by line (D14), without writing",
+      "What buying, returning or passing on would cost on the request's day, line by line (D14), without writing; 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'exits',
     params: exitParamsSchema,
     query: exitPreviewQuerySchema,
@@ -440,7 +444,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/contracts/[id]/exit',
     summary:
-      "Buy out, return or pass on on the request's day: sets the status, emits the event, bills the exit (the customer or admin)",
+      "Buy out, return or pass on on the request's day: sets the status, emits the event, bills the exit (the customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'exits',
     params: exitParamsSchema,
     body: exitBodySchema,
@@ -450,7 +454,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/assets/[id]/assessments',
     summary:
-      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin)",
+      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'second-life',
     params: assessmentParamsSchema,
     response: assessmentResponseSchema,

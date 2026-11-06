@@ -15,11 +15,12 @@ import {
 import { priceQuote, type PricingData, type QuoteStatus } from '@/domain/pricing';
 import { contractRowSchema } from '@/domain/rows/contract';
 import { contractStatusSchema, type ContractStatus } from '@/domain/statuses';
-import { ADMIN_ACTOR } from './actor';
+import type { AuthzRefusal } from '@/domain/authz/policy';
 import { getApplication } from './applications';
 import { getAsset } from './assets';
 import { getCustomer } from './customers';
 import { withAudit, type TransactionClient } from './audit';
+import { authorize } from './authorize';
 import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handlers';
 import { emit } from './events';
 import './event-handlers';
@@ -50,7 +51,7 @@ export type SignContractInput = {
 export type SignContractRefusal =
   | SignRefusal
   | { code: 'application_not_found'; params: { applicationId: string } }
-  | { code: 'not_allowed_to_sign'; params: { applicationId: string } }
+  | AuthzRefusal
   | { code: 'already_signed'; params: { applicationId: string } };
 
 export type SignContractResult =
@@ -119,8 +120,9 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * Signs `applicationId` on `today` (the request's day, demo clock included). Only the
- * application's customer or `admin` may sign. Never re-prices: the contract copies the quote.
+ * Signs `applicationId` on `today` (the request's day, demo clock included). Authorized first
+ * (D73): the application's customer or `admin`, never a case waiting for the company's
+ * signatory. Never re-prices: the contract copies the quote.
  */
 export async function signContract(
   db: PrismaClient,
@@ -129,13 +131,15 @@ export async function signContract(
   data?: PricingData
 ): Promise<SignContractResult> {
   const { applicationId } = input;
+  const notFound = {
+    ok: false,
+    reason: { code: 'application_not_found', params: { applicationId } },
+  } as const;
+  const auth = await authorize(db, input.actor, 'sign_contract', { application: applicationId });
+  if (!auth.ok)
+    return auth.reason.code === 'not_found' ? notFound : { ok: false, reason: auth.reason };
   const application = await getApplication(db, applicationId);
-  if (!application) {
-    return { ok: false, reason: { code: 'application_not_found', params: { applicationId } } };
-  }
-  if (input.actor !== application.customerId && input.actor !== ADMIN_ACTOR) {
-    return { ok: false, reason: { code: 'not_allowed_to_sign', params: { applicationId } } };
-  }
+  if (!application) return notFound;
   const alreadySigned = {
     ok: false,
     reason: { code: 'already_signed', params: { applicationId } },

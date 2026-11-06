@@ -48,7 +48,7 @@ The server runs the same checks on submit and answers 400 `INVALID_ANSWER` with 
 The request body is parsed before anything is read (`createApplicationBodySchema`, a `strictObject`): unknown keys, wrong types and oversize values are 400 `VALIDATION_ERROR`. The bounds, each pinned by a test in `src/app/api/applications/route.test.ts`:
 
 - `quoteId` and `customerId` are trimmed, 1 to 100 characters; the trimmed customer id must be the actor.
-- An answer is a string of at most 500 characters or a list of at most 20 items of 200; a question id is `q_` plus lower-case letters, digits and underscores, at most 64 characters; an application has at most 64 answers (`MAX_ANSWERS`, the bank has 19).
+- An answer is a string of at most 500 characters or a list of at most 20 items of 200; a question id is `q_` plus lower-case letters, digits and underscores, at most 64 characters (`MAX_QUESTION_ID_LENGTH`); an application has at most 64 answers (`MAX_ANSWERS`, the bank has 19).
 - The application id in the path is 1 to 100 characters; `reviewedBy` on a decision is trimmed, 1 to 200.
 - Cents and quantities are safe integers (Zod 4's `int()`): `1e308` and `2^53` are refused; the quote body caps the quantity at 100.
 

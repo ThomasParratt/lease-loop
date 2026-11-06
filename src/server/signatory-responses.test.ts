@@ -7,17 +7,21 @@ async function envelope(response: Response) {
 
 describe('signatoryFailure', () => {
   it('the last signatory is a 409 LAST_SIGNATORY in the fail() envelope', async () => {
-    expect(await envelope(signatoryFailure('last_signatory'))).toMatchObject({
-      status: 409,
-      body: { success: false, error: { code: 'LAST_SIGNATORY' } },
-    });
+    expect(await envelope(signatoryFailure({ ok: false, reason: 'last_signatory' }))).toMatchObject(
+      {
+        status: 409,
+        body: { success: false, error: { code: 'LAST_SIGNATORY' } },
+      }
+    );
   });
 
-  it('a stranger is a 403 NOT_ALLOWED; an unknown company a 404', async () => {
-    expect((await envelope(signatoryFailure('not_allowed'))).status).toBe(403);
-    expect((await envelope(signatoryFailure('not_found'))).body.error.code).toBe(
-      'SIGNATORY_NOT_FOUND'
-    );
+  it('a stranger is a 403 FORBIDDEN (D74); an unknown company a 404', async () => {
+    const refusal = { code: 'not_owner', params: { action: 'manage_signatories' } } as const;
+    const forbidden = await envelope(signatoryFailure({ ok: false, reason: 'forbidden', refusal }));
+    expect(forbidden).toMatchObject({ status: 403, body: { error: { code: 'FORBIDDEN' } } });
+    expect(
+      (await envelope(signatoryFailure({ ok: false, reason: 'not_found' }))).body.error.code
+    ).toBe('SIGNATORY_NOT_FOUND');
   });
 });
 

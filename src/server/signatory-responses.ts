@@ -1,28 +1,27 @@
 // The envelopes of the signatory and signing-link routes (D46): every refusal of
 // src/server/signatories.ts as one `fail()` with its status and code, never a raw message.
 import { fail } from './api-response';
+import { forbiddenResponse } from './authorize';
 import type { AddSignatoryResult, RevokeSignatoryResult, SignByTokenResult } from './signatories';
 
 type Refusal<R> = R extends { ok: false; reason: infer Reason } ? Reason : never;
 
-type SignatoryRefusal = Refusal<AddSignatoryResult> | Refusal<RevokeSignatoryResult>;
+type SignatoryFailure =
+  Extract<AddSignatoryResult, { ok: false }> | Extract<RevokeSignatoryResult, { ok: false }>;
+type SignatoryRefusal = Exclude<SignatoryFailure['reason'], 'forbidden'>;
 
 const SIGNATORY: Record<SignatoryRefusal, [number, string, string]> = {
   not_found: [404, 'SIGNATORY_NOT_FOUND', 'No such company or signatory'],
-  not_allowed: [
-    403,
-    'NOT_ALLOWED',
-    'Only the company’s own signatory or the admin changes the list',
-  ],
   already_listed: [409, 'SIGNATORY_ALREADY_LISTED', 'That e-mail is already on the list'],
   invalid_dates: [400, 'INVALID_DATES', 'The end must come after the start'],
   already_ended: [409, 'SIGNATORY_ALREADY_ENDED', 'That signatory’s right has already ended'],
   last_signatory: [409, 'LAST_SIGNATORY', 'The last active signatory cannot be revoked'],
 };
 
-/** A refused change to the signatory list. */
-export function signatoryFailure(reason: SignatoryRefusal): Response {
-  const [status, code, message] = SIGNATORY[reason];
+/** A refused change to the signatory list; a refused actor through `forbiddenResponse` (D74). */
+export function signatoryFailure(failure: SignatoryFailure): Response {
+  if (failure.reason === 'forbidden') return forbiddenResponse(failure.refusal);
+  const [status, code, message] = SIGNATORY[failure.reason];
   return fail(status, code, message);
 }
 

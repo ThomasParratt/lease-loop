@@ -9,8 +9,9 @@ import { useState } from 'react';
 import { Button, Notice } from '@/components/ui';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import { authzRefusalKey } from '@/components/authz-refusal';
 
-const REFUSALS = ['admin_only', 'asset_not_returned', 'asset_not_found', 'no_list_price'];
+const REFUSALS = ['demand_taken', 'asset_not_returned', 'asset_not_found', 'no_list_price'];
 
 export function AssessButton({ assetId, locale }: { assetId: string; locale: Locale }) {
   const t = getT(locale);
@@ -27,8 +28,9 @@ export function AssessButton({ assetId, locale }: { assetId: string; locale: Loc
     const body = response ? await response.json().catch(() => null) : null;
     if (!body?.success) {
       const code: unknown = body?.error?.details?.code;
+      const authz = authzRefusalKey(code);
       const known = typeof code === 'string' && REFUSALS.includes(code) ? code : 'unknown';
-      setError(t(`secondLife.refusal.${known}` as MessageKey));
+      setError(t(authz ?? (`secondLife.refusal.${known}` as MessageKey)));
       setPending(false);
       return;
     }

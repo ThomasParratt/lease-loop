@@ -10,7 +10,9 @@ import {
   type InvoiceStatus,
 } from '@/domain/statuses';
 import { invoiceRowSchema } from '@/domain/rows/invoice';
+import type { AuthzRefusal } from '@/domain/authz/policy';
 import { withAudit, type TransactionClient } from './audit';
+import { authorize } from './authorize';
 import { contractCustomerId, listContracts } from './contracts';
 import { emit } from './events';
 import type { PrismaClient } from './prisma-client';
@@ -120,7 +122,9 @@ export { contractCustomerId };
 class LostPaymentRace extends Error {}
 
 export type PayInvoiceResult =
-  { ok: true; invoice: InvoiceView } | { ok: false; reason: 'not_found' | 'already_paid' };
+  | { ok: true; invoice: InvoiceView }
+  | { ok: false; reason: 'not_found' | 'already_paid' }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal };
 
 /**
  * Marks an invoice paid on `paidOn` (the request's today), writes `invoice.paid` to the audit
@@ -131,6 +135,13 @@ export async function payInvoice(
   db: PrismaClient,
   input: { id: string; paidOn: string; actor: string }
 ): Promise<PayInvoiceResult> {
+  // D73: authorized before anything else is read: the contract's customer or the admin.
+  const auth = await authorize(db, input.actor, 'pay_invoice', { invoice: input.id });
+  if (!auth.ok) {
+    return auth.reason.code === 'not_found'
+      ? { ok: false, reason: 'not_found' }
+      : { ok: false, reason: 'forbidden', refusal: auth.reason };
+  }
   const existing = await db.invoice.findUnique({ where: { id: input.id } });
   if (!existing) return { ok: false, reason: 'not_found' };
   if (existing.status === 'paid') return { ok: false, reason: 'already_paid' };

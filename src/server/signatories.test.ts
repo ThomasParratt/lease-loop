@@ -1,4 +1,5 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
+import { forbidden } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
@@ -6,7 +7,13 @@ import { resetDb } from '../../tests/helpers/reset-db';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
-import { addSignatory, listSignatories, revokeSignatory, seedSignatories } from './signatories';
+import {
+  addSignatory,
+  entryForLink,
+  listSignatories,
+  revokeSignatory,
+  seedSignatories,
+} from './signatories';
 
 let db: PrismaClient;
 let cleanup: () => Promise<void>;
@@ -80,14 +87,12 @@ describe('addSignatory', () => {
   });
 
   it('the trap: a stranger, anonymous or Norvi’s coordinator who may not sign is refused', async () => {
-    expect(await addSignatory(db, { ...cfo, actor: 'cust-aino' })).toEqual({
-      ok: false,
-      reason: 'not_allowed',
-    });
-    expect(await addSignatory(db, { ...cfo, actor: 'anonymous' })).toEqual({
-      ok: false,
-      reason: 'not_allowed',
-    });
+    expect(await addSignatory(db, { ...cfo, actor: 'cust-aino' })).toEqual(
+      forbidden('not_owner', 'manage_signatories')
+    );
+    expect(await addSignatory(db, { ...cfo, actor: 'anonymous' })).toEqual(
+      forbidden('not_signed_in', 'manage_signatories')
+    );
     expect(
       await addSignatory(db, {
         ...cfo,
@@ -95,7 +100,7 @@ describe('addSignatory', () => {
         email: 'friend@norvi.example.com',
         actor: 'cust-norvi',
       })
-    ).toEqual({ ok: false, reason: 'not_allowed' });
+    ).toEqual(forbidden('signatory_required', 'manage_signatories'));
     expect(await db.auditLog.count()).toBe(0);
   });
 
@@ -114,6 +119,34 @@ describe('addSignatory', () => {
       ok: false,
       reason: 'invalid_dates',
     });
+  });
+});
+
+describe('entryForLink (wave 3 finding 3)', () => {
+  it('a revoked and re-added e-mail gets its link on the new entry, not the ended one', async () => {
+    const first = await addSignatory(db, { ...cfo, actor: 'admin' });
+    if (!first.ok) throw new Error('setup');
+    const revoked = await revokeSignatory(db, {
+      customerId: 'cust-kettukoodi',
+      signatoryId: first.signatory.id,
+      actor: 'admin',
+      today: '2026-11-10',
+    });
+    expect(revoked.ok).toBe(true);
+    const again = await addSignatory(db, {
+      ...cfo,
+      validFrom: '2026-11-12',
+      today: '2026-11-12',
+      actor: 'admin',
+    });
+    if (!again.ok) throw new Error('setup');
+    const rows = await db.companySignatory.findMany({ orderBy: { created_at: 'asc' } });
+    const email = 'kaisa@kettukoodi.example.com';
+    expect(entryForLink(rows, email, '2026-11-12')?.id).toBe(again.signatory.id);
+    // Only the ended entry: the link still names it, and signing answers signatory_not_active.
+    const ended = rows.filter((row) => row.id !== again.signatory.id);
+    expect(entryForLink(ended, email, '2026-11-12')?.id).toBe(first.signatory.id);
+    expect(entryForLink(rows, 'nobody@kettukoodi.example.com', '2026-11-12')).toBeUndefined();
   });
 });
 
@@ -160,6 +193,6 @@ describe('revokeSignatory', () => {
         actor: 'cust-aino',
         today: TODAY,
       })
-    ).toEqual({ ok: false, reason: 'not_allowed' });
+    ).toEqual(forbidden('not_owner', 'manage_signatories'));
   });
 });

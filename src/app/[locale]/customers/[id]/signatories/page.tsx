@@ -1,6 +1,7 @@
 // The company's signatory list (D46): who may sign for it, from when and until when, who
 // granted the right. Seen by the company's own account and the admin; changed by the
 // company's own signatory or the admin (the server decides, the page only writes the answer).
+// Authorized first (D73): `read_signatories` before the list is read.
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -9,7 +10,8 @@ import { REGISTER_CHECK_SIMULATED } from '@/domain/rows/signatory';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { ADMIN_ACTOR, readActor } from '@/server/actor';
+import { readActor } from '@/server/actor';
+import { authorize } from '@/server/authorize';
 import { getCustomer } from '@/server/customers';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -46,16 +48,16 @@ export default async function SignatoriesPage({
     </div>
   );
 
-  const [actor, company, today] = await Promise.all([
-    readActor(db),
-    getCustomer(db, id),
-    todayForRequest(),
-  ]);
+  const auth = await authorize(db, await readActor(db), 'read_signatories', { customer: id });
+  if (!auth.ok && auth.reason.code === 'not_signed_in') {
+    return page(<Notice tone="info">{t('authz.refusal.not_signed_in')}</Notice>);
+  }
+  if (!auth.ok && auth.reason.code !== 'not_found') {
+    return page(<Notice tone="info">{t('signatories.companyOnly')}</Notice>);
+  }
+  const [company, today] = await Promise.all([getCustomer(db, id), todayForRequest()]);
   if (!company || company.type !== 'company') {
     return page(<Notice tone="warning">{t('signatories.notCompany')}</Notice>);
-  }
-  if (actor !== id && actor !== ADMIN_ACTOR) {
-    return page(<Notice tone="info">{t('signatories.companyOnly')}</Notice>);
   }
   const list = await listSignatories(db, id, today);
   const date = (iso: string | null) => (iso === null ? '–' : formatIsoDate(iso, locale));
@@ -65,7 +67,7 @@ export default async function SignatoriesPage({
       : (list.find((other) => other.id === by)?.email ?? by);
   const labels = {
     error: t('signatories.error'),
-    NOT_ALLOWED: t('signatories.notAllowed'),
+    FORBIDDEN: t('signatories.notAllowed'),
     LAST_SIGNATORY: t('signatories.lastSignatory'),
     SIGNATORY_ALREADY_LISTED: t('signatories.alreadyListed'),
     SIGNATORY_ALREADY_ENDED: t('signatories.alreadyEnded'),

@@ -14,6 +14,7 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, messages, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { ExitPreview } from '@/server/exits';
+import { authzRefusalKey } from './authz-refusal';
 import { ExitOptionList } from './exit-preview';
 import { Button, Field, Notice, inputClasses } from './ui';
 
@@ -83,6 +84,8 @@ export function ExitForm(props: ExitFormProps) {
   }, [contractId, mode, condition, usageValue]);
 
   function refusalText(code: unknown): string {
+    const authz = authzRefusalKey(code);
+    if (authz) return t(authz);
     const key = `exit.refusal.${String(code)}`;
     return key in messages.en ? t(key as MessageKey) : t('exit.error');
   }

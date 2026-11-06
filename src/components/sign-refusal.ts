@@ -3,6 +3,7 @@
 // Days are written as dates and a decision as its status text; an unknown code or a response
 // without one gets the generic "could not sign" message.
 import { formatIsoDate } from '@/i18n/format';
+import { authzRefusalKey } from './authz-refusal';
 import { getT, messages, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 
@@ -12,6 +13,8 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function signRefusalText(locale: Locale, reason: SignRefusalReason): string {
   const t = getT(locale);
+  const authz = authzRefusalKey(reason?.code);
+  if (authz) return t(authz);
   const key = `contract.refusal.${String(reason?.code)}`;
   if (!(key in messages.en)) return t('contract.sign.error');
 

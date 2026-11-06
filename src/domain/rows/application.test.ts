@@ -5,6 +5,7 @@ import {
   applicationDecisionUpdateSchema,
   applicationRowSchema,
   MAX_ANSWERS,
+  MAX_QUESTION_ID_LENGTH,
 } from './application';
 
 const refuses = (row: unknown) => applicationRowSchema.safeParse(row).success === false;
@@ -34,12 +35,12 @@ describe('applicationRowSchema: the answers and what the rules decided', () => {
       Array.from({ length: MAX_ANSWERS }, (_, i) => [`q_x${i}`, 'x'])
     );
     expect(answersSchema.safeParse(exactly).success).toBe(true);
-    expect(answersSchema.safeParse({ [`q_${'a'.repeat(MAX_ANSWERS - 1)}`]: 'x' }).success).toBe(
-      false
-    );
-    expect(answersSchema.safeParse({ [`q_${'a'.repeat(MAX_ANSWERS - 2)}`]: 'x' }).success).toBe(
-      true
-    );
+    expect(
+      answersSchema.safeParse({ [`q_${'a'.repeat(MAX_QUESTION_ID_LENGTH - 1)}`]: 'x' }).success
+    ).toBe(false);
+    expect(
+      answersSchema.safeParse({ [`q_${'a'.repeat(MAX_QUESTION_ID_LENGTH - 2)}`]: 'x' }).success
+    ).toBe(true);
   });
 
   it('refuses a reason written as a sentence (team rule 6)', () => {

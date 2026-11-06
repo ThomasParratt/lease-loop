@@ -1,7 +1,8 @@
 // POST /api/demo/cards/:id/run against a real, migrated SQLite database: the app's `db` module
 // is pointed at it and seeded with the pack, nothing else is replaced. The run answers its steps and landing page and
 // sets the demo clock and actor cookies; a second click is 409 with the earlier page (D70).
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+// With the demo tools off (D74, `DEMO_TOOLS=0`) it answers 404 and runs nothing.
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { seedPack } from '../../../../../../../tests/helpers/invoice-fixture';
 import { createTestDb } from '../../../../../../../tests/helpers/test-db';
 import { ACTOR_COOKIE } from '@/server/actor';
@@ -14,6 +15,8 @@ vi.mock('@/server/db', () => ({
     return holder.db;
   },
 }));
+
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 const { POST } = await import('./route');
 
@@ -35,6 +38,22 @@ async function run(id: string) {
     body: await response.json(),
   };
 }
+
+describe('POST /api/demo/cards/[id]/run with the demo tools off (D74)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('answers 404, sets no cookie and writes nothing', async () => {
+    vi.stubEnv('DEMO_TOOLS', '0');
+    const before = await holder.db.auditLog.count();
+    const { status, cookies, body } = await run('5');
+    expect(status).toBe(404);
+    expect(body.error.code).toBe('NOT_FOUND');
+    expect(cookies).toEqual([]);
+    expect(await holder.db.auditLog.count()).toBe(before);
+  });
+});
 
 describe('POST /api/demo/cards/[id]/run', () => {
   it('runs card 5, sets the clock and the actor, and names the application page', async () => {

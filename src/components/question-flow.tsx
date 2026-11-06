@@ -41,7 +41,7 @@ export type QuestionFlowLabels = {
   signatoryIsApplicant: string;
   /** 403 NOT_APPLICANT: the actor is not the customer applying (D40). */
   notApplicant: string;
-  /** 403 NOT_SIGNATORY: only the signing link signs (D46). */
+  /** 403 FORBIDDEN `signatory_required`: only the signing link signs (D46, D73). */
   notSignatory: string;
   /** Raw, with {question} and {problem}: the server refused one answer (400 with a `problem`). */
   answerRefused: string;
@@ -71,7 +71,10 @@ type QuestionFlowProps = {
 };
 
 type FailureBody = {
-  error?: { code?: string; details?: { questionId?: string; problem?: AnswerProblem } };
+  error?: {
+    code?: string;
+    details?: { questionId?: string; problem?: AnswerProblem; code?: string };
+  };
 };
 
 const REVIEW = 'review';
@@ -121,8 +124,10 @@ export function QuestionFlow(props: QuestionFlowProps) {
   /** The sentence for a refused submit: the code the server sent, else the generic error. */
   function failureText(body: FailureBody): string {
     const code = body.error?.code;
-    if (code === 'NOT_APPLICANT') return labels.notApplicant;
-    if (code === 'NOT_SIGNATORY') return labels.notSignatory;
+    if (code === 'FORBIDDEN' && body.error?.details?.code === 'signatory_required') {
+      return labels.notSignatory;
+    }
+    if (code === 'NOT_APPLICANT' || code === 'FORBIDDEN') return labels.notApplicant;
     const { questionId, problem } = body.error?.details ?? {};
     if (problem && questionId) {
       return labels.answerRefused

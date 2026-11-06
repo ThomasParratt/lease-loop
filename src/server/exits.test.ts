@@ -2,6 +2,7 @@
 // paid through payInvoice, then Aino leaves in month 7 (card 8). The contract, the invoices,
 // the asset, the passport and the audit row change together, and a refusal or a throwing
 // handler writes nothing.
+import { refusal } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PricingData } from '@/domain/pricing';
 import { seedPack } from '../../tests/helpers/invoice-fixture';
@@ -233,9 +234,13 @@ describe('exitContract refusals write nothing', () => {
     const contractId = await card1(7);
     const before = await writesSoFar(contractId);
     const base = { contractId, mode: 'buy' as const, reported: AINO_REPORTS };
-    expect(await exitContract(db, { ...base, actor: 'cust-mikko' }, MONTH_7)).toMatchObject({
+    expect(await exitContract(db, { ...base, actor: 'cust-mikko' }, MONTH_7)).toEqual({
       ok: false,
-      reason: { code: 'not_allowed' },
+      reason: refusal('not_owner', 'exit_contract'),
+    });
+    expect(await exitContract(db, { ...base, actor: 'anonymous' }, MONTH_7)).toEqual({
+      ok: false,
+      reason: refusal('not_signed_in', 'exit_contract'),
     });
     expect(
       await exitContract(db, { ...base, contractId: 'nope', actor: 'admin' }, MONTH_7)

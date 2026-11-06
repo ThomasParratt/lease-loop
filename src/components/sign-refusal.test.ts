@@ -38,8 +38,10 @@ describe('signRefusalText', () => {
       'start_too_far',
       'too_young_at_start',
       'already_signed',
-      'not_allowed_to_sign',
       'application_not_found',
+      'not_signed_in',
+      'not_owner',
+      'signatory_required',
     ];
     for (const locale of ['en', 'fi', 'sv', 'et'] as const) {
       for (const code of codes) {
