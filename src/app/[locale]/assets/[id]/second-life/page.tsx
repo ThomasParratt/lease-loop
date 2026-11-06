@@ -14,7 +14,7 @@ import type { ReturnOption } from '@/domain/second-life/assess';
 import type { MatchOutcome, MatchResult } from '@/domain/second-life/match';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
-import { getT, type MessageKey, type Translate } from '@/i18n/get-t';
+import { getT, type MessageKey, type Translate, type TranslateValues } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { ADMIN_ACTOR, readActor } from '@/server/actor';
 import { getAsset } from '@/server/assets';
@@ -413,7 +413,12 @@ export default async function SecondLifePage({
         </Notice>
       )}
       {preview && !preview.ok ? (
-        <Notice tone="error">{t(`secondLife.refusal.${preview.reason.code}` as MessageKey)}</Notice>
+        <Notice tone="error">
+          {t(
+            `secondLife.refusal.${preview.reason.code}` as MessageKey,
+            preview.reason.params as TranslateValues
+          )}
+        </Notice>
       ) : null}
 
       {proposal ? (

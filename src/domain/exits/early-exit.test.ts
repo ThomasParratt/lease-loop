@@ -32,7 +32,11 @@ function card8(overrides: Partial<EarlyExitInput> = {}): EarlyExitInput {
     annualInterestPercent: 7.9,
     invoices: rents(7),
     today: '2027-06-05', // month 7 complete: the 8th period starts, unpaid
-    asset: { category: 'e_bike', modelYear: 2026, previousLives: 0 },
+    asset: { category: 'e_bike' },
+    curve: {
+      listPriceCents: 389_000,
+      age: { modelYear: 2026, previousLives: 0, leaseStart: '2026-11-05' },
+    },
     reported: { condition: 'good', usage: { unit: 'km', value: 1_800 } },
     curves,
     costs,
@@ -162,5 +166,23 @@ describe('earlyExitCost, the rules around it', () => {
     );
     const mv = (c: typeof one) => c.return.lines.find((l) => l.code === 'market_value')!;
     expect(mv(two).params.amountCents).toBe(2 * (mv(one).params.amountCents as number));
+  });
+});
+
+describe('earlyExitCost, a relisted item (review finding 1, card 9)', () => {
+  it('values ebike-007 from D60 (549 000, 58 months), not its second-life price 203 161: 121 329', () => {
+    const cost = earlyExitCost(
+      card8({
+        contract: { ...card8().contract, startDate: '2026-11-06', unitListPriceCents: 203_161 },
+        today: '2027-11-06',
+        curve: {
+          listPriceCents: 549_000,
+          age: { modelYear: 2023, previousLives: 1, leaseStart: '2026-11-06' },
+        },
+        reported: { condition: 'good', usage: { unit: 'km', value: 0 } },
+      })
+    );
+    expect(cost.marketValue.ageMonths).toBe(58);
+    expect(cost.marketValue.valueCents).toBe(121_329);
   });
 });

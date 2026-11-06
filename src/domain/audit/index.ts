@@ -6,6 +6,7 @@ export {
   verifyAuditChain,
   type AuditChainBreak,
   type AuditChainEntry,
+  type AuditChainHead,
   type AuditChainRow,
   type AuditChainVerdict,
 } from './chain';

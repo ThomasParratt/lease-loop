@@ -40,7 +40,12 @@ function input(overrides: Partial<PlanExitInput> = {}): PlanExitInput {
     today: '2027-06-05',
     reported: { condition: 'good', usage: { unit: 'km', value: 1_800 } },
     invoices: rents(7),
-    asset: { category: 'e_bike', modelYear: 2026, previousLives: 0 },
+    asset: { category: 'e_bike' },
+    atSigning: { condition: 'new', usage: { unit: 'km', value: 0 } },
+    curve: {
+      listPriceCents: 389_000,
+      age: { modelYear: 2026, previousLives: 0, leaseStart: '2026-11-05' },
+    },
     annualInterestPercent: 7.9,
     curves,
     costs,
@@ -217,6 +222,42 @@ describe('planExit refusals and guards', () => {
     expect(() =>
       planExit(input({ invoices: [{ id: 'x', kind: 'tip', status: 'paid' }] }))
     ).toThrow();
+  });
+});
+
+describe('planExit checks the report against the asset at signing (D77, review finding 2)', () => {
+  it('refuses a usage below the one at signing: 18 000 km at signing, 0 reported', () => {
+    const result = planExit(
+      input({
+        mode: 'return',
+        atSigning: { condition: 'fair', usage: { unit: 'km', value: 18_000 } },
+        reported: { condition: 'new', usage: { unit: 'km', value: 0 } },
+      })
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'usage_below_signing', params: { value: 0, atSigning: 18_000, unit: 'km' } },
+    });
+  });
+
+  it('prices and records a fair bike reported new as fair: the worse of the two', () => {
+    const fair = { condition: 'fair' as const, usage: { unit: 'km' as const, value: 18_000 } };
+    const claimed = plan({
+      mode: 'return',
+      atSigning: fair,
+      reported: { ...fair, condition: 'new' },
+    });
+    const honest = plan({ mode: 'return', atSigning: fair, reported: fair });
+    expect(claimed.cost.return).toEqual(honest.cost.return);
+    expect(claimed.event).toMatchObject({ type: 'UNIT_RETURNED', condition: 'fair' });
+  });
+
+  it('a condition worse than at signing is taken as reported', () => {
+    const p = plan({
+      mode: 'return',
+      reported: { condition: 'poor', usage: { unit: 'km', value: 1_800 } },
+    });
+    expect(p.event).toMatchObject({ condition: 'poor' });
   });
 });
 

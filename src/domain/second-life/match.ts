@@ -151,7 +151,10 @@ function firstDifference(a: Candidate, b: Candidate): { step: RankStep; sign: nu
   if (a.totalRentCents !== b.totalRentCents) {
     return { step: 'total_rent', sign: b.totalRentCents - a.totalRentCents };
   }
-  if (a.demandId !== b.demandId) return { step: 'id', sign: a.demandId < b.demandId ? -1 : 1 };
+  // By the numbers inside the ids, so a surprise wait-100 ranks after wait-14 (finding 12).
+  if (a.demandId !== b.demandId) {
+    return { step: 'id', sign: a.demandId.localeCompare(b.demandId, 'en', { numeric: true }) };
+  }
   return null;
 }
 

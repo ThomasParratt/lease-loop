@@ -68,7 +68,7 @@ export function ExitForm(props: ExitFormProps) {
         if (body.success) {
           setPreview(body.data);
           setError(null);
-        } else setError(refusalText(body.error?.details?.code));
+        } else setError(refusalText(body.error?.details));
       } catch (caught) {
         if ((caught as Error).name !== 'AbortError') setError(t('exit.error'));
       } finally {
@@ -83,11 +83,12 @@ export function ExitForm(props: ExitFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractId, mode, condition, usageValue]);
 
-  function refusalText(code: unknown): string {
-    const authz = authzRefusalKey(code);
+  /** The refusal `{ code, params }` from the error details, with its params (review finding 14). */
+  function refusalText(details?: { code?: unknown; params?: Record<string, string | number> }) {
+    const authz = authzRefusalKey(details?.code);
     if (authz) return t(authz);
-    const key = `exit.refusal.${String(code)}`;
-    return key in messages.en ? t(key as MessageKey) : t('exit.error');
+    const key = `exit.refusal.${String(details?.code)}`;
+    return key in messages.en ? t(key as MessageKey, details?.params) : t('exit.error');
   }
 
   async function submit(event: React.FormEvent) {
@@ -106,7 +107,7 @@ export function ExitForm(props: ExitFormProps) {
     }).catch(() => null);
     const body = response ? await response.json().catch(() => null) : null;
     if (!body?.success) {
-      setError(refusalText(body?.error?.details?.code));
+      setError(refusalText(body?.error?.details));
       return;
     }
     startTransition(() => router.refresh());

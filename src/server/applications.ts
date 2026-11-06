@@ -67,7 +67,13 @@ export function toApplicationView(row: ApplicationRow): ApplicationView {
   };
 }
 
-export type FlowSetup = { context: FlowContext; quoteValidUntil: string; customerIsPep: boolean };
+export type FlowSetup = {
+  context: FlowContext;
+  /** The quote's day: no application before it (review finding 10). */
+  quoteDate: string;
+  quoteValidUntil: string;
+  customerIsPep: boolean;
+};
 
 /**
  * The deal a quote and a customer make for the question flow. The quote is read through the
@@ -102,6 +108,7 @@ export async function flowSetupFor(
         financedCents: deal.financedCents,
         termMonths: deal.termMonths,
       },
+      quoteDate: quote.quoteDate,
       quoteValidUntil: quote.validUntil,
       customerIsPep: customer.is_pep,
     },
@@ -133,6 +140,7 @@ export type CreateApplicationResult =
         | 'quote_not_found'
         | 'customer_not_found'
         | 'quote_expired'
+        | 'quote_not_yet_valid'
         | 'not_applicant'
         | 'incomplete_answers'
         | 'invalid_answer'
@@ -192,8 +200,9 @@ export async function createApplication(
   if (!namesApplicant(input)) return { ok: false, reason: 'not_applicant' };
   const found = await flowSetupFor(db, input.quoteId, input.customerId);
   if (!found.ok) return found;
-  const { context, quoteValidUntil, customerIsPep } = found.setup;
+  const { context, quoteDate, quoteValidUntil, customerIsPep } = found.setup;
   if (quoteValidUntil < input.today) return { ok: false, reason: 'quote_expired' };
+  if (input.today < quoteDate) return { ok: false, reason: 'quote_not_yet_valid' };
 
   const { questions, eligibility_rules: rules } = await loadQuestions();
   const answers = pruneAnswers(questions, context, input.answers);

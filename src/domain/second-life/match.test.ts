@@ -143,6 +143,11 @@ describe('matchDemand on other data', () => {
     ]);
   });
 
+  it('ids compare by their numbers: wait-14 before wait-100 (review finding 12)', () => {
+    const match = matchDemand(assessed, [entry({ id: 'wait-100' }), entry({ id: 'wait-14' })]);
+    expect(match.ranking.map((r) => r.demandId)).toEqual(['wait-14', 'wait-100']);
+  });
+
   it('on equal need dates the higher total rent over the term wins', () => {
     const match = matchDemand(assessed, [
       entry({ id: 'w-a', preferred_term_months: 12 }),

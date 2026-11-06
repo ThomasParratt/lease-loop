@@ -4,11 +4,12 @@ import { z } from 'zod';
 
 const sha256HexSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
-/** Why a row breaks the chain: its prevHash, its own hash, or no hash at all. */
+/** Why a row breaks the chain: its prevHash, its own hash, no hash, or a head that differs. */
 export const auditChainBreakSchema = z.enum([
   'prev_hash_mismatch',
   'hash_mismatch',
   'unhashed_in_chain',
+  'head_mismatch',
 ]);
 
 /**

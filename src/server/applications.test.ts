@@ -82,6 +82,7 @@ describe('flowSetupFor', () => {
       ok: true,
       setup: {
         context: { category: 'e_bike', financedCents: 2_196_000, termMonths: 36 },
+        quoteDate: '2026-11-05',
         quoteValidUntil: '2026-12-05',
       },
       quote: { monthlyNetCents: 58_993, vatRateBp: 2_550 },
@@ -326,6 +327,17 @@ describe('createApplication', () => {
       actor: 'cust-aino',
     });
     expect(late).toEqual({ ok: false, reason: 'quote_expired' });
+  });
+
+  it('a day before the quote (the demo clock moved back) is quote_not_yet_valid (review finding 10)', async () => {
+    const early = await createApplication(db, {
+      quoteId: await card1(),
+      customerId: 'cust-aino',
+      answers: answersOf('cust-aino'),
+      today: '2026-10-01',
+      actor: 'cust-aino',
+    });
+    expect(early).toEqual({ ok: false, reason: 'quote_not_yet_valid' });
   });
 });
 

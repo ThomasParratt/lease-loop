@@ -4,9 +4,10 @@
 //    returned usage. The rules are parsed from the data, never hard-coded:
 //    - `always`;
 //    - `usage.value >= N <unit>`: the usage is at least N;
-//    - `per started N <unit> since last service`: one step per started block of N, on the
-//      returned usage (the pack has no service history, so the usage counter is taken as the
-//      usage since the last service; docs/features/exits.md, open questions).
+//    - `per started N <unit> since last service`: one step per started block of N since
+//      `usageAtLastService` (the usage of the assessment that last did the step; 0 when there
+//      is none, as the pack has no service history). A counter below it (a replaced meter)
+//      counts from 0. Review finding 7: a second return billed the lifetime hours again.
 //    Any other text is an error, so a new rule in the data cannot be skipped silently.
 // 2. The condition upgrades from the returned condition up to `targetCondition`, one step at a
 //    time (`poor->fair`, then `fair->good`, …). An item already as good as the target needs
@@ -32,6 +33,8 @@ export type RefurbishmentInput = {
   category: AssetCategory;
   condition: AssetCondition;
   usage: { unit: UsageUnit; value: number };
+  /** The usage when the per-started-block steps were last done; 0 or absent: never. */
+  usageAtLastService?: number;
   targetCondition: AssetCondition;
 };
 
@@ -73,13 +76,18 @@ export function parseWhenRule(when: string): WhenRule {
 }
 
 /** How many times a rule applies to `usage`: 0 or 1, or the started blocks. */
-function timesApplied(rule: WhenRule, usage: { unit: UsageUnit; value: number }): number {
+function timesApplied(
+  rule: WhenRule,
+  usage: { unit: UsageUnit; value: number },
+  atLastService: number
+): number {
   if (rule.kind === 'always') return 1;
   if (rule.unit !== usage.unit) {
     throw new RangeError(`the rule counts ${rule.unit}, the usage is in ${usage.unit}`);
   }
   if (rule.kind === 'usage_at_least') return usage.value >= rule.value ? 1 : 0;
-  return Math.ceil(usage.value / rule.block);
+  const since = usage.value >= atLastService ? usage.value - atLastService : usage.value;
+  return Math.ceil(since / rule.block);
 }
 
 /** The steps and the cost to bring the item to `targetCondition`. */
@@ -96,7 +104,7 @@ export function refurbishmentPlan(
   let resets = false;
 
   for (const fixed of data.fixed) {
-    const quantity = timesApplied(parseWhenRule(fixed.when), usage);
+    const quantity = timesApplied(parseWhenRule(fixed.when), usage, input.usageAtLastService ?? 0);
     if (quantity === 0) continue;
     const resetsUsage = fixed.resets_usage === true;
     resets ||= resetsUsage;
@@ -133,4 +141,23 @@ export function refurbishmentPlan(
     usageAfter: { unit: usage.unit, value: resets ? 0 : usage.value },
     conditionAfter: to > from ? targetCondition : condition,
   };
+}
+
+/**
+ * The usage at the last per-block service (review finding 7): the usage of the newest past
+ * assessment whose plan did a step with a `per started` rule, or 0 when none did.
+ * `assessments` newest first, each with its usage and the ids of its plan's steps.
+ */
+export function usageAtLastService(
+  assessments: readonly { usageValue: number; stepIds: readonly string[] }[],
+  category: AssetCategory,
+  costs: RefurbishmentCosts
+): number {
+  const perBlock = new Set(
+    costs[category].fixed
+      .filter((fixed) => parseWhenRule(fixed.when).kind === 'per_started')
+      .map((fixed) => fixed.id)
+  );
+  const serviced = assessments.find((a) => a.stepIds.some((id) => perBlock.has(id)));
+  return serviced?.usageValue ?? 0;
 }

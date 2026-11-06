@@ -71,6 +71,7 @@ export default async function SignatoriesPage({
     LAST_SIGNATORY: t('signatories.lastSignatory'),
     SIGNATORY_ALREADY_LISTED: t('signatories.alreadyListed'),
     SIGNATORY_ALREADY_ENDED: t('signatories.alreadyEnded'),
+    SIGNATORY_NOT_FOUND: t('signatories.notFound'),
     INVALID_DATES: t('signatories.invalidDates'),
     VALIDATION_ERROR: t('signatories.invalid'),
   };

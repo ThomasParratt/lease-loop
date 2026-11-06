@@ -48,6 +48,8 @@ export type QuestionFlowLabels = {
   pruned: string;
   moneyHint: string;
   listHint: string;
+  /** The hint per validation format in the visitor's language; the pack's English is the fallback. */
+  formatHints: Record<string, string>;
   prefill?: string;
 };
 
@@ -423,7 +425,9 @@ function QuestionStep(props: StepProps) {
                 ? labels.moneyHint
                 : question.type === 'list'
                   ? labels.listHint
-                  : question.validation?.hint
+                  : question.validation
+                    ? (labels.formatHints[question.validation.format] ?? question.validation.hint)
+                    : undefined
             }
             error={error}
           >

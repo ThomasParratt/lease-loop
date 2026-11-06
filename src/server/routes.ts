@@ -50,7 +50,11 @@ import {
   quoteIdParamsSchema,
   storedQuoteResponseSchema,
 } from './quote-schemas';
-import { assessmentParamsSchema, assessmentResponseSchema } from './second-life-schemas';
+import {
+  assessmentBodySchema,
+  assessmentParamsSchema,
+  assessmentResponseSchema,
+} from './second-life-schemas';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -159,8 +163,8 @@ export const applicationIdParamsSchema = z.object({ id: z.string().min(1).max(10
 /** Body of `POST /api/applications/[id]/decision` (D10): the admin's review only (D46). */
 export const decideApplicationBodySchema = z.strictObject({
   decision: z.enum(['approved', 'rejected']),
-  /** The reviewer. */
-  reviewedBy: z.string().trim().min(1).max(200),
+  /** Accepted for older clients and ignored: the reviewer is the cookie's actor (finding 13). */
+  reviewedBy: z.string().trim().min(1).max(200).optional(),
 });
 
 export const applicationReasonSchema = z.object({
@@ -454,9 +458,10 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/assets/[id]/assessments',
     summary:
-      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
+      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); an optional body is the inspection (D77); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'second-life',
     params: assessmentParamsSchema,
+    body: assessmentBodySchema,
     response: assessmentResponseSchema,
     status: 201,
   },

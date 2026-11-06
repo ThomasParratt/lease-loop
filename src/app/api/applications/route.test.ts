@@ -354,6 +354,15 @@ describe('POST /api/applications/[id]/decision', () => {
     expect(await holder.db.auditLog.count({ where: { action: 'application.decided' } })).toBe(0);
   });
 
+  it('the reviewer is the cookie actor, never the body (review finding 13)', async () => {
+    const id = await pending('cust-haapala');
+    actAs('admin');
+    const response = await postDecision(id, { decision: 'approved', reviewedBy: 'somebody else' });
+    expect(response.status).toBe(200);
+    const row = await holder.db.application.findUniqueOrThrow({ where: { id } });
+    expect(row.reviewed_by).toBe('admin');
+  });
+
   it('an approved application is 409 APPLICATION_NOT_PENDING; an unknown id is 404', async () => {
     const id = await pending('cust-aino');
     actAs('admin');

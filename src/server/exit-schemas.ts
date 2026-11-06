@@ -83,6 +83,7 @@ export const exitRefusalSchema = z.object({
     'next_customer_not_found',
     'reason_mismatch',
     'usage_unit_mismatch',
+    'usage_below_signing',
     'no_vat_rate_on_date',
   ]),
   params: z.record(z.string(), z.union([z.string(), z.number()])),

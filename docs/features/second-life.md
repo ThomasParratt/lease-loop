@@ -40,13 +40,14 @@ A returned item is assessed: every way to relist it (as returned, or refurbished
 
 ## Decisions
 
-D12 (re-pricing), D13 (matchmaking), D15 (CO2), D16 and D66 (the contract chain), D22 and D23 (`returned` → `available`, statuses parsed before the write), D31 and D60 (the price and age the value starts from), D61 (refurbish or not, the floor), D62 (the budget test), D63 (where the price lives), D64 (the admin button, not an event handler), D65 (an assessment without a contract), D67 (a relisted fair item is open to anyone), D68 (the new battery in the value and in the price).
+D12 (re-pricing), D77 (the inspection wins over the report), D13 (matchmaking), D15 (CO2), D16 and D66 (the contract chain), D22 and D23 (`returned` → `available`, statuses parsed before the write), D31 and D60 (the price and age the value starts from), D61 (refurbish or not, the floor), D62 (the budget test), D63 (where the price lives), D64 (the admin button, not an event handler), D65 (an assessment without a contract), D67 (a relisted fair item is open to anyone), D68 (the new battery in the value and in the price).
 
 ## Pure functions
 
 - `assessReturn(input, { curves, costs, pricing })` in `src/domain/second-life/assess.ts`. In: asset id, category, returned condition and usage, the curve-age input (D11/D31), the new price (D60), the ISO day. Out: `{ assetId, category, isoDate, ageMonths, returnedCondition, options[] }`, each option `{ condition, upgrade, plan, marketValue, secondLifeFinancedCents, rents[{ termMonths, monthlyNetCents | null, band, refusal }] }`.
 - `matchDemand(assessment, demand)` in `src/domain/second-life/match.ts`. Out: `{ verdicts[{ demandId, neededBy, outcome: { code, params } }], ranking[{ …, rank, decidedBy }], winner, decision: { code, params }, relist }`.
-- `firstLeaseListPriceCents(priceLists, assetId)` and `withSecondLifePrice(pricing, assetId, cents)` in `assess.ts`.
+- `firstLeaseCurve({ assetId, modelYear, previousLives, contracts, priceLists, today }) → { listPriceCents, age } | null` and `livesSoFar(packPreviousLives, contracts) → { previousLives, currentLife }` in `src/domain/second-life/first-lease.ts`: D60 in one place, read by the assessment and the exit (review findings 1 and 3); `firstLeaseListPriceCents` lives there too (re-exported from `assess.ts`). `withSecondLifePrice(pricing, assetId, cents)` in `assess.ts`.
+- **The inspection (D77).** `POST /api/assets/[id]/assessments` takes an optional body `{ condition?, usageValue? }`: the admin's inspection, assessed and relisted on instead of the reported values the exit stored; no body assesses the stored values, as the assess button does. A per-block service (the farm machine's) counts from the usage of the newest assessment that did it.
 
 ## Files
 

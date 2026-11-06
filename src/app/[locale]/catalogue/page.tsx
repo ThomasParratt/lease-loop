@@ -24,7 +24,7 @@ import { allowedTermsOf, financeOffer, termsOf, type FinanceOffer } from '@/doma
 import { formatNumber } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale, type Locale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { listAssetsWithLives } from '@/server/asset-lives';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 import { loadPricingData } from '@/server/quotes';
@@ -66,7 +66,7 @@ export default async function CataloguePage({
 
   const t = getT(locale);
   const today = await todayForRequest(); // read once here; domain code never reads the clock
-  const [assets, data] = await Promise.all([listAssets(db), loadPricingData()]);
+  const [assets, data] = await Promise.all([listAssetsWithLives(db), loadPricingData()]);
   const termMonths = termsOf(data.table).includes(CARD_TERM) ? CARD_TERM : termsOf(data.table)[0]!;
   // Each item is priced at the catalogue's term when its category allows it, else at the longest
   // term it may be offered (D43), so a category capped below the default still shows a price. An

@@ -196,7 +196,6 @@ export default async function ApplicationPage({
           {actor === ADMIN_ACTOR ? (
             <DecisionForm
               applicationId={application.id}
-              reviewer={ADMIN_ACTOR}
               labels={{ approve: t('decision.approve'), reject: t('decision.reject') }}
               failures={{
                 error: t('decision.error'),

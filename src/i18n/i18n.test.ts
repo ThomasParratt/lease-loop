@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatIsoDate, formatNumber, formatTimestamp } from './format';
-import { getT } from './get-t';
+import { getT, type MessageKey } from './get-t';
 import { defaultLocale, isLocale, locales } from './locales';
 
 const plain = (text: string) => text.replace(/\s/g, ' ');
@@ -31,6 +31,16 @@ describe('getT', () => {
 
   it('leaves a placeholder visible when its value is missing', () => {
     expect(getT('en')('catalogue.itemCount', {})).toBe('{count} items');
+  });
+});
+
+describe('getT with a key that is missing (review finding 8)', () => {
+  it('returns the key itself instead of crashing the page', () => {
+    const t = getT('fi');
+    expect(t('exit.refusal.no_such_code' as MessageKey, { x: 1 })).toBe(
+      'exit.refusal.no_such_code'
+    );
+    expect(t('demo.step.no_such_code' as MessageKey)).toBe('demo.step.no_such_code');
   });
 });
 

@@ -159,3 +159,39 @@ describe('verifyAuditChain', () => {
     });
   });
 });
+
+describe('verifyAuditChain against the stored head (review finding 11)', () => {
+  it('an intact chain matches its head: count and hash', () => {
+    const rows = chainOf(entries);
+    expect(verifyAuditChain(rows, { length: 3, hash: rows[2]!.hash! })).toMatchObject({ ok: true });
+  });
+
+  it('the newest row deleted: the chain alone is intact, the head names the missing row', () => {
+    const rows = chainOf(entries);
+    const head = { length: 3, hash: rows[2]!.hash! };
+    const cut = rows.slice(0, 2);
+    expect(verifyAuditChain(cut).ok).toBe(true);
+    expect(verifyAuditChain(cut, head)).toEqual({
+      ok: false,
+      brokenAt: 3,
+      reason: 'head_mismatch',
+    });
+  });
+
+  it('the newest two deleted, or every row deleted, is a head mismatch too', () => {
+    const rows = chainOf(entries);
+    const head = { length: 3, hash: rows[2]!.hash! };
+    expect(verifyAuditChain(rows.slice(0, 1), head)).toMatchObject({ brokenAt: 2 });
+    expect(verifyAuditChain([], head)).toMatchObject({ ok: false, brokenAt: 1 });
+  });
+
+  it('rows but no stored head (the head row deleted) is a head mismatch; no rows and no head is intact', () => {
+    const rows = chainOf(entries);
+    expect(verifyAuditChain(rows, null)).toEqual({
+      ok: false,
+      brokenAt: rows[2]!.id,
+      reason: 'head_mismatch',
+    });
+    expect(verifyAuditChain([], null)).toMatchObject({ ok: true, length: 0 });
+  });
+});
