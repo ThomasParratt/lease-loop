@@ -8,6 +8,16 @@ import { todayIso } from './today';
 
 export const DEMO_CLOCK_COOKIE = 'lease-loop-as-of';
 
+/**
+ * `Set-Cookie` value that moves the demo clock to `asOf`, or back to the real day with null.
+ * For the routes that set the clock (the clock form and the scenario card runner).
+ */
+export function demoClockCookieHeader(asOf: string | null): string {
+  return asOf === null
+    ? `${DEMO_CLOCK_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`
+    : `${DEMO_CLOCK_COOKIE}=${asOf}; Path=/; HttpOnly; SameSite=Lax`;
+}
+
 /** True for a real calendar day written `YYYY-MM-DD` (so `2026-02-29` is false). */
 export function isIsoDay(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);

@@ -1,31 +1,24 @@
-// The demo page: the clock override that lets the judges run a dated scenario card on its
-// own day, and (from wave 1) one button per scenario card that sets the card up and runs it.
+// The demo page, the one entry point to the demo tools (issue #35): the clock override that
+// lets the judges run a dated scenario card on its own day, one Run button per scenario card
+// (docs/features/demo-cards.md) and the audit log with its chain badge.
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { Badge, Card, DateText, Notice, PageHeader, StaffNote } from '@/components/ui';
+import { AuditChainBadge } from '@/components/audit-chain-badge';
+import { Badge, Card, DateText, LinkButton, Notice, PageHeader, StaffNote } from '@/components/ui';
+import { loadCustomers } from '@/data/load';
 import { formatIsoDate } from '@/i18n/format';
-import { getT, type MessageKey } from '@/i18n/get-t';
+import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { verifyAuditChain } from '@/server/audit';
+import { db } from '@/server/db';
+import { DEMO_CARDS } from '@/server/demo-cards';
 import { readDemoClock } from '@/server/demo-clock';
+import { CardList } from './card-list';
 import { ClockForm } from './clock-form';
 
 /** The dates the scenario cards and the pitch need most: the two hackathon days and the VAT year. */
 const PRESET_DAYS = ['2026-11-05', '2026-11-06', '2027-01-01'];
-
-/** CHALLENGE.md section 4. Later waves give each a button that seeds and runs it. */
-const SCENARIO_CARDS: MessageKey[] = [
-  'demo.card.1',
-  'demo.card.2',
-  'demo.card.3',
-  'demo.card.4',
-  'demo.card.5',
-  'demo.card.6',
-  'demo.card.7',
-  'demo.card.8',
-  'demo.card.9',
-  'demo.card.10',
-];
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/demo'>): Promise<Metadata> {
   const { locale } = await params;
@@ -40,13 +33,36 @@ export default async function DemoPage({ params }: PageProps<'/[locale]/demo'>) 
   await connection();
 
   const t = getT(locale);
-  const clock = await readDemoClock();
+  const [clock, verdict, customers] = await Promise.all([
+    readDemoClock(),
+    verifyAuditChain(db),
+    loadCustomers(),
+  ]);
+  const names = new Map(customers.map((c) => [c.id, c.name]));
+  const tools = [
+    { href: '#demo-clock', label: t('demo.clock.title') },
+    { href: '#demo-cards', label: t('demo.cards.title') },
+    { href: '#demo-audit', label: t('demo.audit.title') },
+  ];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader title={t('demo.title')} intro={t('demo.intro')}>
         <StaffNote>{t('staff.note')}</StaffNote>
       </PageHeader>
+
+      <nav aria-label={t('demo.tools.title')} className="mb-8">
+        <p className="mb-2 font-medium">{t('demo.tools.title')}</p>
+        <ul className="flex flex-wrap gap-2">
+          {tools.map((tool) => (
+            <li key={tool.href}>
+              <LinkButton href={tool.href} variant="secondary" size="sm">
+                {tool.label}
+              </LinkButton>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       <Card as="section" title={t('demo.clock.title')} titleId="demo-clock">
         <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -84,17 +100,18 @@ export default async function DemoPage({ params }: PageProps<'/[locale]/demo'>) 
 
       <Card as="section" title={t('demo.cards.title')} titleId="demo-cards" className="mt-8">
         <p className="mb-4 text-ink-muted">{t('demo.cards.intro')}</p>
-        <ol className="divide-y divide-line">
-          {SCENARIO_CARDS.map((key, index) => (
-            <li key={key} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <span>
-                <span className="mr-2 font-semibold tabular-nums text-ink-muted">{index + 1}.</span>
-                {t(key)}
-              </span>
-              <Badge tone="neutral">{t('demo.cards.soon')}</Badge>
-            </li>
-          ))}
-        </ol>
+        <CardList cards={DEMO_CARDS} names={names} locale={locale} t={t} />
+      </Card>
+
+      <Card as="section" title={t('demo.audit.title')} titleId="demo-audit" className="mt-8">
+        <p className="mb-4 text-ink-muted">{t('demo.audit.intro')}</p>
+        <AuditChainBadge verdict={verdict} t={t} />
+        <LinkButton href={`/${locale}/audit`} variant="secondary" size="sm">
+          {t('demo.audit.open')}
+        </LinkButton>
+        <p className="mt-4 text-sm text-ink-muted">
+          {t('demo.audit.tamper', { command: 'npm run demo:tamper' })}
+        </p>
       </Card>
     </div>
   );
