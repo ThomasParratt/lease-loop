@@ -24,6 +24,7 @@ import { mandatoryRefurbishmentCents } from '@/domain/second-life/money-saved';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
+import { ADMIN_ACTOR, readActor } from '@/server/actor';
 import { readPassport } from '@/server/asset-events';
 import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
@@ -88,10 +89,11 @@ export default async function PassportPage({
 
   const t = getT(locale);
   const today = await todayForRequest();
-  const [result, factors, costs] = await Promise.all([
+  const [result, factors, costs, actor] = await Promise.all([
     readPassport(db, id, today),
     loadCo2Factors(),
     loadRefurbishmentCosts(),
+    readActor(db),
   ]);
   if (!result) notFound();
   const { asset, passport, co2, money } = result;
@@ -125,7 +127,8 @@ export default async function PassportPage({
             {t('passport.serial')}: {asset.serial_number}
           </Badge>
         </div>
-        {asset.status === 'returned' ? (
+        {/* D85: the second life is back office; everyone keeps the passport itself. */}
+        {actor === ADMIN_ACTOR && asset.status === 'returned' ? (
           <Link
             href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}
             className="mt-3 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"

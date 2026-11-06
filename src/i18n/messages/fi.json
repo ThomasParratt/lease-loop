@@ -743,7 +743,7 @@
   "secondLife.decision.rent": "Valittu maksaa {rent} kuussa netto {months} kuukauden ajan.",
   "secondLife.button": "Arvioi ja palauta myyntiin",
   "secondLife.pending": "Arvioidaan…",
-  "secondLife.adminOnly": "Toimi ylläpitäjänä arvioidaksesi tuotteen ja palauttaaksesi sen myyntiin.",
+  "secondLife.backOfficeOnly": "Vain ylläpitäjä näkee toisen elämän arvion: siinä näkyy koko jonotuslista, myös muiden asiakkaiden budjetit ja tarpeet.",
   "secondLife.refusal.asset_not_returned": "Tuote ei enää odota arviointia.",
   "secondLife.refusal.asset_not_found": "Tuotetta ei ole.",
   "secondLife.refusal.no_list_price": "Tuotteella ei ole listahintaa, josta arvo laskettaisiin.",

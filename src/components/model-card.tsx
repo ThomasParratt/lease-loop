@@ -108,15 +108,22 @@ export function ModelCard({ group, offer, termMonths, locale, t }: ModelCardProp
   );
 }
 
-type UnavailableCardProps = { asset: Asset; locale: Locale; t: Translate };
+type UnavailableCardProps = {
+  asset: Asset;
+  locale: Locale;
+  t: Translate;
+  /** D85: the second-life link is back office, shown to the admin only. */
+  isAdmin: boolean;
+};
 
 /**
  * A returned or leased unit at the bottom of the catalogue: greyed out under its status, with
  * no price (a returned unit is re-priced before its next life; a leased one belongs to
  * someone). It links straight to its passport: its lives and the CO2 they saved. A returned
- * unit also links to its second life, where it is assessed and matched to the waiting list.
+ * unit also links the admin to its second life, where it is assessed and matched to the
+ * waiting list (D85: back office).
  */
-export function UnavailableCard({ asset, locale, t }: UnavailableCardProps) {
+export function UnavailableCard({ asset, locale, t, isAdmin }: UnavailableCardProps) {
   const headingId = `unit-${asset.id}`;
   return (
     <article
@@ -159,7 +166,7 @@ export function UnavailableCard({ asset, locale, t }: UnavailableCardProps) {
               {t('catalogue.card.unavailableHint')}
             </span>
           </p>
-          {asset.status === 'returned' ? (
+          {isAdmin && asset.status === 'returned' ? (
             // Above the card's stretched passport link, so it takes its own clicks.
             <Link
               href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}

@@ -2,7 +2,8 @@
 // usage it came back with, every way to relist it with its refurbishment plan, market value
 // and D12 price, the rent per term, the waiting list with every D13 step, and the decision.
 // Before the assessment it is a preview computed on today's date; after it, the stored
-// assessment. The admin's "Assess and relist" writes it (StaffNote: a back-office page).
+// assessment. The admin's "Assess and relist" writes it. Back office (D85): the waiting list is
+// other customers' data, so the page is the admin's alone; anyone else gets a refusal notice.
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -16,16 +17,12 @@ import { formatEuro } from '@/domain/money';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey, type Translate, type TranslateValues } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
-import { ADMIN_ACTOR, readActor } from '@/server/actor';
-import { getAsset } from '@/server/assets';
+import { authzRefusalKey } from '@/components/authz-refusal';
+import { ANONYMOUS_ACTOR, readActor } from '@/server/actor';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
-import {
-  latestAssessment,
-  loadSecondLifeData,
-  previewAssessment,
-  type SecondLifeProposal,
-} from '@/server/second-life';
+import type { SecondLifeProposal } from '@/server/second-life';
+import { readSecondLifePage } from '@/server/second-life-page';
 import { AssessButton } from './assess-button';
 
 export async function generateMetadata({
@@ -356,17 +353,26 @@ export default async function SecondLifePage({
 
   const t = getT(locale);
   const today = await todayForRequest(); // read once here, passed down
-  const [asset, actor, stored, data] = await Promise.all([
-    getAsset(db, id),
-    readActor(db),
-    latestAssessment(db, id),
-    loadSecondLifeData(),
-  ]);
+  const actor = await readActor(db);
+  // D85: back office. Authorized before anything is read; anyone but the admin gets the refusal.
+  const read = await readSecondLifePage(db, actor, id, today);
+  if (!read.ok) {
+    const refusal =
+      read.reason.code === 'admin_only'
+        ? t('secondLife.backOfficeOnly')
+        : t(authzRefusalKey(read.reason.code) ?? 'authz.refusal.not_signed_in');
+    return (
+      <div className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6 sm:py-14">
+        <PageHeader title={t('secondLife.title')} />
+        <Notice tone={actor === ANONYMOUS_ACTOR ? 'info' : 'warning'}>{refusal}</Notice>
+      </div>
+    );
+  }
+  const { asset, stored, preview, demand } = read;
   if (!asset) notFound();
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  const ctx: Ctx = { locale, t, euro, demand: data.demand };
+  const ctx: Ctx = { locale, t, euro, demand };
 
-  const preview = asset.status === 'returned' ? await previewAssessment(db, id, today, data) : null;
   const proposal: SecondLifeProposal | null = preview?.ok ? preview.proposal : stored;
 
   const facts = proposal
@@ -437,13 +443,8 @@ export default async function SecondLifePage({
         </>
       ) : null}
 
-      {preview?.ok ? (
-        actor === ADMIN_ACTOR ? (
-          <AssessButton assetId={asset.id} locale={locale} />
-        ) : (
-          <Notice tone="info">{t('secondLife.adminOnly')}</Notice>
-        )
-      ) : null}
+      {/* Only the admin reaches this far (D85), and only the admin assesses. */}
+      {preview?.ok ? <AssessButton assetId={asset.id} locale={locale} /> : null}
 
       <div className="flex flex-wrap gap-6">
         <Link

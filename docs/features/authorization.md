@@ -12,7 +12,7 @@ One pure rule decides who may take each action on whose record, and every route 
 2. A case awaiting the company's signatory (`awaiting_signatory`) is signed or decided only through the signing link by an e-mail with an active mandate on the day (`canSign`, D46); the coordinator and the admin are `signatory_required`.
 3. `anonymous` is `not_signed_in`.
 4. The admin may do everything else.
-5. `decide_application`, `assess_asset` and `set_asset_status` are the admin's: a customer is `admin_only`.
+5. `decide_application`, `assess_asset`, `read_second_life` and `set_asset_status` are the admin's: a customer is `admin_only`.
 6. A customer acts on its own records only: anyone else is `not_owner`.
 7. A company's account changes its own signatory list only while its e-mail is an active signatory (`signatory_required` otherwise; the admin checks the register instead).
 
@@ -31,6 +31,7 @@ The actor × action table, as `src/domain/authz/policy.test.ts` pins it (owner =
 | `manage_signatories` | not_signed_in | ok         | not_owner  | ok    |
 | `read_signatories`   | not_signed_in | ok         | not_owner  | ok    |
 | `assess_asset`       | not_signed_in | admin_only | admin_only | ok    |
+| `read_second_life`   | not_signed_in | admin_only | admin_only | ok    |
 | `set_asset_status`   | not_signed_in | admin_only | admin_only | ok    |
 | `run_demo_card`      | ok            | ok         | ok         | ok    |
 
@@ -44,6 +45,7 @@ Public, with no `authorize`: the catalogue, the price preview and the stored quo
 
 - D73: one pure policy, checked before the action in the route and again at the service's top.
 - D74: the HTTP mapping (401 / 403 `FORBIDDEN`) and the `DEMO_TOOLS` switch on the card runner.
+- D85: the second-life page is back office: `read_second_life` is the admin's, because the page shows the whole waiting list (other customers' budgets and needs); its links show for the admin only.
 - Builds on D17 (no login, the "continue as" cookie), D46 (the signing link, the mandate list), D47 (the admin applies on behalf), D57 (another customer's application reads as not found).
 
 ## Pure functions
@@ -59,7 +61,7 @@ The server side, not pure: `authorize(db, actor, action, ref)` with `ref` one of
 - `src/server/authorize.ts`, `authorize.test.ts`: the owner read and the HTTP mapping.
 - `src/server/demo-tools.ts`, `demo-tools.test.ts`: the `DEMO_TOOLS` switch.
 - The routes under `src/app/api/` (every write and private read), the tops of `signContract`, `exitContract`, `decideApplication`, `createApplication`, `payInvoice`, `addSignatory`, `revokeSignatory`, `assessAsset`, `changeAssetStatus`.
-- The pages `applications/[id]` (and its signing outbox), `contracts/[id]`, `customers/[id]/signatories`.
+- The pages `applications/[id]` (and its signing outbox), `contracts/[id]`, `customers/[id]/signatories`, `assets/[id]/second-life` (through `src/server/second-life-page.ts`, D85).
 - `src/components/authz-refusal.ts`: the message key of a refusal; the `authz.refusal.*` keys in the four message files.
 
 ## Tests that pin the numbers
@@ -67,6 +69,7 @@ The server side, not pure: `authorize(db, actor, action, ref)` with `ref` one of
 - `src/domain/authz/policy.test.ts`: every actor kind × every action, card 6's signatory rows, the mandate on the company's own list.
 - `src/app/api/authz.routes.test.ts`: every write route posted as anonymous (401), the wrong customer (403) and the admin, the audit row count unchanged on a refusal.
 - `src/server/authorize.test.ts`: owner reads, `not_found`, anonymous refused before the read, card 6.
+- `src/server/second-life-page.test.ts`: D85, a customer, an unknown actor and anonymous get the refusal and no waiting-list data; the admin gets card 9's preview.
 - `src/app/api/demo/cards/[id]/run/route.test.ts`: 404 with the demo tools off.
 - `tests/meta-rules.test.ts`: every non-public `route.ts` calls `authorize(`.
 
