@@ -88,7 +88,7 @@ export function SiteHeader({ locale, t, actor, customers }: SiteHeaderProps) {
           </div>
 
           {/* On a phone the links fold into a menu; <details> needs no JavaScript. */}
-          <details className="group relative md:hidden">
+          <details data-nav-menu className="group relative md:hidden">
             <summary
               className={cx(
                 'flex size-11 cursor-pointer list-none items-center justify-center rounded-full',

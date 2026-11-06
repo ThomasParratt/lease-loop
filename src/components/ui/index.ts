@@ -7,7 +7,7 @@ export { cx } from './cx';
 export { DateText } from './date';
 export { DefinitionList, type DefinitionItem } from './definition-list';
 export { Disclosure } from './disclosure';
-export { HashLink } from './hash-link';
+export { HashLink, HashTargetFocus } from './hash-link';
 export { InfoPopover } from './info-popover';
 export { Field, inputClasses, type FieldControlProps } from './field';
 export { LifeStamp } from './life-stamp';

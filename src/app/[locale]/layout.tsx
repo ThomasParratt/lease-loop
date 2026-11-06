@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { LoopMark } from '@/components/loop-mark';
 import { SiteHeader } from '@/components/site-header';
+import { HashTargetFocus } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { readActor } from '@/server/actor';
@@ -62,6 +63,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         <main id="main" className="flex-1">
           {children}
         </main>
+        <HashTargetFocus />
 
         <footer className="bg-brand text-brand-contrast">
           <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 px-4 py-10 sm:px-6">
