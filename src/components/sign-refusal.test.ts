@@ -36,6 +36,7 @@ describe('signRefusalText', () => {
       'asset_not_available',
       'start_before_signing',
       'start_too_far',
+      'too_young_at_start',
       'already_signed',
       'not_allowed_to_sign',
       'application_not_found',

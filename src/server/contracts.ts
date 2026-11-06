@@ -18,6 +18,7 @@ import { contractStatusSchema, type ContractStatus } from '@/domain/statuses';
 import { ADMIN_ACTOR } from './actor';
 import { getApplication } from './applications';
 import { getAsset } from './assets';
+import { getCustomer } from './customers';
 import { withAudit, type TransactionClient } from './audit';
 import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handlers';
 import { emit } from './events';
@@ -148,6 +149,7 @@ export async function signContract(
   if (!asset) throw new Error(`Quote ${stored.id} names a missing asset`);
   const pricing = data ?? (await loadPricingData());
   const quoteStatus = storedQuoteStatusOn(stored, today, pricing.priceLists);
+  const customer = await getCustomer(db, application.customerId);
 
   const plan = planContract({
     contractId: randomUUID(),
@@ -160,6 +162,7 @@ export async function signContract(
     currentMonthlyNetCents: repricedMonthlyNet(stored, quoteStatus, today, pricing),
     signedOn: today,
     startDate: input.startDate ?? today,
+    birthDate: customer && 'birth_date' in customer ? customer.birth_date : undefined,
   });
   if (!plan.ok) return plan;
   const { contract, event } = plan;

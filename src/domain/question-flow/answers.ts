@@ -1,5 +1,5 @@
 // From the applicant's answers to the eligibility input, and the small conversions around it.
-import type { Customer, Question } from '@/data/schemas';
+import type { ConsumerLimits, Customer, Question } from '@/data/schemas';
 import { splitVat } from '@/domain/money-math';
 import type { Answer, Answers, FlowContext } from './engine';
 import type { EligibilityInput } from './eligibility';
@@ -130,6 +130,10 @@ export type InputFromAnswers = {
   knownPep?: boolean;
   /** Question ids answered other than the customer record (`recordMismatches`, D38). */
   recordMismatches?: readonly string[];
+  /** The quote's quantity, for the consumer cap. */
+  quantity?: number;
+  /** The team's consumer limits; without them the consumer caps are not applied. */
+  consumerLimits?: ConsumerLimits;
 };
 
 /** The eligibility input from the (pruned) answers of a flow. */
@@ -150,6 +154,14 @@ export function eligibilityInputFromAnswers(args: InputFromAnswers): Eligibility
     financedCents: context.financedCents,
     financedLimits: args.financedLimits,
     recordMismatches: args.recordMismatches,
+    category: context.category,
+    quantity: args.quantity,
+    annualRevenueCents:
+      'q_annual_revenue' in answers ? (cents(answers.q_annual_revenue) ?? null) : undefined,
+    beneficialOwners: Array.isArray(answers.q_beneficial_owners)
+      ? answers.q_beneficial_owners
+      : undefined,
+    consumerLimits: args.consumerLimits,
   };
 }
 
