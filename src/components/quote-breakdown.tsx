@@ -17,6 +17,18 @@ export function formatFactor(millionths: number, locale: Locale): string {
   }).format(millionths / 1_000_000);
 }
 
+/**
+ * The factor as the share of the financed amount paid each month, for the customer's step 2:
+ * 27 584 millionths → "2.7584" (the message adds the % sign). All four decimals are kept, so the
+ * sum on the page (financed × 2.7584 %) gives the cents the domain computed.
+ */
+export function formatMonthlySharePercent(millionths: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale[locale], {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(millionths / 10_000);
+}
+
 /** 2550 basis points → "25.5" in the page's language (the message adds the % sign). */
 export function formatBasisPoints(basisPoints: number, locale: Locale): string {
   return new Intl.NumberFormat(intlLocale[locale], { maximumFractionDigits: 2 }).format(
@@ -105,8 +117,12 @@ export function QuoteBreakdownList({ quote, locale, t }: QuoteBreakdownListProps
     { label: t('pricing.line.financed'), value: money(quote.financedCents) },
     {
       op: '×',
-      label: t('pricing.explain.factor'),
-      value: formatFactor(quote.factorMillionths, locale),
+      // Not "factor" and not "rate": the share of the amount paid each month, interest included.
+      label: t('pricing.explain.monthlyShare'),
+      hint: t('pricing.explain.monthlyShareHint'),
+      value: t('pricing.explain.percent', {
+        percent: formatMonthlySharePercent(quote.factorMillionths, locale),
+      }),
     },
     { op: '=', label: t('pricing.line.net'), value: money(quote.monthlyNetCents) },
     {

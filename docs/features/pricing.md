@@ -9,7 +9,7 @@ The price page shows what an item costs a month for any term and down payment, l
 In detail:
 
 - **The price page** `/[locale]/assets/[id]`: the asset, a term slider over the terms the item may be offered (the table's 12/24/36/48 under the category's cap, D43: a laptop stops at 36, with a note saying so), a down payment typed as an exact amount or set with its slider (0 to the price, in steps of 1 % of the price rounded to whole euros; the box takes any amount to the cent, read with `parseEurosToCents`) Every item is unique, so the page prices one item and has no quantity field (D8). The monthly price updates live from `GET /api/quotes/preview`; the browser never computes a price.
-- **The breakdown** ("How your price is made"), as three short sums that each end on the number the next starts from: (1) what we finance: the price of the item minus what you pay at the start; (2) your monthly payment: the amount financed × the monthly factor, plus VAT; (3) what it costs in total: the down payment with VAT plus the term's payments, then the buyout with VAT for the total if you keep it. The band letter and the price-list version are left out of the customer's view (the stored quote and the contract still show the version); the factor stays, with one line saying it already includes the interest.
+- **The breakdown** ("How your price is made"), as three short sums that each end on the number the next starts from: (1) what we finance: the price of the item minus what you pay at the start; (2) your monthly payment: the amount financed × the share paid each month, plus VAT; (3) what it costs in total: the down payment with VAT plus the term's payments, then the buyout with VAT for the total if you keep it. The band letter and the price-list version are left out of the customer's view (the stored quote and the contract still show the version); the factor stays, written for the customer as "Paid each month · 2.7584 %, a share of what we finance" (the factor in millionths ÷ 10 000, all four decimals kept so 3 890 € × 2.7584 % gives the page's 107.30 €), never as a "rate", with one line saying the percentage already includes the interest. The contract page and the staff views keep "band B · factor 0.027584".
 - **The term comparison**: the same choices priced at every allowed term, side by side, with the terms that cannot be priced and why. A term over the category's cap is not a row at all.
 - **The stored quote** (D7, revised): "Apply at this price" stores a `Quote` row priced on the request's day, valid 14 days, with an audit row, and opens the application (`/[locale]/apply/[quoteId]`, the question-flow slice's page), which shows "Price locked until" its last valid day while the quote is valid. `?quote=<id>` on the price page still shows a stored quote with a notice when a cheaper list is live today (card 2), but nothing links to it any more.
 - **The catalogue's offer** (`financeOffer`): the limits apply to the amount financed, not to the item. An item above the highest band is offered with the down payment that leaves exactly the maximum to finance: `farm-006` at 260 000 € gets "with 10 000 € down", financed 250 000 € in band D; its price page opens with that down payment and a notice saying why. An item below the lowest band is not leasable on that price list (D78): `ebike-010` at 289 € on list 1 (5 Nov) shows "Not leasable on this price list" on its card and a notice with the price and the 300 € minimum on its page, and a quote is refused with `below_minimum`; on list 2 (6 Nov) it is 303 €, band A.
@@ -99,23 +99,24 @@ Server (`src/server/quotes.ts`): `loadPricingData()`, `createQuote(db, { assetId
 
 ## Files
 
-| File                                    | What                                                                            |
-| --------------------------------------- | ------------------------------------------------------------------------------- |
-| `src/domain/pricing/quote.ts`           | `priceQuote`, `breakdownFromFrozen`                                             |
-| `src/domain/pricing/compare.ts`         | `compareTerms`                                                                  |
-| `src/domain/pricing/terms.ts`           | `termsOf`, `allowedTerms`, `termAllowed`, `allowedTermsOf` (D43)                |
-| `data/term-limits.json`                 | the team's cap per category, schema `termLimitsSchema`, loader `loadTermLimits` |
-| `src/domain/pricing/quote-status.ts`    | `quoteStatusOn`                                                                 |
-| `src/domain/civil-days.ts`              | `addDays`, no clock, shared with invoicing                                      |
-| `src/domain/pricing/index.ts`           | the public exports and `QUOTE_VALID_DAYS`                                       |
-| `src/server/quotes.ts`                  | the stored quote, the preview                                                   |
-| `src/server/quote-schemas.ts`           | the Zod schemas of the three routes (rows in `routes.ts`)                       |
-| `src/app/api/quotes/route.ts`           | `POST /api/quotes`                                                              |
-| `src/app/api/quotes/preview/route.ts`   | `GET /api/quotes/preview` (its test: the cap through the `ok()` envelope)       |
-| `src/app/api/quotes/[id]/route.ts`      | `GET /api/quotes/[id]`                                                          |
-| `src/app/[locale]/assets/[id]/page.tsx` | the price page and the locked quote                                             |
-| `src/components/quote-calculator.tsx`   | the sliders and the term table (client)                                         |
-| `src/components/quote-breakdown.tsx`    | the breakdown list and the refusal text (server and client)                     |
+| File                                     | What                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/domain/pricing/quote.ts`            | `priceQuote`, `breakdownFromFrozen`                                                               |
+| `src/domain/pricing/compare.ts`          | `compareTerms`                                                                                    |
+| `src/domain/pricing/terms.ts`            | `termsOf`, `allowedTerms`, `termAllowed`, `allowedTermsOf` (D43)                                  |
+| `data/term-limits.json`                  | the team's cap per category, schema `termLimitsSchema`, loader `loadTermLimits`                   |
+| `src/domain/pricing/quote-status.ts`     | `quoteStatusOn`                                                                                   |
+| `src/domain/civil-days.ts`               | `addDays`, no clock, shared with invoicing                                                        |
+| `src/domain/pricing/index.ts`            | the public exports and `QUOTE_VALID_DAYS`                                                         |
+| `src/server/quotes.ts`                   | the stored quote, the preview                                                                     |
+| `src/server/quote-schemas.ts`            | the Zod schemas of the three routes (rows in `routes.ts`)                                         |
+| `src/app/api/quotes/route.ts`            | `POST /api/quotes`                                                                                |
+| `src/app/api/quotes/preview/route.ts`    | `GET /api/quotes/preview` (its test: the cap through the `ok()` envelope)                         |
+| `src/app/api/quotes/[id]/route.ts`       | `GET /api/quotes/[id]`                                                                            |
+| `src/app/[locale]/assets/[id]/page.tsx`  | the price page and the locked quote                                                               |
+| `src/components/quote-calculator.tsx`    | the sliders and the term table (client)                                                           |
+| `src/components/quote-breakdown.tsx`     | the breakdown list and the refusal text (server and client)                                       |
+| `src/components/quote-breakdown.test.ts` | the factor written as the monthly share: 27 584 millionths → "2.7584" (en), "2,7584" (fi, sv, et) |
 
 ## Tests that pin the numbers
 
@@ -131,6 +132,7 @@ Server (`src/server/quotes.ts`): `loadPricingData()`, `createQuote(db, { assetId
 | Valid until 2026-11-19, expired on the 20th, leap days                                                                                                                                                                     | `days.test.ts`, `quote-status.test.ts`                                                                                                                                          |
 | Reserved `ebike-009` cannot be quoted; nothing written on refusal                                                                                                                                                          | `quotes.test.ts`                                                                                                                                                                |
 | Cards 1, 2, 6, 7, the band edges and the table limits on the data pack (scenario harness)                                                                                                                                  | `src/domain/scenarios/card-01-happy-path.test.ts`, `card-02-price-lock.test.ts`, `card-06-who-can-sign.test.ts`, `card-07-big-ticket.test.ts`, `traps.test.ts`                  |
+| Card 1's factor 0.027584 shown as "2.7584 %" paid each month; card 7's 0.021763 as "2.1763 %"                                                                                                                              | `src/components/quote-breakdown.test.ts`                                                                                                                                        |
 
 ## Open questions
 
