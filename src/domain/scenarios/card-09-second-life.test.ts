@@ -93,28 +93,28 @@ describe('card 9: second life (ebike-007, fair, 18 400 km)', () => {
     expect(option('good').plan.totalCents - option('fair').plan.totalCents).toBe(12_000);
   });
 
-  it('as is, it matches wait-02 (fair, 12 months, up to 9 000): 155 476 financed, 8 710 a month', () => {
-    // 549 000 × 32.5 % (46 months) × 0.65 = 115 976 + 39 500 = 155 476; × 0.056022 = 8 710.
-    expect(option('fair').secondLifeFinancedCents).toBe(155_476);
+  it('as is, it matches wait-02 (fair, 12 months, up to 9 000): 132 281 financed, 7 411 a month', () => {
+    // 549 000 × 32.5 % (46 months) × 0.65 = 92 781 + 39 500 = 132 281; × 0.056022 = 7 411.
+    expect(option('fair').secondLifeFinancedCents).toBe(132_281);
     expect(match.winner).toMatchObject({
       demandId: 'wait-02',
       condition: 'fair',
       upgrade: false,
       termMonths: 12,
-      monthlyNetCents: 8_710,
+      monthlyNetCents: 7_411,
     });
     expect(match.decision.code).toBe('relist_for_winner');
     expect(match.relist.condition).toBe('fair');
   });
 
   it('refurbished to good, it matches wait-13 (good, 24 months, up to 9 000) and ranks second', () => {
-    // 549 000 × 32.5 % × 0.85 = 151 661 + 51 500 = 203 161 (band B); × 0.035532 = 7 219.
-    expect(option('good').secondLifeFinancedCents).toBe(203_161);
+    // 549 000 × 32.5 % × 0.85 = 121 329 + 51 500 = 172 829 (band B); × 0.035532 = 6 332.
+    expect(option('good').secondLifeFinancedCents).toBe(172_829);
     expect(match.ranking[1]).toMatchObject({
       demandId: 'wait-13',
       condition: 'good',
       upgrade: true,
-      monthlyNetCents: 7_219,
+      monthlyNetCents: 6_332,
       decidedBy: 'no_refurbishment',
     });
   });

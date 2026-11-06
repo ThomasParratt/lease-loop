@@ -39,7 +39,7 @@ async function relistAndLease(assetId: string, termMonths: number) {
 describe('an early return of a relisted item (finding 1)', () => {
   it('card 9: ebike-007 (relisted fair) returned on 2027-11-06 is valued from 549 000 at 58 months', async () => {
     const { contract } = await relistAndLease('ebike-007', 24);
-    expect(contract.unitListPriceCents).toBe(155_476);
+    expect(contract.unitListPriceCents).toBe(132_281);
     const preview = await previewExit(
       db,
       {

@@ -1,6 +1,6 @@
 # Questions for the mentors
 
-Three readings of the brief we took in code and wanted confirmed on Friday (issues #13 and #54, and D60 from second life; #13 is answered); D31 is now a stated assumption (below). For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
+Three readings of the brief we took in code and asked the organisers about on Friday; all three are answered (issues #13 and #54 closed, D60). D31 is a stated assumption (below). For each: what they said and what the code does.
 
 Not a question here: Thomas's question-flow validation (#25, merged) added four rules (D37 to D40: the birth-date range, answers checked against the customer record, only the named signatory signs, only the acting customer applies). They are listed for information; the scenario suite on `main` passes with them.
 
@@ -10,21 +10,17 @@ Not a question here: Thomas's question-flow validation (#25, merged) added four 
 
 **What the code does now.** A quote prices one item: no quantity in `POST /api/quotes`, `GET /api/quotes/preview` or the price page, no per-item split. Card 6 is 549 000 financed, band B, 15 144 a month, and ends `awaiting_signatory` because the applicant may not sign. An item below the smallest lease is not leasable on that list (D78, replacing D41's "two together"). The `quantity` column stays at 1, and signing still refuses a larger one (D76) for rows stored before the answer. Our earlier reading (the band on the fleet's total, band C at 58 993) is in D8's history.
 
-## 2. Pass on: is the next user a named person? (D16, issue #54)
+## 2. Pass on: answered (D16, issue #54)
 
-**Our reading.** "Pass it on" names the next person (a friend, a colleague), who then applies in the normal way with a fresh quote at the second-life price. "Give it back" is the other exit, where matchmaking on the waiting list (D13, wave 3) finds the next customer.
+**Answered by the organisers on 2026-11-06.** "Pass it on" means the item goes straight to a new user, who starts its second life on a new lease priced on its used value; that person can be someone from the waiting list or someone the customer names, and the details are the team’s choice.
 
-**What the code does today.** The exit form asks for a customer for `pass_on` and refuses without one (`pass_on_needs_next_customer`), with yourself (`next_customer_is_self`) or with an unknown id (`next_customer_not_found`). The asset becomes `returned` and its passport records `passed_on` with the next customer ([exits.md](features/exits.md)).
+**What the code does.** Pass on names the next customer (the picker, standing in for an e-mail invitation), and refuses without one (`pass_on_needs_next_customer`), with yourself (`next_customer_is_self`) or an unknown id (`next_customer_not_found`). The waiting-list route is "return": the item is assessed and matchmaking (D13) names the next customer. A waiting-list entry has no customer record in the pack, so it cannot apply or sign itself. Both exits share the assessment (D77), the first contract ends `passed_on` (or `ended_early` before its end, D32 to D35), the second-life price is D12 on D60 and D79, and the passport chains the lives (D66). The mapping is in [issue #54](https://github.com/ThomasParratt/northfina-lease-loop/issues/54).
 
-**If the answer differs.** If passing on means "back to the waiting list", `pass_on` and `return` become one flow: the person picker and its three refusals go, and the next customer comes from D13's matchmaking. The billing (D14) and the passport entry stay as they are.
+## 3. Second life: answered (D60, D79)
 
-## 3. Second life: what price and age is a returned seeded item valued from? (D60)
+**Answered by the organisers on 2026-11-06.** For an item with past lives in the pack, the price at its first lease is its price on list 1, and its age counts from 1 January of its model year. Their worked example values `ebike-007` on 6 Nov 2026 at 927,81 €, with its usage counted.
 
-**Our reading.** The residual curve starts from the item's "net list price at its first lease". An item first leased by us has that price in its first contract and is aged from that contract's start (D31). A seeded item with past lives has neither in the pack, so we take the earliest price list that lists it (the lowest version, the price as new) and age it by D11 from 1 January of its model year. A third life is never valued from its second-life contract, whose "list price" is the second-life amount.
-
-**What the code does today.** `firstLeaseListPriceCents` in `src/domain/second-life/assess.ts` picks the price, `src/server/second-life.ts` the contract or the list. Card 9's `ebike-007` (one past life, no contract here) is valued from 549 000 (v1) at 46 months: 32.5 % on the curve, 115 976 as fair, a second-life price of **155 476** and **8 710** net a month for 12 months to `wait-02` ([second-life.md](features/second-life.md)).
-
-**If the answer differs.** If the price list live on the assessment day is meant, `ebike-007` starts from v2's 576 400 (about +5 %): 121 765 as fair and 161 265 with the mandatory 39 500, and every rent after it moves with the band and factor; the change is the list `firstLeaseListPriceCents` reads, and `assess.test.ts` pins the v1 numbers. If the mentors give a first-lease date, the age comes from it instead of the model year, through the same `curveAgeInMonths` switch as D31.
+**What the code does.** D60 was already that reading. D79 (Johannes) follows their example for the usage too: the value is taken as returned, so a new battery is a cost in the price and no longer lifts the value (D68 replaced). Card 9: 549 000 × 32.5 % × 0.65 × 0.80 = **92 781**, + 39 500 = **132 281**, `wait-02` at **7 411** a month for 12 months ([second-life.md](features/second-life.md)). When the app leases an item again, the contract stores the real start day and price, so the next life has its own history.
 
 ## Not a question any more: card 8's curve age (D31)
 

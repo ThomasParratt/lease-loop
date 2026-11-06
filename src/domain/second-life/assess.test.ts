@@ -46,33 +46,33 @@ describe('assessReturn (card 9: ebike-007, fair, 18 400 km)', () => {
     ]);
   });
 
-  it('as returned: battery 35 000 + inspection 4 500, usage reset, value 115 976, price 155 476', () => {
+  it('as returned: battery 35 000 + inspection 4 500, value as returned 92 781, price 132 281', () => {
     const fair = option('fair');
     expect(fair.plan.totalCents).toBe(39_500);
     expect(fair.plan.usageAfter).toEqual({ unit: 'km', value: 0 });
-    // 549 000 × 32.5 % × 0.65 × (1 − 0 %) = 115 976.25 → 115 976 (usage reset by the battery).
-    expect(fair.marketValue.valueCents).toBe(115_976);
-    expect(fair.secondLifeFinancedCents).toBe(115_976 + 39_500);
+    // 549 000 × 32.5 % × 0.65 × 0.80 (18 400 km, −20 % cap) = 92 781 (D79: the usage as returned; the organisers' 927,81 €).
+    expect(fair.marketValue.valueCents).toBe(92_781);
+    expect(fair.secondLifeFinancedCents).toBe(92_781 + 39_500);
   });
 
-  it('to good: 51 500 of work, value 151 661, price 203 161 (band B)', () => {
+  it('to good: 51 500 of work, value 121 329, price 172 829 (band B)', () => {
     const good = option('good');
     expect(good.plan.totalCents).toBe(51_500);
-    expect(good.marketValue.valueCents).toBe(151_661);
-    expect(good.secondLifeFinancedCents).toBe(203_161);
+    expect(good.marketValue.valueCents).toBe(121_329);
+    expect(good.secondLifeFinancedCents).toBe(172_829);
   });
 
   it('prices every allowed term on the D12 amount with the normal band and factor', () => {
-    // 155 476 × 0.056022 = 8 710.08 → 8 710; × 0.036637 = 5 696.17 → 5 696 (band A).
+    // 132 281, band A: 12 months 7 411, 24 months 4 846, 36 months 3 787, 48 months 3 168.
     expect(option('fair').rents.map((r) => [r.termMonths, r.monthlyNetCents])).toEqual([
-      [12, 8_710],
-      [24, 5_696],
-      [36, 4_451],
-      [48, 3_723],
+      [12, 7_411],
+      [24, 4_846],
+      [36, 3_787],
+      [48, 3_168],
     ]);
-    // 203 161 × 0.035532 = 7 218.72 → 7 219 (band B).
-    expect(option('good').rents.find((r) => r.termMonths === 24)?.monthlyNetCents).toBe(7_219);
-    expect(option('good').rents.find((r) => r.termMonths === 24)?.band).toBe('B');
+    // 172 829 is band A now (D79): 24 months at 6 332.
+    expect(option('good').rents.find((r) => r.termMonths === 24)?.monthlyNetCents).toBe(6_332);
+    expect(option('good').rents.find((r) => r.termMonths === 24)?.band).toBe('A');
   });
 });
 
@@ -82,8 +82,8 @@ describe('assessReturn on other data', () => {
     cheap.e_bike.fixed = cheap.e_bike.fixed.map((f) => ({ ...f, cost_cents: 1_000 }));
     const result = assessReturn(ebike007, { ...data, costs: cheap });
     expect(result.options[0]!.plan.totalCents).toBe(2_000);
-    expect(result.options[0]!.marketValue.valueCents).toBe(115_976);
-    expect(result.options[0]!.secondLifeFinancedCents).toBe(117_976);
+    expect(result.options[0]!.marketValue.valueCents).toBe(92_781);
+    expect(result.options[0]!.secondLifeFinancedCents).toBe(94_781);
   });
 
   it('a first-life item is aged from its lease start (D31)', () => {
@@ -141,10 +141,10 @@ describe('assessReturn on other data', () => {
 
 describe('withSecondLifePrice', () => {
   it('replaces the asset price in every list and keeps the versions and other prices', () => {
-    const lists = withSecondLifePrice(pricing, 'ebike-007', 155_476).priceLists;
+    const lists = withSecondLifePrice(pricing, 'ebike-007', 132_281).priceLists;
     expect(lists.map((l) => [l.version, l.prices['ebike-007']])).toEqual([
-      [1, 155_476],
-      [2, 155_476],
+      [1, 132_281],
+      [2, 132_281],
     ]);
     expect(lists[0]!.prices['ebike-001']).toBe(pricing.priceLists[0]!.prices['ebike-001']);
     expect(pricing.priceLists[0]!.prices['ebike-007']).toBe(549_000);

@@ -170,10 +170,10 @@ describe('earlyExitCost, the rules around it', () => {
 });
 
 describe('earlyExitCost, a relisted item (review finding 1, card 9)', () => {
-  it('values ebike-007 from D60 (549 000, 58 months), not its second-life price 203 161: 121 329', () => {
+  it('values ebike-007 from D60 (549 000, 58 months), not its second-life price 172 829: 121 329', () => {
     const cost = earlyExitCost(
       card8({
-        contract: { ...card8().contract, startDate: '2026-11-06', unitListPriceCents: 203_161 },
+        contract: { ...card8().contract, startDate: '2026-11-06', unitListPriceCents: 172_829 },
         today: '2027-11-06',
         curve: {
           listPriceCents: 549_000,

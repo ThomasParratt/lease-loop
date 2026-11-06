@@ -6,7 +6,8 @@
 // - the refurbishment plan (`refurbishmentPlan`, the data's own `when` rules);
 // - the market value after it (`marketValueCents`: the net list price at the first lease ×
 //   the curve at the item's age × the condition multiplier after the plan × the usage
-//   adjustment after the plan, so a new battery resets the usage loss);
+//   adjustment on the usage as returned (D79, the organisers' rule of 6 Nov: a new battery
+//   is a refurbishment cost in the price, it does not lift the market value; reverses D68);
 // - the second-life financed amount, D12: market value + refurbishment cost;
 // - the monthly net rent for each allowed term (D43), priced by `priceQuote` itself on that
 //   amount, so a quote made later on the relisted item gives exactly the same rent.
@@ -158,7 +159,8 @@ export function assessReturn(input: AssessInput, data: AssessData): ReturnAssess
         category: input.category,
         ageMonths,
         condition: plan.conditionAfter,
-        usage: plan.usageAfter,
+        // D79: the usage as returned, even when the plan replaces the battery.
+        usage: input.usage,
       },
       data.curves
     );

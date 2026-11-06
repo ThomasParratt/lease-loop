@@ -162,7 +162,7 @@ describe('runDemoCard', () => {
     expect(run.steps[1]?.params).toEqual({ count: 7, grossCents: 2 * 13_466 + 5 * 13_520 });
   });
 
-  it('card 9: assesses ebike-007 as admin, relists it fair for wait-02 at 8 710 a month', async () => {
+  it('card 9: assesses ebike-007 as admin, relists it fair for wait-02 at 7 411 a month', async () => {
     const run = ran(await runDemoCard(db, 9));
     expect(run).toMatchObject({
       today: '2026-11-06',
@@ -175,13 +175,13 @@ describe('runDemoCard', () => {
       assetId: 'ebike-007',
       condition: 'fair',
       refurbishmentCents: 39_500,
-      secondLifeFinancedCents: 155_476,
+      secondLifeFinancedCents: 132_281,
     });
     expect(run.steps[1]?.params).toEqual({
       demandId: 'wait-02',
       condition: 'fair',
       termMonths: 12,
-      monthlyNetCents: 8_710,
+      monthlyNetCents: 7_411,
     });
     const assessed = await latestAssessment(db, 'ebike-007');
     expect(assessed?.match.ranking.map((r) => r.demandId).slice(0, 2)).toEqual([
