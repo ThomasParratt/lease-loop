@@ -32,6 +32,7 @@ const countAll = async () => ({
   customer: await db.customer.count(),
   asset: await db.asset.count(),
   auditLog: await db.auditLog.count(),
+  auditHead: await db.auditHead.count(),
 });
 
 describe('resetDb', () => {

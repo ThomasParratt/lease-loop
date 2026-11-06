@@ -690,7 +690,7 @@
                     "maxLength": 200
                   }
                 },
-                "required": ["decision", "reviewedBy"],
+                "required": ["decision"],
                 "additionalProperties": false
               }
             }
@@ -1033,7 +1033,7 @@
     },
     "/api/assets/{id}/assessments": {
       "post": {
-        "summary": "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
+        "summary": "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); an optional body is the inspection (D77); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["second-life"],
         "parameters": [
           {
@@ -1046,6 +1046,28 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "condition": {
+                    "type": "string",
+                    "enum": ["new", "like_new", "good", "fair", "poor"]
+                  },
+                  "usageValue": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Success",
@@ -1979,7 +2001,12 @@
                             },
                             "reason": {
                               "type": "string",
-                              "enum": ["prev_hash_mismatch", "hash_mismatch", "unhashed_in_chain"]
+                              "enum": [
+                                "prev_hash_mismatch",
+                                "hash_mismatch",
+                                "unhashed_in_chain",
+                                "head_mismatch"
+                              ]
                             }
                           },
                           "required": ["ok", "brokenAt", "reason"],

@@ -32,6 +32,7 @@ import {
   type DomainEvent,
 } from '../events';
 import { splitVat } from '../money-math';
+import { conditionRank } from '../second-life/assess';
 import {
   contractStatusSchema,
   invoiceKindSchema,
@@ -64,6 +65,7 @@ export type ExitRefusal =
   | { code: 'next_customer_is_self'; params: { customerId: string } }
   | { code: 'reason_mismatch'; params: { reason: ExitReason; endDate: string } }
   | { code: 'usage_unit_mismatch'; params: { unit: string; expected: string } }
+  | { code: 'usage_below_signing'; params: { value: number; atSigning: number; unit: string } }
   | { code: 'no_vat_rate_on_date'; params: { isoDate: string } };
 
 export type PlanExitInput = Omit<EarlyExitInput, 'invoices' | 'reported'> & {
@@ -77,6 +79,9 @@ export type PlanExitInput = Omit<EarlyExitInput, 'invoices' | 'reported'> & {
   reason?: string;
   reported: { condition: string; usage: EarlyExitInput['reported']['usage'] };
   nextCustomerId?: string;
+  /** The asset as it was leased (its row is not written during the lease): D77 checks the
+   *  report against it. */
+  atSigning: { condition: string; usage: EarlyExitInput['reported']['usage'] };
   invoices: readonly ExitInvoiceRow[];
   vatRates: VatRates;
 };
@@ -157,7 +162,14 @@ const STATUS_AT_END: Record<ExitMode, ContractStatus> = {
 export function planExit(input: PlanExitInput): PlanExitResult {
   const mode = exitModeSchema.parse(input.mode);
   const status = contractStatusSchema.parse(input.contract.status);
-  const condition = assetConditionSchema.parse(input.reported.condition);
+  // D77: the customer's word is taken only where it is no better than the item at signing; the
+  // assessment's inspection decides the rest (review finding 2).
+  const conditionAtSigning = assetConditionSchema.parse(input.atSigning.condition);
+  const reportedCondition = assetConditionSchema.parse(input.reported.condition);
+  const condition =
+    conditionRank(reportedCondition) > conditionRank(conditionAtSigning)
+      ? conditionAtSigning
+      : reportedCondition;
   const { contract, today } = input;
 
   if (status !== 'active') {
@@ -193,6 +205,20 @@ export function planExit(input: PlanExitInput): PlanExitResult {
       reason: {
         code: 'usage_unit_mismatch',
         params: { unit: input.reported.usage.unit, expected: expectedUnit },
+      },
+    };
+  }
+
+  if (input.reported.usage.value < input.atSigning.usage.value) {
+    return {
+      ok: false,
+      reason: {
+        code: 'usage_below_signing',
+        params: {
+          value: input.reported.usage.value,
+          atSigning: input.atSigning.usage.value,
+          unit: input.reported.usage.unit,
+        },
       },
     };
   }

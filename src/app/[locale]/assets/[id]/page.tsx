@@ -32,7 +32,7 @@ import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { listAssetsWithLives } from '@/server/asset-lives';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 import {
@@ -63,7 +63,7 @@ export default async function PricePage({
 
   const t = getT(locale);
   const today = await todayForRequest(); // read once here, passed down
-  const [assets, listData] = await Promise.all([listAssets(db), loadPricingData()]);
+  const [assets, listData] = await Promise.all([listAssetsWithLives(db), loadPricingData()]);
   const asset = assets.find((a) => a.id === id);
   if (!asset) notFound();
   // D12: a relisted item is priced on its assessment's second-life amount, here as in the quote.

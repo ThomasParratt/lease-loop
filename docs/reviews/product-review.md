@@ -28,6 +28,8 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 1. high: an exit of a relisted item values it from its second-life price, aged again from the model year
 
+**Status:** fixed in `fix/product-review`: the exit and the assessment read one D60 rule (`firstLeaseCurve`, `src/domain/second-life/first-lease.ts`); card 9's early return on 2027-11-06 starts from 549 000 at 58 months (121 329 as good, 92 781 as the fair it was leased in, D77), card 10's preview from 179 900 (`src/server/scenarios/relisted-exit.test.ts`).
+
 - **Where:** `src/server/exit-data.ts:90` passes `contract.unitListPriceCents` to `src/domain/exits/early-exit.ts:128` as the curve's list price; `src/domain/residual/age.ts` (`curveAgeInMonths`) then ages any item with `previous_lives > 0` from its model year.
 - **What is wrong:** for a contract on a relisted item, `unitListPriceCents` is the D12/D63 second-life financed amount (the quote's price is replaced by the assessment's), which is already a depreciated value. The exit multiplies it by the curve at the item's full age a second time. D60 says the curve starts from the "net list price at its first lease" (the first contract's price, or the earliest price list) — which is what `src/server/second-life.ts:97-112` does, and the exit does not.
 - **Reproduce:** run card 9 (`ebike-007` relisted good, 203 161), lease it, return it early on 2027-11-06 (age 58 months, good, 0 km). The exit shows a market value of **448,99 €**; by D60 (549 000 × the same curve) it is **1 213,29 €**. The return bill is **764,30 € net too high**. Card 10's contract (`ebike-008`, `previous_lives` 2) is valued the same way, so an exit preview on it shows the same error.
@@ -35,12 +37,16 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 2. medium: an exit trusts the customer's reported condition and usage, and the assessment relists on them
 
+**Status:** fixed in `fix/product-review` (D77): the exit bills and records the worse of the reported condition and the one at signing, refuses a usage below the one at signing (`usage_below_signing`), and the assessment takes the admin's inspection in an optional body `{ condition?, usageValue? }`.
+
 - **Where:** the exit body (`src/server/exit-schemas.ts:33-39`) → `src/server/exits.ts:82-86` → `early-exit.ts:126-150`; `returnLeasedAsset` (`src/server/catalogue-handlers.ts:61-85`) writes them onto the asset; `POST /api/assets/[id]/assessments` reads no body and `src/server/second-life.ts:107-108` assesses the stored values.
 - **What is wrong:** `early-exit.ts`'s comment says "the assessment (wave 3) checks it", but the assessment takes the customer's word. A usage below the one at signing is accepted too.
 - **Reproduce:** return a fair bike at 18 000 km with `{ "mode": "return", "condition": "new", "usage": { "unit": "km", "value": 0 } }`: the early-return cost takes the top market value and no upgrade or battery step, and the bike is relisted as new with 0 km.
 - **Fix:** refuse a usage below the asset's usage at signing; let the admin's assessment take the inspected condition and usage in its body (defaulting to the reported ones), and price the return on the worse of the reported condition and the condition at signing until it does.
 
 ### 3. medium: `previous_lives` is the pack's count and never moves, but pages and the exit read it as the current life
+
+**Status:** fixed in `fix/product-review`: the catalogue and the price page stamp `livesSoFar` (pack count + our ended contracts, `src/server/asset-lives.ts`); the exit ages an item ours from new from its first lease on every later lease (`firstLeaseCurve`). The version picker reads the same assets.
 
 - **Where:** no code writes `previous_lives` (grep: only reads). Read as "this life" at `src/app/[locale]/assets/[id]/page.tsx:162-164`, `src/components/model-card.tsx:69-71`, `src/components/version-picker.tsx:44-46`, and by the exit's curve age (`exit-data.ts:97`).
 - **What is wrong:** after card 8 returns card 1's `ebike-003` (pack `previous_lives` 0) and it is assessed and relisted, the catalogue and the price page still stamp it **"Life 1 · New"**, while its passport counts two lives. On its second lease the exit ages it from the second lease's start (D31 sees 0 previous lives), so it is valued as a new item again, on top of finding 1's price.
@@ -64,17 +70,23 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 6. medium: the business-id hint is the data pack's English on every language
 
+**Status:** fixed in `fix/product-review`: `apply.hint.finnish_business_id` in the four files, the pack's text only as the fallback.
+
 - **Where:** `src/components/question-flow.tsx:421` shows `question.validation.hint`, which is `data/questions.json:232`'s "1234567-8 with a valid check digit".
 - **Reproduce:** apply as a company or sole trader on `/fi/…`, `/sv/…` or `/et/…`: the hint under the business-id field is English.
 - **Fix:** a key per validation format (`question.hint.finnish_business_id`) in all four files, the pack's text only as the fallback.
 
 ### 7. low: a farm machine's major service counts lifetime hours, so a second return bills it again
 
+**Status:** fixed in `fix/product-review`: per-started blocks count from `usageAtLastService`, the usage of the newest assessment that did the step; farm-005 returned again at 4 500 h bills one major service.
+
 - **Where:** `src/domain/refurbishment/plan.ts:82` (`Math.ceil(usage.value / rule.block)`).
 - **Reproduce:** `farm-005` returned at 4 200 h, leased again, returned at 4 500 h: both returns bill 5 major services (750 000 c); the second should bill 1. Already an open question in `docs/features/exits.md:110`; listed because "an item returned twice" is a likely surprise card.
 - **Fix:** record the hours at the last service (the assessment's usage) and count blocks from there.
 
 ### 8. low: a cast message key that is missing crashes the page instead of showing the key
+
+**Status:** fixed in `fix/product-review`: `getT` returns the key itself for a missing message.
 
 - **Where:** `src/i18n/get-t.ts:24` (`interpolate(dictionary[key], values)` calls `.replace` on `undefined`), reached through `t(\`${prefix}.${code}\` as MessageKey, values)`at`src/app/[locale]/demo/card-steps.ts:82`and`src/components/exit-preview.tsx:48`.
 - **What is wrong:** today every code has its key (the counted script below), so nothing breaks; a new server code without its key takes the demo page or the exit preview down.
@@ -90,17 +102,23 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 10. low: moving the demo clock back lets a contract be signed before its quote existed
 
+**Status:** fixed in `fix/product-review`: `quote_not_yet_valid { quoteDate }` in `planContract` (after D76's check) and in `createApplication` (409 `QUOTE_NOT_YET_VALID`); the apply page says it up front.
+
 - **Where:** `src/domain/pricing/quote-status.ts:38` (`today <= validUntil` is "valid", with no lower bound), `src/domain/contracts/sign.ts:97-118`.
 - **Reproduce:** quote on 2026-11-05, set the clock to 2026-10-01, sign: the contract's `signed_on` is before its `quote_date`, and its invoice 0 is dated a month before the quote.
 - **Fix:** `quote_not_yet_valid` when `today < quoteDate` (and the same lower bound on an application's day).
 
 ### 11. low: the audit chain cannot see a deleted last row
 
+**Status:** fixed in `fix/product-review`: `withAudit` keeps an `AuditHead` row (count and newest hash) in the same transaction; the verifier answers `head_mismatch` for a deleted newest row or a missing head. Rewriting both tables is still not caught (`docs/features/audit-chain.md`). An existing database needs `npm run db:reset` after the migration.
+
 - **Where:** `src/domain/audit/chain.ts:62-75`; the head is shown but not kept anywhere outside the table.
 - **What is wrong:** deleting the newest row (or the newest N) leaves a valid chain; the file's comment says so ("anchoring the head outside the database answers"), but the anchoring is not built and no test names the case. A judge running `npm run demo:tamper` with a delete of the last row would see "intact".
 - **Fix:** for the pitch, say it; in code, keep the head hash with its row count in a second place (a file written by `withAudit`, or the demo page prints it to copy) and compare.
 
 ### 12. low: smaller gaps from the data-pack walk
+
+**Status:** partly fixed in `fix/product-review`: the waiting-list tie-break compares ids by number; one `MAX_QUANTITY` (100) for the page and the API. Not fixed: the application's age on today (D45 already says the start is re-checked at signing), the company residency check (needs the record's country in the flow, more than a small change), signatory dates, the fleet quote on a relisted item (D8's open question, issue #13).
 
 - **Application age on today, not the start** (`src/server/applications.ts:209`, `startDate: input.today`): Mikko (card 5) cannot apply for a lease that starts on his 18th birthday, although signing allows a start up to 12 months ahead and re-checks the age on it. Fix: take the planned start into the application, or say in D45 that the application is on today's age.
 - **No residency check for a company** (`src/domain/question-flow/eligibility.ts:108`, `answers.ts:147`): the country question is asked only of people and the company record's country is not passed in; a surprise company in `DE` is approved. Signatories have no birth date, so a 17-year-old signatory is not detectable from the pack. Fix: pass the record's country for every customer type.
@@ -111,11 +129,15 @@ Most severe first. "Card" is a scenario card of `CHALLENGE.md`; "D" a row of `do
 
 ### 13. low: rules the meta tests do not see
 
+**Status:** partly fixed in `fix/product-review`: `resolveActor` reads through `listCustomers`; the reviewer is the cookie actor (the body's `reviewedBy` is ignored). Not fixed: the demo card double click (a read before the work; money is safe, the message is only confusing).
+
 - **A direct read of another slice's table:** `src/server/actor.ts:41` reads `db.customer.findMany` instead of the customers slice's read function (team rule 3). Every other access in the grep is in its owner's file.
 - **`reviewedBy` from the browser:** `decision-form.tsx:28` sends it and `src/server/applications.ts:364` stores it after checking the cookie actor is admin. Fix: set it from the actor on the server.
 - **Demo card double click** (`src/server/demo-cards.ts:177`, `earlierRun`): "already run" is a read before the work, so two quick clicks both quote and apply; the signing's conditional write lets one win and the other shows "signing refused: asset not available", leaving an orphan quote and application. Money is safe; the message is confusing in front of a judge.
 
 ### 14. low: pages
+
+**Status:** partly fixed in `fix/product-review`: refusal params on the exit form, the contract's exit card and the second-life page; `SIGNATORY_NOT_FOUND` labelled; the seven unused keys removed. Not fixed: the page sizes (under 600), the client-side formatters, "Ready to sign" on the portal (not this PR's files), the language switcher's query string (`useSearchParams` needs a Suspense boundary in the layout).
 
 - **Over 400 lines:** `src/components/question-flow.tsx` 465, `src/app/[locale]/assets/[id]/second-life/page.tsx` 461, `src/components/quote-calculator.tsx` 455, `src/app/[locale]/assets/[id]/page.tsx` 406 (under the 600 rule; split the step, the tables and the stored-quote section).
 - **Logic in client components:** `quote-calculator.tsx:61-71` (`centsToInput`, `downPaymentStep`) and a duplicate `centsToEuroInput` in `question-flow.tsx:278-283` that writes "," even in English. Fix: one domain formatter with tests.

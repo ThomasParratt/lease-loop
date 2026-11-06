@@ -13,15 +13,16 @@
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@/generated/prisma/client';
 import { loadRefurbishmentCosts, loadResidualCurves, loadSecondLifeDemand } from '@/data/load';
-import type { Asset, SecondLifeRequest } from '@/data/schemas';
+import type { Asset, AssetCondition, SecondLifeRequest } from '@/data/schemas';
 import { returnAssessmentRowSchema } from '@/domain/rows/return-assessment';
 import {
   assessReturn,
-  firstLeaseListPriceCents,
   type AssessData,
   type AssessInput,
   type ReturnAssessmentResult,
 } from '@/domain/second-life/assess';
+import { firstLeaseCurve } from '@/domain/second-life/first-lease';
+import { usageAtLastService } from '@/domain/refurbishment/plan';
 import { matchDemand, type MatchResult } from '@/domain/second-life/match';
 import type { AuthzRefusal } from '@/domain/authz/policy';
 import { appendAssetEvent } from './asset-events';
@@ -75,6 +76,9 @@ export type AssessRefusal =
   | { code: 'no_list_price'; params: { assetId: string } }
   | { code: 'demand_taken'; params: { demandId: string } };
 
+/** What the admin found on inspection (D77); a missing field keeps the stored (reported) value. */
+export type Inspection = { condition?: AssetCondition; usageValue?: number };
+
 type Built = { ok: true; proposal: SecondLifeProposal } | { ok: false; reason: AssessRefusal };
 
 /** The waiting-list entries an earlier assessment already matched (D62): one item each. */
@@ -86,36 +90,63 @@ async function matchedDemandIds(db: PrismaClient | TransactionClient): Promise<s
   return rows.flatMap((row) => (row.matched_demand_id ? [row.matched_demand_id] : []));
 }
 
+/**
+ * Past assessments of an asset, newest first: the usage and the plan's step ids, for the hours
+ * at the last major service (`usageAtLastService`, review finding 7). The exit reads it too.
+ */
+export async function assessmentHistory(
+  db: PrismaClient | TransactionClient,
+  assetId: string
+): Promise<{ usageValue: number; stepIds: string[] }[]> {
+  const rows = await db.returnAssessment.findMany({
+    where: { asset_id: assetId },
+    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    select: { usage_value: true, refurbishment_json: true },
+  });
+  return rows.map((row) => {
+    const steps = parseJson(row.refurbishment_json);
+    const stepIds = Array.isArray(steps)
+      ? steps.flatMap((s: unknown) =>
+          s && typeof s === 'object' && 'step' in s && typeof s.step === 'string' ? [s.step] : []
+        )
+      : [];
+    return { usageValue: row.usage_value, stepIds };
+  });
+}
+
 async function buildProposal(
   db: PrismaClient | TransactionClient,
   asset: Asset,
   today: string,
-  data: SecondLifeData
+  data: SecondLifeData,
+  inspected: Inspection = {}
 ): Promise<Built> {
-  const [contracts, taken] = await Promise.all([
+  const [contracts, taken, history] = await Promise.all([
     listAssetContracts(db, asset.id),
     matchedDemandIds(db),
+    assessmentHistory(db, asset.id),
   ]);
-  const first = contracts[0];
-  const ours = asset.previous_lives === 0 && first !== undefined;
-  const newPriceCents = ours
-    ? first.unitListPriceCents
-    : firstLeaseListPriceCents(data.pricing.priceLists, asset.id);
-  if (newPriceCents === null) {
+  // D60, the same read the exit uses (first-lease.ts).
+  const curve = firstLeaseCurve({
+    assetId: asset.id,
+    modelYear: asset.model_year,
+    previousLives: asset.previous_lives,
+    contracts,
+    priceLists: data.pricing.priceLists,
+    today,
+  });
+  if (curve === null) {
     return { ok: false, reason: { code: 'no_list_price', params: { assetId: asset.id } } };
   }
   const input: AssessInput = {
     assetId: asset.id,
     category: asset.category,
-    condition: asset.condition,
-    usage: asset.usage,
-    // D11 counts from the model year whenever the item is not ours from new.
-    age: {
-      modelYear: asset.model_year,
-      previousLives: ours ? 0 : Math.max(1, asset.previous_lives),
-      leaseStart: ours ? first.startDate : today,
-    },
-    newPriceCents,
+    // D77: the inspection wins over the customer's report the exit stored on the asset.
+    condition: inspected.condition ?? asset.condition,
+    usage: { unit: asset.usage.unit, value: inspected.usageValue ?? asset.usage.value },
+    usageAtLastService: usageAtLastService(history, asset.category, data.costs),
+    age: curve.age,
+    newPriceCents: curve.listPriceCents,
     isoDate: today,
   };
   const assessment = assessReturn(input, data);
@@ -150,11 +181,12 @@ export async function previewAssessment(
   db: PrismaClient,
   assetId: string,
   today: string,
-  data?: SecondLifeData
+  data?: SecondLifeData,
+  inspected?: Inspection
 ): Promise<Built> {
   const found = await returnedAsset(db, assetId);
   if (!found.ok) return found;
-  return buildProposal(db, found.asset, today, data ?? (await loadSecondLifeData()));
+  return buildProposal(db, found.asset, today, data ?? (await loadSecondLifeData()), inspected);
 }
 
 export type AssessResult =
@@ -167,13 +199,13 @@ export type AssessResult =
  */
 export async function assessAsset(
   db: PrismaClient,
-  input: { assetId: string; actor: string; today: string },
+  input: { assetId: string; actor: string; today: string; inspected?: Inspection },
   data?: SecondLifeData
 ): Promise<AssessResult> {
   // D73: authorized before anything is read.
   const auth = await authorize(db, input.actor, 'assess_asset', { none: true });
   if (!auth.ok && auth.reason.code !== 'not_found') return { ok: false, reason: auth.reason };
-  const built = await previewAssessment(db, input.assetId, input.today, data);
+  const built = await previewAssessment(db, input.assetId, input.today, data, input.inspected);
   if (!built.ok) return built;
   const { proposal } = built;
   const { assessment, match } = proposal;

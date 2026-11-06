@@ -244,6 +244,21 @@ describe('planContract refusals (codes with params)', () => {
     });
   });
 
+  it('quote_not_yet_valid before the quote day: the demo clock moved back (review finding 10)', () => {
+    expect(
+      planContract(
+        input({
+          quoteStatus: statusOn(card1Quote, '2026-10-01', { version: 1, unitPriceCents: 389_000 }),
+          signedOn: '2026-10-01',
+          startDate: '2026-10-01',
+        })
+      )
+    ).toEqual({
+      ok: false,
+      reason: { code: 'quote_not_yet_valid', params: { quoteDate: '2026-11-05' } },
+    });
+  });
+
   it('signs on valid_until itself (the last day is inclusive)', () => {
     const plan = planContract(
       input({
@@ -354,10 +369,11 @@ describe('planContract parses what it is given (D23)', () => {
 describe('planContract re-checks the age on the start day (D9 at signing)', () => {
   // born 2008-12-01: 18 on 2026-12-01. The quote is made 2026-11-05, before the birthday.
   const quote = { ...card1Quote, validUntil: '2026-12-31' };
+  // The leap-day case signs in January, so its quote is dated that day (finding 10's bound).
   const at = (signedOn: string, startDate: string, birthDate?: string) =>
     planContract(
       input({
-        quote,
+        quote: signedOn < quote.isoDate ? { ...quote, isoDate: signedOn } : quote,
         quoteStatus: statusOn(quote, signedOn, { version: 1, unitPriceCents: 389_000 }),
         signedOn,
         startDate,

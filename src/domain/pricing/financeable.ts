@@ -7,8 +7,11 @@
 // MAX_QUANTITY does it stay refused. Pure; the caller passes the day.
 import { priceQuote, type PricingData, type QuoteBreakdown, type QuoteRefusal } from './quote';
 
-/** The most units one quote finances together (the price page's quantity field). */
-export const MAX_QUANTITY = 20;
+/**
+ * The most units one quote finances together: the price page's quantity field and the quote API
+ * (one constant since review finding 12, where the page stopped at 20 and the API at 100).
+ */
+export const MAX_QUANTITY = 100;
 
 export type FinanceOffer =
   | { kind: 'standard'; quote: QuoteBreakdown }

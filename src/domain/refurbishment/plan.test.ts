@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import refurbishmentJson from '../../../data/refurbishment-costs.json';
 import { refurbishmentCostsSchema, type RefurbishmentCosts } from '@/data/schemas';
-import { parseWhenRule, refurbishmentPlan } from './plan';
+import { parseWhenRule, refurbishmentPlan, usageAtLastService } from './plan';
 
 const costs = refurbishmentCostsSchema.parse(refurbishmentJson);
 const km = (value: number) => ({ unit: 'km' as const, value });
@@ -120,6 +120,38 @@ describe('refurbishmentPlan', () => {
     expect(plan.totalCents).toBe(450_000 + 40_000);
   });
 
+  it('farm-005 returned a second time at 4 500 h, serviced at 4 200 h: one major service, not five (review finding 7)', () => {
+    const farm = (usageAtLastService?: number) =>
+      refurbishmentPlan(
+        {
+          category: 'farm_machine',
+          condition: 'good',
+          usage: { unit: 'engine_hours', value: 4_500 },
+          usageAtLastService,
+          targetCondition: 'good',
+        },
+        costs
+      ).steps.find((step) => step.id === 'major_service');
+    expect(farm()).toMatchObject({ quantity: 5, costCents: 750_000 });
+    expect(farm(4_200)).toMatchObject({ quantity: 1, costCents: 150_000 });
+    // Not a block started since the service: no major service at all.
+    expect(farm(4_500)).toBeUndefined();
+  });
+
+  it('a last service above the counter (a replaced meter) counts from 0, never negative', () => {
+    const plan = refurbishmentPlan(
+      {
+        category: 'farm_machine',
+        condition: 'good',
+        usage: { unit: 'engine_hours', value: 300 },
+        usageAtLastService: 4_200,
+        targetCondition: 'good',
+      },
+      costs
+    );
+    expect(plan.steps.find((step) => step.id === 'major_service')).toMatchObject({ quantity: 1 });
+  });
+
   it('a target the data has no upgrade for (like_new to new) throws', () => {
     expect(() =>
       refurbishmentPlan(
@@ -154,5 +186,19 @@ describe('refurbishmentPlan', () => {
         costs
       )
     ).toThrow(RangeError);
+  });
+});
+
+describe('usageAtLastService', () => {
+  it('the newest assessment that did a major service gives the hours; none gives 0', () => {
+    const history = [
+      { usageValue: 4_600, stepIds: ['safety_inspection'] },
+      { usageValue: 4_200, stepIds: ['major_service', 'safety_inspection'] },
+      { usageValue: 1_000, stepIds: ['major_service'] },
+    ];
+    expect(usageAtLastService(history, 'farm_machine', costs)).toBe(4_200);
+    expect(usageAtLastService([], 'farm_machine', costs)).toBe(0);
+    // An e-bike has no per-block step: its battery is a threshold rule.
+    expect(usageAtLastService(history, 'e_bike', costs)).toBe(0);
   });
 });

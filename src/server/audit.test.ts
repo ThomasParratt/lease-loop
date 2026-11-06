@@ -228,6 +228,26 @@ describe('the audit chain', () => {
     });
   });
 
+  it('reports the newest row deleted behind the app against the stored head (review finding 11)', async () => {
+    for (let minute = 0; minute < 3; minute++) {
+      await withAudit(db, { ...entry, details: { minute } }, reserve, at(minute));
+    }
+    const newest = (await rowsInOrder()).at(-1)!;
+    // The test may do this; the app never does (tests/meta-rules.test.ts).
+    await db.$executeRaw`DELETE FROM "AuditLog" WHERE id = ${newest.id}`;
+    expect(await verifyAuditChain(db)).toEqual({
+      ok: false,
+      brokenAt: newest.id,
+      reason: 'head_mismatch',
+    });
+  });
+
+  it('reports a log whose head row was deleted', async () => {
+    await withAudit(db, entry, reserve, at(0));
+    await db.$executeRaw`DELETE FROM "AuditHead"`;
+    expect(await verifyAuditChain(db)).toMatchObject({ ok: false, reason: 'head_mismatch' });
+  });
+
   it('reports a re-timed row', async () => {
     await withAudit(db, entry, reserve, at(0));
     const row = await db.auditLog.findFirstOrThrow();

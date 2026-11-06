@@ -28,17 +28,18 @@ Head hash: `53a1ed1503f5ee6d6c874237774939b025193a0bb8badbc9df98b9682ffa06d0`.
 
 **What breaks when:**
 
-| Tamper                                                                 | Verdict                                                                                                  |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Row 2's details become `{"quoteId":"Q-2"}`                             | broken at 2, `hash_mismatch` (it would now hash to `94b76012…`)                                          |
-| Row 1 re-timed, or its actor changed                                   | broken at 1, `hash_mismatch`                                                                             |
-| Row 2 deleted                                                          | broken at 3, `prev_hash_mismatch` (3 points at `ef606347…`, sees `d8f1fbbe…`)                            |
-| Rows 2 and 3 swapped                                                   | broken at 3, `prev_hash_mismatch`                                                                        |
-| Row 2's `prev_hash` edited                                             | broken at 2, `prev_hash_mismatch`                                                                        |
-| Row 3's hash set to null                                               | broken at 3, `unhashed_in_chain`                                                                         |
-| Every `hash` and `prev_hash` set to null                               | broken at 1, `unhashed_in_chain`                                                                         |
-| A second row written with row 1's `prev_hash` (a fork)                 | refused by the database: `prev_hash` is `@unique`                                                        |
-| The newest row deleted, or the whole table rewritten with fresh hashes | **not detected inside the database**: the head hash changes, which only an anchor kept elsewhere reveals |
+| Tamper                                                 | Verdict                                                                                               |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Row 2's details become `{"quoteId":"Q-2"}`             | broken at 2, `hash_mismatch` (it would now hash to `94b76012…`)                                       |
+| Row 1 re-timed, or its actor changed                   | broken at 1, `hash_mismatch`                                                                          |
+| Row 2 deleted                                          | broken at 3, `prev_hash_mismatch` (3 points at `ef606347…`, sees `d8f1fbbe…`)                         |
+| Rows 2 and 3 swapped                                   | broken at 3, `prev_hash_mismatch`                                                                     |
+| Row 2's `prev_hash` edited                             | broken at 2, `prev_hash_mismatch`                                                                     |
+| Row 3's hash set to null                               | broken at 3, `unhashed_in_chain`                                                                      |
+| Every `hash` and `prev_hash` set to null               | broken at 1, `unhashed_in_chain`                                                                      |
+| A second row written with row 1's `prev_hash` (a fork) | refused by the database: `prev_hash` is `@unique`                                                     |
+| The newest row deleted (review finding 11)             | broken at the deleted id, `head_mismatch`: the `AuditHead` row (count, newest hash) no longer matches |
+| Both tables rewritten with fresh hashes                | **not detected inside the database**: only an anchor kept elsewhere reveals it                        |
 
 Every row must be hashed. The columns are nullable only so the migration applies to a table with rows; no demo database has rows from before the chain (the seed writes none and `db:reset` reruns every migration), so a null hash anywhere is a break, and nulling every hash cannot pass as an intact log (review on #21).
 
@@ -72,7 +73,7 @@ The script is a terminal tool, never a route, so the app's own write rule holds.
 - `canonicalJson(value: unknown): string`: the canonical JSON text; throws on a bigint.
 - `GENESIS_HASH: string`: 64 zeros.
 - `hashAuditEntry(prevHash: string, entry: AuditChainEntry): string`: 64 hex characters. `AuditChainEntry = { actor, action, entityType, entityId, details: unknown, createdAt: string }`.
-- `verifyAuditChain(rows: AuditChainRow[]): AuditChainVerdict`: `rows` in id order, each `{ id, prevHash, hash, ...entry }` (the columns are nullable; a null hash is a break); returns `{ ok: true, length, headHash }` or `{ ok: false, brokenAt: id, reason: 'prev_hash_mismatch' | 'hash_mismatch' | 'unhashed_in_chain' }` for the first broken row.
+- `verifyAuditChain(rows: AuditChainRow[], storedHead?: { length, hash } | null): AuditChainVerdict`: `storedHead` (the `AuditHead` row `withAudit` writes in the same transaction) must match the walked chain, else `head_mismatch` (null with rows: the head row was deleted). `rows` in id order, each `{ id, prevHash, hash, ...entry }` (the columns are nullable; a null hash is a break); returns `{ ok: true, length, headHash }` or `{ ok: false, brokenAt: id, reason: 'prev_hash_mismatch' | 'hash_mismatch' | 'unhashed_in_chain' }` for the first broken row.
 
 Server reads in `src/server/audit.ts`: `verifyAuditChain(db)` (all rows in id order through the domain verifier), `auditChainHead(db)` (the newest row's hash, or the genesis hash). `withAudit(db, entry, work, now?)` gained the optional `now` (an ISO instant).
 
@@ -98,6 +99,6 @@ Server reads in `src/server/audit.ts`: `verifyAuditChain(db)` (all rows in id or
 ## Open questions
 
 - **Sign each row with an application key** (HMAC-SHA-256 or Ed25519 over the row hash) kept outside the database, so database access alone is not enough to recompute the chain. Needs a secret store and key rotation; not built.
-- **Anchor the head outside the database**: publish the head hash periodically to an RFC 3161 timestamp authority or a public ledger, so a truncated tail or a full rewrite is caught. Not built; the page shows the head for a person to copy.
+- **Anchor the head outside the database**: publish the head hash periodically to an RFC 3161 timestamp authority or a public ledger, so a rewrite of both tables is caught. Not built; the page shows the head for a person to copy. The `AuditHead` row catches a truncated tail inside the database (finding 11); a database migrated with rows already in it has no head until `npm run db:reset`.
 - **Postgres:** the previous-row read needs `SELECT … FOR UPDATE` or an advisory lock, and a trigger could forbid `UPDATE`/`DELETE` on `AuditLog` at the database level.
 - `verifyAuditChain(db)` reads the whole table on every audit-page load; fine for the demo, a checkpoint (verified up to id n with head h) would make it incremental.

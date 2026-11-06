@@ -248,6 +248,15 @@ model AuditLog {
   @@index([created_at])
 }
 
+// The audit chain's head (review finding 11): one row (id 1), written by withAudit in the same
+// transaction as every audit row, with the row count and the newest hash. Deleting the newest
+// audit rows leaves a valid shorter chain; the verifier compares it with this head.
+model AuditHead {
+  id     Int    @id
+  length Int
+  hash   String
+}
+
 // Who may sign for a company (D46): the company's own list of authorised signatories, as the
 // trade register and Suomi.fi e-Authorizations would give it in production. Owned by
 // src/server/signatories.ts. Days are ISO strings: valid from `valid_from` (null while the

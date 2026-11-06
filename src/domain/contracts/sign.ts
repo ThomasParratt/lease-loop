@@ -85,6 +85,7 @@ export type SignRefusal =
   | { code: 'quote_expired'; params: { validUntil: string } }
   | { code: 'asset_not_available'; params: { status: string } }
   | { code: 'not_enough_units'; params: { requested: number; available: number } }
+  | { code: 'quote_not_yet_valid'; params: { quoteDate: string } }
   | { code: 'start_before_signing'; params: { signedOn: string; startDate: string } }
   | {
       code: 'start_too_far';
@@ -132,6 +133,13 @@ export function planContract(input: PlanContractInput): PlanContractResult {
         code: 'not_enough_units',
         params: { requested: quote.quantity, available: UNITS_PER_CONTRACT },
       },
+    };
+  }
+  // A demo clock moved back must not sign a contract dated before its quote (review finding 10).
+  if (signedOn < quote.isoDate) {
+    return {
+      ok: false,
+      reason: { code: 'quote_not_yet_valid', params: { quoteDate: quote.isoDate } },
     };
   }
   // ISO days compare correctly as strings.

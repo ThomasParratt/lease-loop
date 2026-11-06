@@ -29,6 +29,9 @@ export type AuditEntry = {
 
 export type TransactionClient = Prisma.TransactionClient;
 
+/** The one row of `AuditHead`. */
+const AUDIT_HEAD_ID = 1;
+
 /**
  * Runs `work` inside a transaction and records `entry` in the audit log.
  * Use the `tx` you are given for every write in `work`; writes through `db` would
@@ -81,6 +84,14 @@ export async function withAudit<T>(
         hash,
       },
     });
+    // The head beside the log, in the same transaction (review finding 11): the verifier sees a
+    // deleted newest row as a count or hash that no longer matches.
+    const length = await tx.auditLog.count();
+    await tx.auditHead.upsert({
+      where: { id: AUDIT_HEAD_ID },
+      create: { id: AUDIT_HEAD_ID, length, hash },
+      update: { length, hash },
+    });
     return result;
   });
 }
@@ -114,7 +125,10 @@ export async function listAuditLog(db: PrismaClient, limit = 50): Promise<AuditL
 
 /** Walks the whole audit log in id order and names the first broken row (see domain/audit). */
 export async function verifyAuditChain(db: PrismaClient): Promise<AuditChainVerdict> {
-  const rows = await db.auditLog.findMany({ orderBy: { id: 'asc' } });
+  const [rows, head] = await Promise.all([
+    db.auditLog.findMany({ orderBy: { id: 'asc' } }),
+    db.auditHead.findUnique({ where: { id: AUDIT_HEAD_ID } }),
+  ]);
   return verifyChainRows(
     rows.map((row) => ({
       id: row.id,
@@ -126,7 +140,8 @@ export async function verifyAuditChain(db: PrismaClient): Promise<AuditChainVerd
       entityId: row.entity_id,
       details: row.details_json === null ? null : parseStoredJson(row.details_json),
       createdAt: row.created_at.toISOString(),
-    }))
+    })),
+    head ? { length: head.length, hash: head.hash } : null
   );
 }
 

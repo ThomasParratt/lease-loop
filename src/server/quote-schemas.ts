@@ -3,13 +3,14 @@
 // routes.ts; they live here so the four wave 1 slices do not all grow one file.
 import { z } from 'zod';
 import { centsSchema, isoDateSchema } from '@/data/schemas';
+import { MAX_QUANTITY } from '@/domain/pricing/financeable';
 
 const intFromQuery = z.coerce.number().int();
 
 /** Body of `POST /api/quotes`. The day is the request's, never the browser's. */
 export const createQuoteBodySchema = z.strictObject({
   assetId: z.string().min(1).max(100),
-  quantity: z.number().int().min(1).max(100).default(1),
+  quantity: z.number().int().min(1).max(MAX_QUANTITY).default(1),
   termMonths: z.number().int().positive(),
   downPaymentCents: centsSchema,
 });
@@ -17,7 +18,7 @@ export const createQuoteBodySchema = z.strictObject({
 /** Query of `GET /api/quotes/preview`, the live sliders. */
 export const previewQuoteQuerySchema = z.object({
   assetId: z.string().min(1).max(100),
-  quantity: intFromQuery.min(1).max(100).default(1),
+  quantity: intFromQuery.min(1).max(MAX_QUANTITY).default(1),
   termMonths: intFromQuery.positive(),
   downPaymentCents: intFromQuery.nonnegative().default(0),
 });

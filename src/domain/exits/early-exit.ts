@@ -22,6 +22,7 @@ import type {
 import { outstandingBalanceAfter, type AmortisationRow } from '../invoicing/balance';
 import { refurbishmentPlan, type RefurbishmentPlan } from '../refurbishment/plan';
 import { curveAgeInMonths } from '../residual/age';
+import type { FirstLeaseCurve } from '../second-life/first-lease';
 import { marketValueCents, type MarketValue, type Usage } from '../residual/market-value';
 import type { InvoiceKind, InvoiceStatus } from '../statuses';
 
@@ -54,11 +55,12 @@ export type ExitContractTerms = {
   monthlyNetCents: number;
   termMonths: number;
   buyoutCents: number;
-  /** The first day of the lease: the curve age of a first-life item counts from it (D31). */
+  /** The first day of this lease. */
   startDate: string;
   /** Inclusive: the last day of the term. */
   endDate: string;
-  /** Net list price of one unit at signing: the first-lease price for the curve. */
+  /** Net list price of one unit at signing. Not the curve's price: a relisted item's is its
+   *  second-life amount, already depreciated (review finding 1); `curve` carries D60's. */
   unitListPriceCents: number;
   quantity: number;
 };
@@ -69,10 +71,14 @@ export type EarlyExitInput = {
   annualInterestPercent: number;
   invoices: readonly { kind: InvoiceKind; status: InvoiceStatus }[];
   today: string;
-  /** `previousLives` during this lease picks the curve age (D31). */
-  asset: { category: AssetCategory; modelYear: number; previousLives: number };
+  asset: { category: AssetCategory };
+  /** The residual curve's list price and age inputs (D60, `firstLeaseCurve`): the same read the
+   *  assessment of the returned item uses, so the two value it alike. */
+  curve: FirstLeaseCurve;
   /** What the customer reports; the assessment (wave 3) checks it. */
   reported: { condition: AssetCondition; usage: Usage };
+  /** The usage at the last per-block service (review finding 7); absent: none on record. */
+  usageAtLastService?: number;
   curves: ResidualCurves;
   costs: RefurbishmentCosts;
 };
@@ -125,16 +131,9 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
 
   const marketValue = marketValueCents(
     {
-      listPriceCents: contract.unitListPriceCents,
+      listPriceCents: input.curve.listPriceCents,
       category: asset.category,
-      ageMonths: curveAgeInMonths(
-        {
-          modelYear: asset.modelYear,
-          previousLives: asset.previousLives,
-          leaseStart: contract.startDate,
-        },
-        today
-      ),
+      ageMonths: curveAgeInMonths(input.curve.age, today),
       condition: reported.condition,
       usage: reported.usage,
     },
@@ -145,6 +144,7 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
       category: asset.category,
       condition: reported.condition,
       usage: reported.usage,
+      usageAtLastService: input.usageAtLastService,
       targetCondition: LEASABLE_CONDITION,
     },
     input.costs

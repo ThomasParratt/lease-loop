@@ -2,6 +2,7 @@
 // cookie with a customer id or `admin`, and every withAudit entry names that actor. A cookie
 // that names nobody we know reads as `anonymous`.
 import { cookies } from 'next/headers';
+import { listCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
 
 export const ACTOR_COOKIE = 'lease-loop-actor';
@@ -38,10 +39,11 @@ export function clearActorCookieHeader(): string {
 
 /** Checks a cookie value against the customers in the database. */
 export async function resolveActor(db: PrismaClient, value: string | undefined): Promise<Actor> {
-  const rows = await db.customer.findMany({ select: { id: true } });
+  // Through the customers slice's read (team rule 3, review finding 13).
+  const customers = await listCustomers(db);
   return actorFromCookieValue(
     value,
-    rows.map((row) => row.id)
+    customers.map((customer) => customer.id)
   );
 }
 

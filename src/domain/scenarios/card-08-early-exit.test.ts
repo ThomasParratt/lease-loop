@@ -163,7 +163,11 @@ function exitInput(paid: number, today: string): EarlyExitInput {
       status: i < paid ? ('paid' as const) : ('issued' as const),
     })),
     today,
-    asset: { category: 'e_bike', modelYear: 2026, previousLives: 0 },
+    asset: { category: 'e_bike' },
+    curve: {
+      listPriceCents: quote.unitListPriceCents,
+      age: { modelYear: 2026, previousLives: 0, leaseStart: deal.isoDate },
+    },
     reported: { condition: 'good', usage: { unit: 'km', value: 1_800 } },
     curves,
     costs,

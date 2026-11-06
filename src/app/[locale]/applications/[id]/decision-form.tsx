@@ -9,14 +9,12 @@ import { Button, Notice } from '@/components/ui';
 
 type DecisionFormProps = {
   applicationId: string;
-  /** Who decides: the admin. */
-  reviewer: string;
   labels: { approve: string; reject: string };
   /** The refusal sentences by code (product review 5); `error` for anything else. */
   failures: FailureLabels;
 };
 
-export function DecisionForm({ applicationId, reviewer, labels, failures }: DecisionFormProps) {
+export function DecisionForm({ applicationId, labels, failures }: DecisionFormProps) {
   const router = useRouter();
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -28,7 +26,8 @@ export function DecisionForm({ applicationId, reviewer, labels, failures }: Deci
       const response = await fetch(`/api/applications/${applicationId}/decision`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ decision, reviewedBy: reviewer }),
+        // The reviewer is the server's actor, never sent (review finding 13).
+        body: JSON.stringify({ decision }),
       });
       if (!response.ok) setFailed(await responseFailureText(response, failures));
       else router.refresh();

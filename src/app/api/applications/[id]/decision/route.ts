@@ -1,7 +1,8 @@
-// POST /api/applications/:id/decision   body: { decision: "approved" | "rejected", reviewedBy }
+// POST /api/applications/:id/decision   body: { decision: "approved" | "rejected" }
 // D10: an admin decides a manual review. An awaiting_signatory case is signed or declined only
 // through the signing link (POST /api/sign/:token, D39, D46): here it is 403 FORBIDDEN
-// `signatory_required` for everyone. Authorized first (D73, D74); the actor is the cookie's.
+// `signatory_required` for everyone. Authorized first (D73, D74); the actor is the cookie's, and
+// so is the reviewer stored with the decision (review finding 13: never the body's).
 import { readActor } from '@/server/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { decideApplication } from '@/server/applications';
@@ -21,7 +22,13 @@ export const POST = handleRoute(
     const body = await readJsonBody(request, decideApplicationBodySchema);
     const today = await todayForRequest();
 
-    const result = await decideApplication(db, { id, ...body, today, actor });
+    const result = await decideApplication(db, {
+      id,
+      decision: body.decision,
+      reviewedBy: actor,
+      today,
+      actor,
+    });
     if (result.ok) return ok(result.application);
 
     if (result.reason === 'forbidden') return forbiddenResponse(result.refusal);

@@ -35,6 +35,8 @@ export const POST = handleRoute(async (request) => {
       return fail(403, 'NOT_APPLICANT', 'You can apply only in your own name');
     case 'quote_expired':
       return fail(409, 'QUOTE_EXPIRED', 'The quote is no longer valid');
+    case 'quote_not_yet_valid':
+      return fail(409, 'QUOTE_NOT_YET_VALID', 'The quote is dated after today');
     case 'quote_in_use':
       return fail(409, 'QUOTE_IN_USE', 'The quote already has a pending or approved application', {
         applicationId: result.applicationId,

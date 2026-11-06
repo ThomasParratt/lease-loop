@@ -1,10 +1,17 @@
 // Zod schemas of the second-life route (contract first): `POST /api/assets/[id]/assessments`
 // assesses a returned asset on the request's day and relists it (admin only, D12, D13, D61).
-// The row that uses them is in routes.ts. No body: the day and the actor are the server's.
+// The row that uses them is in routes.ts. The day and the actor are the server's; the optional
+// body is the admin's inspection (D77), each field defaulting to the stored (reported) value.
 import { z } from 'zod';
 import { assetConditionSchema, centsSchema, isoDateSchema } from '@/data/schemas';
 
 export const assessmentParamsSchema = z.object({ id: z.string().min(1) });
+
+/** The inspected condition and usage (D77); an empty body or {} assesses the stored values. */
+export const assessmentBodySchema = z.strictObject({
+  condition: assetConditionSchema.optional(),
+  usageValue: z.number().int().nonnegative().optional(),
+});
 
 const outcomeSchema = z.object({
   code: z.string(),

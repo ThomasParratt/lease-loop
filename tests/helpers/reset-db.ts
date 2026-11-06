@@ -16,6 +16,7 @@ export const RESET_ORDER = [
   'customer',
   'asset',
   'auditLog',
+  'auditHead',
 ] as const;
 
 export type ResetTable = (typeof RESET_ORDER)[number];
@@ -47,6 +48,8 @@ function deleteAll(db: PrismaClient, table: ResetTable) {
       return db.customer.deleteMany();
     case 'asset':
       return db.asset.deleteMany();
+    case 'auditHead':
+      return db.auditHead.deleteMany();
     case 'auditLog':
       return db.auditLog.deleteMany();
   }
