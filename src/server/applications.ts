@@ -335,14 +335,6 @@ export async function listApplications(
   return rows.map(toApplicationView);
 }
 
-/** Who may read an application: the applicant customer and the admin, nobody else. */
-export function mayReadApplication(
-  actor: string,
-  application: Pick<ApplicationView, 'customerId'>
-) {
-  return actor === ADMIN_ACTOR || actor === application.customerId;
-}
-
 export type DecideApplicationInput = {
   id: string;
   decision: 'approved' | 'rejected';

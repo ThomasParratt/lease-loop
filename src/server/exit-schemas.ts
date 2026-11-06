@@ -72,23 +72,6 @@ export const exitPreviewResponseSchema = z.object({
   cancelInvoiceIds: z.array(z.string()),
 });
 
-/** Refusals of an exit, as codes with params. */
-export const exitRefusalSchema = z.object({
-  code: z.enum([
-    'contract_not_found',
-    'contract_not_active',
-    'not_started',
-    'pass_on_needs_next_customer',
-    'next_customer_is_self',
-    'next_customer_not_found',
-    'reason_mismatch',
-    'usage_unit_mismatch',
-    'usage_below_signing',
-    'no_vat_rate_on_date',
-  ]),
-  params: z.record(z.string(), z.union([z.string(), z.number()])),
-});
-
 /** After an exit: the contract with its new status and end day, and what was billed. */
 export const exitResponseSchema = z.object({
   contract: contractViewSchema,

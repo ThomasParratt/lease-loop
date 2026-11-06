@@ -97,10 +97,6 @@ export const domainEventSchema = z.discriminatedUnion('type', [
 ]);
 
 export type ContractSigned = z.infer<typeof contractSignedSchema>;
-export type ContractBoughtOut = z.infer<typeof contractBoughtOutSchema>;
-export type UnitReturned = z.infer<typeof unitReturnedSchema>;
-export type UnitPassedOn = z.infer<typeof unitPassedOnSchema>;
-export type InvoicePaid = z.infer<typeof invoicePaidSchema>;
 export type DomainEvent = z.infer<typeof domainEventSchema>;
 export type EventType = DomainEvent['type'];
 /** The event of one type, e.g. `EventOf<'INVOICE_PAID'>`. */
