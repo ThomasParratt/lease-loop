@@ -10,7 +10,7 @@ import { matchDemand } from '../second-life/match';
 import { applyFor, assessPackItem, customerById, pack, pricing, quoteFor } from './fixtures';
 
 const quoteOn = (data: PricingData, assetId: string, isoDate: string, termMonths = 36) =>
-  priceQuote(data, { assetId, quantity: 1, termMonths, downPaymentCents: 0, isoDate });
+  priceQuote(data, { assetId, termMonths, downPaymentCents: 0, isoDate });
 
 describe('drill: a price list v3 after 6 Nov that moves items across bands', () => {
   const v2 = pack.priceLists.find((l) => l.version === 2)!;

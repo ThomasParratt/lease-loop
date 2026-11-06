@@ -1,8 +1,9 @@
 // One model in the catalogue: its drawing with the life stamp of its first version, the make
 // and model, what is on offer (one unit's condition, wear and year, or "new and used · 3
 // available"), and the monthly price on a small tag: one price, the lowest of a range, or
-// "See details" for an item leased only several together or with no plain price. The card
-// links to the first version's page, where the customer picks between versions.
+// "See details" for an item with no plain price ("Not leasable on this price list" below the
+// smallest lease, D78). The card links to the first version's page, where the customer picks
+// between versions.
 // A server component: it renders to HTML and ships no JavaScript. The whole card is one link
 // (the title's link stretches over it), so there is one tab stop per model.
 import Link from 'next/link';
@@ -47,8 +48,8 @@ export function ModelCard({ group, offer, termMonths, locale, t }: ModelCardProp
   const priced = group.minMonthlyCents !== null;
   const range = priced && group.minMonthlyCents !== group.maxMonthlyCents;
   const sub =
-    offer.kind === 'needs_quantity'
-      ? t('catalogue.card.together', { count: offer.quantity })
+    offer.kind === 'none' && offer.reason.code === 'below_minimum'
+      ? t('catalogue.card.belowMinimum')
       : !priced
         ? undefined
         : offer.kind === 'needs_down_payment' && group.versions.length === 1

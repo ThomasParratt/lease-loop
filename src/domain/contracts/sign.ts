@@ -123,9 +123,9 @@ export function planContract(input: PlanContractInput): PlanContractResult {
   if (assetStatus !== 'available') {
     return { ok: false, reason: { code: 'asset_not_available', params: { status: assetStatus } } };
   }
-  // D76: a contract holds one asset row and signing locks exactly that row, so it can deliver
-  // one unit. A quote may still price a fleet (D8, card 6's band on the total), but signing
-  // refuses more units than it can lock, until issue #13 lets one contract hold N rows.
+  // D76: a contract holds one asset row and signing locks exactly that row, so it delivers one
+  // unit. Since D8 was decided (every item is unique) a quote always prices one unit; this stays
+  // as a guard against a stored quote row from before that, which signing must never oversell.
   if (quote.quantity > UNITS_PER_CONTRACT) {
     return {
       ok: false,

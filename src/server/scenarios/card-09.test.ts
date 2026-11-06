@@ -95,7 +95,6 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
       assetId: 'ebike-007',
       termMonths: 12,
       downPaymentCents: 0,
-      quantity: 1,
       today,
       actor: 'cust-aino',
     });

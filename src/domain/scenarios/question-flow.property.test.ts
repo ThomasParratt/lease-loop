@@ -1,7 +1,7 @@
 // Nothing throws, and every outcome is one the page can write: for a random customer × asset ×
-// term × quantity × down payment on the real data pack, the flow either refuses the quote with
-// a known code or decides with known reason codes whose message keys exist in all four
-// languages. The seed is fixed and the run count bounded, so the test is the same every time.
+// term × down payment on the real data pack (a quote is one unit: every item is unique), the
+// flow either refuses the quote with a known code or decides with known reason codes whose
+// message keys exist in all four languages. The seed is fixed and the run count bounded, so the test is the same every time.
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import en from '@/i18n/messages/en.json';
@@ -19,7 +19,6 @@ const TIMEOUT_MS = 60_000;
 const DAY = '2026-11-05';
 
 const QUOTE_REFUSALS = [
-  'invalid_quantity',
   'invalid_down_payment',
   'unknown_term',
   'term_over_category_max',
@@ -42,7 +41,6 @@ const KNOWN_REASONS = [
   'missing_answer',
   'pep',
   'answer_differs_from_record',
-  'quantity_over_consumer_cap',
   'category_needs_review',
   'income_implausible',
   'revenue_below_financed',
@@ -63,23 +61,20 @@ const dealArb = fc.record({
   customer: fc.constantFrom(...pack.customers),
   assetId: fc.constantFrom(...pack.assets.map((a) => a.id)),
   termMonths: fc.constantFrom(...termsOf(pack.table)),
-  quantity: fc.integer({ min: 1, max: 5 }),
   downKind: fc.constantFrom(0, 1, 2, 3) as fc.Arbitrary<0 | 1 | 2 | 3>,
 });
 
 describe('the question flow on random deals (property)', () => {
   it(
-    `every customer × asset × term × quantity 1–5 × four down payments decides or refuses with known codes (seed ${SEED})`,
+    `every customer × asset × term × four down payments decides or refuses with known codes (seed ${SEED})`,
     () => {
       fc.assert(
-        fc.property(dealArb, ({ customer, assetId, termMonths, quantity, downKind }) => {
+        fc.property(dealArb, ({ customer, assetId, termMonths, downKind }) => {
           const unit = listPriceOn(pack.priceLists, assetId, DAY);
           if (!unit.ok) throw new Error(`no list price for ${assetId} on ${DAY}`);
-          const listPriceCents = unit.priceCents * quantity;
-          const downPaymentCents = downPaymentFor(listPriceCents, downKind);
+          const downPaymentCents = downPaymentFor(unit.priceCents, downKind);
           const app = applyFor(customer, {
             assetId,
-            quantity,
             termMonths,
             downPaymentCents,
             isoDate: DAY,
@@ -113,11 +108,13 @@ describe('the question flow on random deals (property)', () => {
     TIMEOUT_MS
   );
 
-  it('the generator reaches a plausibility hold: a consumer with three e-bikes (quantity 1–5 > cap 2)', () => {
+  // quantity_over_consumer_cap cannot come from a quote any more (one unit each); the rule is
+  // still pinned in src/domain/question-flow/plausibility.test.ts
+  it('the generator reaches a plausibility hold: a consumer with an affordable farm machine (category_needs_review)', () => {
     const consumer = pack.customers.find((c) => c.type === 'consumer' && c.id === 'cust-aino')!;
-    const bike = pack.assets.find((a) => a.category === 'e_bike')!.id;
-    const app = applyFor(consumer, { assetId: bike, quantity: 3, termMonths: 48, isoDate: DAY });
-    expect(app.ok && app.result.reasons.map((r) => r.code)).toContain('quantity_over_consumer_cap');
+    // farm-008, the cheapest farm machine (1 290 000), is within Aino's budget
+    const app = applyFor(consumer, { assetId: 'farm-008', termMonths: 48, isoDate: DAY });
+    expect(app.ok && app.result.reasons.map((r) => r.code)).toContain('category_needs_review');
   });
 
   it('the four down payments cover the price edge: 0, 1, price − 1 and the price itself', () => {

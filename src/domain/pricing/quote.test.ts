@@ -7,7 +7,7 @@ import {
   loadVatRates,
 } from '@/data/load';
 import { buildSchedule, scheduleTotals } from '../invoicing/schedule';
-import { breakdownFromFrozen, priceQuote, splitEvenly, type PricingData } from './quote';
+import { breakdownFromFrozen, priceQuote, type PricingData } from './quote';
 
 // Against the real data pack, so a changed data file fails the pinned card numbers.
 let data: PricingData;
@@ -21,7 +21,7 @@ beforeAll(async () => {
   };
 });
 
-const base = { quantity: 1, downPaymentCents: 0, isoDate: '2026-11-05' };
+const base = { downPaymentCents: 0, isoDate: '2026-11-05' };
 
 function quoteOf(input: Parameters<typeof priceQuote>[1]) {
   const result = priceQuote(data, input);
@@ -46,7 +46,6 @@ describe('priceQuote, card 1 (the worked example: ebike-003, 36 months, no down 
       monthlyGrossCents: 13_466,
       buyoutPercentBasisPoints: 1500,
       buyoutCents: 58_350,
-      perUnit: null,
     });
   });
 
@@ -161,33 +160,23 @@ describe('priceQuote, the term cap per category (D43)', () => {
   });
 });
 
-describe('priceQuote, card 6 (the fleet: four ebike-004, 36 months, D8)', () => {
-  it('finances list × quantity, which moves the four bikes into band C: 58 993 a month', () => {
-    const quote = quoteOf({ ...base, assetId: 'ebike-004', quantity: 4, termMonths: 36 });
+describe('priceQuote, card 6 (Norvi Logistics: one ebike-004, 36 months, D8)', () => {
+  it('prices the one unique bike in band B: 549 000 financed, 15 144 a month', () => {
+    const quote = quoteOf({ ...base, assetId: 'ebike-004', termMonths: 36 });
     expect(quote).toMatchObject({
-      quantity: 4,
+      quantity: 1,
       unitListPriceCents: 549_000,
-      listPriceCents: 2_196_000,
-      financedCents: 2_196_000,
-      band: 'C',
-      factorMillionths: 26_864,
-      monthlyNetCents: 58_993,
+      listPriceCents: 549_000,
+      financedCents: 549_000,
+      band: 'B',
+      factorMillionths: 27_584,
+      monthlyNetCents: 15_144,
     });
   });
 
-  it('prices one bike alone in band B at 15 144', () => {
-    const quote = quoteOf({ ...base, assetId: 'ebike-004', termMonths: 36 });
-    expect(quote).toMatchObject({ band: 'B', monthlyNetCents: 15_144 });
-  });
-
-  it('splits the fleet rent per unit so the shares add up to the total exactly', () => {
-    const quote = quoteOf({ ...base, assetId: 'ebike-004', quantity: 4, termMonths: 36 });
-    // 58 993 / 4 = 14 748 r 1: one bike carries the extra cent.
-    expect(quote.perUnit?.monthlyNetCents).toEqual({ shareCents: 14_748, remainderCents: 1 });
-    const gross = quote.perUnit!.monthlyGrossCents;
-    expect(gross.shareCents * 4 + gross.remainderCents).toBe(quote.monthlyGrossCents);
-    const buyout = quote.perUnit!.buyoutCents;
-    expect(buyout.shareCents * 4 + buyout.remainderCents).toBe(quote.buyoutCents);
+  it('ignores a quantity smuggled into the input: one item is one unit (D8)', () => {
+    const input = { ...base, assetId: 'ebike-004', termMonths: 36, quantity: 4 };
+    expect(quoteOf(input)).toMatchObject({ quantity: 1, financedCents: 549_000 });
   });
 });
 
@@ -262,16 +251,6 @@ describe('priceQuote, the traps', () => {
     expect(quote).toMatchObject({ financedCents: 25_000_000, band: 'D' });
   });
 
-  it('refuses a quantity of 0, a negative or a fractional quantity', () => {
-    for (const quantity of [0, -1, 1.5]) {
-      const result = priceQuote(data, { ...base, assetId: 'ebike-003', termMonths: 36, quantity });
-      expect(result).toEqual({
-        ok: false,
-        reason: { code: 'invalid_quantity', params: { quantity } },
-      });
-    }
-  });
-
   it('refuses a down payment equal to the price (nothing left to finance)', () => {
     const result = priceQuote(data, {
       ...base,
@@ -286,17 +265,6 @@ describe('priceQuote, the traps', () => {
         params: { downPaymentCents: 389_000, listPriceCents: 389_000 },
       },
     });
-  });
-
-  it('measures the down payment against list × quantity', () => {
-    const result = priceQuote(data, {
-      ...base,
-      assetId: 'ebike-004',
-      quantity: 2,
-      termMonths: 36,
-      downPaymentCents: 549_000,
-    });
-    expect(result).toMatchObject({ ok: true, quote: { financedCents: 549_000 } });
   });
 
   it('refuses a negative or fractional down payment', () => {
@@ -405,20 +373,7 @@ describe('the quote total and the invoices (D6, review of PR #11)', () => {
 
 describe('breakdownFromFrozen', () => {
   it('rebuilds the same breakdown from the stored numbers without the data pack', () => {
-    const quote = quoteOf({ ...base, assetId: 'ebike-004', quantity: 4, termMonths: 36 });
+    const quote = quoteOf({ ...base, assetId: 'ebike-004', termMonths: 36 });
     expect(breakdownFromFrozen(quote)).toEqual(quote);
-  });
-});
-
-describe('splitEvenly', () => {
-  it('gives every unit the floor share and the remainder to the first units', () => {
-    expect(splitEvenly(58_993, 4)).toEqual({ shareCents: 14_748, remainderCents: 1 });
-    expect(splitEvenly(100, 4)).toEqual({ shareCents: 25, remainderCents: 0 });
-    expect(splitEvenly(0, 3)).toEqual({ shareCents: 0, remainderCents: 0 });
-  });
-
-  it('throws on a programming error', () => {
-    expect(() => splitEvenly(10, 0)).toThrow(RangeError);
-    expect(() => splitEvenly(1.5, 2)).toThrow(RangeError);
   });
 });

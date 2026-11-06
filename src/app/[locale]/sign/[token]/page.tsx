@@ -55,7 +55,7 @@ export default async function SignPage({ params }: PageProps<'/[locale]/sign/[to
     { label: t('sign.company'), value: company?.name ?? link.customerId },
     ...(deal
       ? [
-          { label: t('sign.asset'), value: `${deal.quantity} × ${deal.assetId}` },
+          { label: t('sign.asset'), value: deal.assetId },
           { label: t('sign.term'), value: t('sign.months', { months: deal.termMonths }) },
           { label: t('sign.financed'), value: money(deal.financedCents), numeric: true },
           { label: t('sign.monthly'), value: money(deal.monthlyNetCents), numeric: true },

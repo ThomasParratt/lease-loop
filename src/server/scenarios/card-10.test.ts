@@ -50,7 +50,6 @@ describe('card 10: ebike-008, two lives, good, 9 800 km', () => {
       assetId: 'ebike-008',
       termMonths: 24,
       downPaymentCents: 0,
-      quantity: 1,
       today: '2026-11-05',
       actor: 'cust-aino',
     });

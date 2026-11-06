@@ -14,7 +14,6 @@ export type Trip = {
   customerId: string;
   assetId: string;
   termMonths: number;
-  quantity?: number;
   downPaymentCents?: number;
   /** The quote day; the application is made on it too. */
   quoteOn: string;
@@ -29,7 +28,6 @@ export async function quoteAndApply(db: PrismaClient, trip: Trip) {
       assetId: trip.assetId,
       termMonths: trip.termMonths,
       downPaymentCents: trip.downPaymentCents ?? 0,
-      quantity: trip.quantity ?? 1,
       today: trip.quoteOn,
       actor: trip.customerId,
     },

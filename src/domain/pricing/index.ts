@@ -1,11 +1,10 @@
 // Pricing: the price breakdown, the term comparison, quote validity and the stored quote's status.
 export { compareTerms, type TermComparison, type TermRow } from './compare';
-export { financeOffer, MAX_QUANTITY, type FinanceOffer } from './financeable';
+export { financeOffer, type FinanceOffer } from './financeable';
 export { addDays } from '../civil-days';
 export {
   breakdownFromFrozen,
   priceQuote,
-  splitEvenly,
   termsOf,
   type FrozenQuote,
   type PricingData,
@@ -13,7 +12,6 @@ export {
   type QuoteInput,
   type QuoteRefusal,
   type QuoteResult,
-  type UnitSplit,
 } from './quote';
 export { quoteStatusOn, type QuoteForStatus, type QuoteStatus } from './quote-status';
 export { allowedTerms, allowedTermsOf, longestAllowedTerm, termAllowed } from './terms';

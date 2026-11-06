@@ -24,7 +24,6 @@ export const demoTripSchema = z.strictObject({
   customerId: z.string().min(1),
   assetId: z.string().min(1),
   termMonths: z.number().int().positive(),
-  quantity: z.number().int().positive().default(1),
   downPaymentCents: centsSchema.default(0),
   /** The quote day; the application is made on it too. */
   quoteOn: isoDateSchema,

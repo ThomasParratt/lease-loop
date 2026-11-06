@@ -57,7 +57,6 @@ export type StoredQuote = {
 
 export type CreateQuoteInput = {
   assetId: string;
-  quantity: number;
   termMonths: number;
   downPaymentCents: number;
   /** The request's day, from `todayForRequest()`; never from the browser. */
@@ -112,7 +111,6 @@ export async function createQuote(
   const pricing = await pricingForAsset(db, input.assetId, data ?? (await loadPricingData()));
   const priced = priceQuote(pricing, {
     assetId: input.assetId,
-    quantity: input.quantity,
     termMonths: input.termMonths,
     downPaymentCents: input.downPaymentCents,
     isoDate: input.today,
@@ -221,7 +219,6 @@ export function previewQuote(
     refusal: result.ok ? null : result.reason,
     comparison: compareTerms(data, {
       assetId: rest.assetId,
-      quantity: rest.quantity,
       downPaymentCents: rest.downPaymentCents,
       isoDate: today,
     }),

@@ -18,7 +18,6 @@ const dayBetween = (from: string, to: string) =>
 
 const dealArb = fc.record({
   assetId: fc.constantFrom(...pack.assets.map((a) => a.id)),
-  quantity: fc.integer({ min: 1, max: 6 }),
   termMonths: fc.constantFrom(12, 24, 36, 48),
   /** Share of the list price paid down, in basis points (0 … 99.99 %). */
   downShareBp: fc.integer({ min: 0, max: 9_999 }),

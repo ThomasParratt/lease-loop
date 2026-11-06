@@ -47,7 +47,6 @@ async function card1(paid: number): Promise<string> {
       termMonths: 36,
       downPaymentCents: 0,
       today: '2026-11-05',
-      quantity: 1,
       actor: 'cust-aino',
     },
     data

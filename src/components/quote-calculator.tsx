@@ -1,25 +1,20 @@
 'use client';
 
-// The price sliders: term, down payment and quantity. Each change asks GET /api/quotes/preview
+// The price sliders for one item (D8): term and down payment. Each change asks GET /api/quotes/preview
 // (debounced, the previous request aborted) and shows the breakdown and the term comparison the
 // server priced; the browser never computes a price. "Apply at this price" stores the quote
 // (POST /api/quotes, which locks the price for 14 days, D7) and goes straight to the
 // application, so the lock is part of applying rather than a step of its own.
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
-import {
-  MAX_QUANTITY,
-  type QuoteBreakdown,
-  type QuoteRefusal,
-  type TermComparison,
-} from '@/domain/pricing';
+import { type QuoteBreakdown, type QuoteRefusal, type TermComparison } from '@/domain/pricing';
 import { getT } from '@/i18n/get-t';
 import { formatEuro } from '@/domain/money';
 import { parseEurosToCents } from '@/domain/question-flow/answers';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { formatBasisPoints, QuoteBreakdownList, refusalText } from './quote-breakdown';
 import { termControl } from './quote-terms';
-import { Button, Disclosure, Field, Money, Notice, PriceTag, inputClasses } from './ui';
+import { Button, Disclosure, Field, Money, Notice, PriceTag } from './ui';
 
 export type QuotePreviewData = {
   today: string;
@@ -35,9 +30,9 @@ type QuoteCalculatorProps = {
   terms: number[];
   /** Why the slider stops short of the table's longest term, when it does. */
   termNote?: string;
-  /** Today's net list price of one unit, for the down-payment slider's range. */
+  /** Today's net list price of the item, for the down-payment slider's range. */
   unitPriceCents: number;
-  initial: { termMonths: number; downPaymentCents: number; quantity: number };
+  initial: { termMonths: number; downPaymentCents: number };
   initialPreview: QuotePreviewData;
   /** False when the asset is reserved or returned: the price shows, the button does not. */
   canQuote: boolean;
@@ -82,7 +77,6 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
   const [downDraft, setDownDraft] = useState(() =>
     centsToInput(props.initial.downPaymentCents, locale)
   );
-  const [quantity, setQuantity] = useState(props.initial.quantity);
   const [preview, setPreview] = useState(initialPreview);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -91,7 +85,7 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
   const firstRun = useRef(true);
 
   const termMonths = terms[termIndex] ?? terms[0]!;
-  const totalPriceCents = unitPriceCents * quantity;
+  const totalPriceCents = unitPriceCents;
   const step = downPaymentStep(totalPriceCents, props.initial.downPaymentCents);
 
   useEffect(() => {
@@ -104,7 +98,6 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
       setLoading(true);
       const query = new URLSearchParams({
         assetId,
-        quantity: String(quantity),
         termMonths: String(termMonths),
         downPaymentCents: String(downPaymentCents),
       });
@@ -126,7 +119,7 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [assetId, quantity, termMonths, downPaymentCents]);
+  }, [assetId, termMonths, downPaymentCents]);
 
   function setDown(cents: number) {
     setDownPaymentCents(cents);
@@ -140,19 +133,13 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
     if (cents !== null) setDownPaymentCents(Math.min(cents, totalPriceCents));
   }
 
-  function onQuantity(value: string) {
-    const next = Math.min(MAX_QUANTITY, Math.max(1, Math.trunc(Number(value)) || 1));
-    setQuantity(next);
-    setDown(Math.min(downPaymentCents, unitPriceCents * next));
-  }
-
   function apply() {
     setSubmitError(null);
     startTransition(async () => {
       const response = await fetch('/api/quotes', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ assetId, quantity, termMonths, downPaymentCents }),
+        body: JSON.stringify({ assetId, termMonths, downPaymentCents }),
       }).catch(() => null);
       const body = await response?.json().catch(() => null);
       if (response?.ok && body?.success) {
@@ -295,25 +282,6 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
               )}
             </Field>
 
-            <Field
-              id={`${ids}-quantity`}
-              label={t('pricing.calculator.quantity')}
-              hint={t('pricing.calculator.quantityHint')}
-            >
-              {(control) => (
-                <input
-                  {...control}
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={MAX_QUANTITY}
-                  value={quantity}
-                  onChange={(e) => onQuantity(e.target.value)}
-                  className={`${inputClasses} max-w-32`}
-                />
-              )}
-            </Field>
-
             {failed ? <Notice tone="error">{t('pricing.calculator.previewFailed')}</Notice> : null}
             {preview.refusal ? (
               <Notice tone="warning" live>
@@ -350,7 +318,7 @@ export function QuoteCalculator(props: QuoteCalculatorProps) {
           title={t('pricing.breakdown.title')}
           summary={t('pricing.breakdown.summary')}
           // Opened by a catalogue preset (e.g. the down payment an item needs): show why.
-          defaultOpen={props.initial.downPaymentCents > 0 || props.initial.quantity > 1}
+          defaultOpen={props.initial.downPaymentCents > 0}
         >
           {quote ? (
             <QuoteBreakdownList quote={quote} locale={locale} t={t} />

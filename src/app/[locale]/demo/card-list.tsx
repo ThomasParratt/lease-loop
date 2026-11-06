@@ -25,8 +25,8 @@ export function cardInputs(
 ): string {
   const parts: string[] = [];
   const lease = (trip: DemoTrip, signOn?: string) => {
-    const { customerId, assetId, quantity, termMonths, downPaymentCents, quoteOn } = trip;
-    const shown = { assetId, quantity, termMonths, downPaymentCents, quoteOn };
+    const { customerId, assetId, termMonths, downPaymentCents, quoteOn } = trip;
+    const shown = { assetId, termMonths, downPaymentCents, quoteOn };
     const customer = names.get(customerId) ?? customerId;
     parts.push(t('demo.input.trip', formatParams({ ...shown, customer }, t, locale)));
     if (signOn) parts.push(t('demo.input.signed', formatParams({ signOn }, t, locale)));

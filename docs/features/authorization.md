@@ -34,7 +34,7 @@ The actor × action table, as `src/domain/authz/policy.test.ts` pins it (owner =
 | `set_asset_status`   | not_signed_in | admin_only | admin_only | ok    |
 | `run_demo_card`      | ok            | ok         | ok         | ok    |
 
-Worked example, card 6: Norvi's coordinator (`cust-norvi`) applies for four `ebike-004` (58 993 a month) and the case waits for the signatory. `POST /api/contracts` as `cust-norvi` and as `admin` both answer 403 `FORBIDDEN` with `{ code: 'signatory_required', params: { action: 'sign_contract' } }`; with no actor picked it is 401 `not_signed_in`. Only the link the demo outbox shows to the admin signs it, as the named signatory.
+Worked example, card 6: Norvi's coordinator (`cust-norvi`) applies for one `ebike-004` (15 144 a month) and the case waits for the signatory. `POST /api/contracts` as `cust-norvi` and as `admin` both answer 403 `FORBIDDEN` with `{ code: 'signatory_required', params: { action: 'sign_contract' } }`; with no actor picked it is 401 `not_signed_in`. Only the link the demo outbox shows to the admin signs it, as the named signatory.
 
 HTTP (D74): `not_signed_in` → 401, every other refusal → 403, both `FORBIDDEN` through `fail()` with the reason as details. An unknown record keeps the route's own 404; another customer reading an application gets the same 404 as an unknown id (D57). The application page shows the signing-token link to the admin only (wave 3 review finding 1).
 

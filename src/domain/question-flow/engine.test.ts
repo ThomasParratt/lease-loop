@@ -26,11 +26,11 @@ const card7: FlowContext = {
   financedCents: 12_500_000,
   termMonths: 48,
 };
-/** Card 6: four ebike-004, financed 2 196 000. */
+/** Card 6: one ebike-004 (every item is unique, D8), financed 549 000. */
 const card6: FlowContext = {
   customerType: 'company',
   category: 'e_bike',
-  financedCents: 2_196_000,
+  financedCents: 549_000,
   termMonths: 36,
 };
 /** Card 1: ebike-003, 36 months, no down payment. */
@@ -104,7 +104,7 @@ describe('visibleQuestions', () => {
     expect(ids(visibleQuestions(bank, card7, { q_pep: 'yes' }))).toContain('q_pep_details');
   });
 
-  it('card 6: 2 196 000 asks PEP but not revenue or owners; the can-sign question appears', () => {
+  it('card 6: 549 000 asks no PEP, revenue or owners; the can-sign question appears', () => {
     const visible = ids(visibleQuestions(bank, card6, {}));
     expect(visible).toEqual([
       'q_customer_type',
@@ -114,7 +114,6 @@ describe('visibleQuestions', () => {
       'q_can_sign',
       'q_vat_registered',
       'q_usage_purpose',
-      'q_pep',
     ]);
   });
 

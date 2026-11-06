@@ -98,11 +98,11 @@ describe('evaluate: card 5 (Mikko is 17 on the start date)', () => {
 });
 
 describe('evaluate: card 6 (Norvi, the applicant cannot sign)', () => {
-  it('four ebike-004 (2 196 000) end in awaiting_signatory with the signatory named', () => {
-    const net = 58_993;
+  it('one ebike-004 (549 000) ends in awaiting_signatory with the signatory named', () => {
+    const net = 15_144;
     const result = decide(
       'cust-norvi',
-      { category: 'e_bike', financedCents: 2_196_000, termMonths: 36 },
+      { category: 'e_bike', financedCents: 549_000, termMonths: 36 },
       grossFromNetCents(net, 2_550)
     );
     expect(result).toEqual({

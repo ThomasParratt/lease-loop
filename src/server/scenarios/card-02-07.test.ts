@@ -124,15 +124,19 @@ describe('cards 5, 6 and 7: an application that is not approved cannot be signed
     expect((await getAsset(db, 'laptop-008'))?.status).toBe('available');
   });
 
-  it('card 6: four ebike-004 for Norvi await the signatory; the applicant cannot sign', async () => {
+  it('card 6: one ebike-004 for Norvi awaits the signatory; the applicant cannot sign', async () => {
     const { quote, application } = await quoteAndApply(db, {
       customerId: 'cust-norvi',
       assetId: 'ebike-004',
-      quantity: 4,
       termMonths: 36,
       quoteOn: '2026-11-05',
     });
-    expect(quote.breakdown).toMatchObject({ band: 'C', monthlyNetCents: 58_993 });
+    expect(quote.breakdown).toMatchObject({
+      quantity: 1,
+      financedCents: 549_000,
+      band: 'B',
+      monthlyNetCents: 15_144,
+    });
     expect(application.decision).toBe('awaiting_signatory');
     expect(application.reasons.map((r) => r.code)).toEqual(['signatory_needed']);
     expect(await sign(db, application.id, 'cust-norvi', '2026-11-05')).toEqual({

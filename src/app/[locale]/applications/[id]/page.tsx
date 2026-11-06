@@ -215,6 +215,27 @@ export default async function ApplicationPage({
       {decision === 'awaiting_signatory' ? (
         <Card
           as="section"
+          title={t('decision.waiting.title')}
+          titleId="decision-waiting"
+          className="mt-6"
+        >
+          <p>
+            {t('decision.waiting.body', {
+              who: signatoryOf(application.reasons) ?? t('decision.waiting.someone'),
+            })}
+          </p>
+          <ol className="mt-3 list-decimal space-y-2 pl-5">
+            <li>{t('decision.waiting.step1')}</li>
+            <li>{t('decision.waiting.step2')}</li>
+            <li>{t('decision.waiting.step3')}</li>
+          </ol>
+          <p className="mt-3 text-ink-muted">{t('decision.waiting.nothingToDo')}</p>
+        </Card>
+      ) : null}
+
+      {decision === 'awaiting_signatory' && actor === ADMIN_ACTOR ? (
+        <Card
+          as="section"
           title={t('decision.outbox.title')}
           titleId="decision-outbox"
           className="mt-6"
@@ -253,4 +274,10 @@ export default async function ApplicationPage({
       </div>
     </div>
   );
+}
+
+/** The signatory the applicant named, from the `signatory_needed` reason; null when none is. */
+function signatoryOf(reasons: readonly StoredReason[]): string | null {
+  const email = reasons.find((r) => r.code === 'signatory_needed')?.params.signatoryEmail;
+  return typeof email === 'string' && email !== '' ? email : null;
 }

@@ -52,7 +52,6 @@ export function refusalText(
     'unknown_asset',
     'no_price_list_on_date',
     'down_payment_too_high',
-    'invalid_quantity',
     'invalid_down_payment',
     'no_vat_rate_on_date',
     'asset_not_available',
@@ -86,13 +85,7 @@ export function QuoteBreakdownList({ quote, locale, t }: QuoteBreakdownListProps
   const rentsCents = quote.totalIfReturnCents - quote.downPaymentGrossCents;
 
   const finance: SumLine[] = [
-    quote.quantity > 1
-      ? {
-          label: t('pricing.line.listPrice', { quantity: quote.quantity }),
-          hint: t('pricing.explain.each', { amount: euro(quote.unitListPriceCents) }),
-          value: money(quote.listPriceCents),
-        }
-      : { label: t('pricing.line.unitPrice'), value: money(quote.listPriceCents) },
+    { label: t('pricing.line.unitPrice'), value: money(quote.listPriceCents) },
   ];
   if (quote.downPaymentCents > 0) {
     finance.push({
@@ -128,18 +121,6 @@ export function QuoteBreakdownList({ quote, locale, t }: QuoteBreakdownListProps
       result: true,
     },
   ];
-  if (quote.perUnit) {
-    monthly.push({
-      label: t('pricing.line.perUnit'),
-      hint:
-        quote.perUnit.monthlyGrossCents.remainderCents > 0
-          ? t('pricing.hint.perUnitRemainder', {
-              count: quote.perUnit.monthlyGrossCents.remainderCents,
-            })
-          : undefined,
-      value: money(quote.perUnit.monthlyGrossCents.shareCents),
-    });
-  }
 
   const total: SumLine[] = [];
   if (quote.downPaymentCents > 0) {

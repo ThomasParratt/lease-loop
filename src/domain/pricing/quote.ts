@@ -1,5 +1,6 @@
-// The price breakdown of a lease (D1, D6, D8): from the list price on a day, the quantity, the
-// term and the down payment to the monthly rent, the VAT, the buyout and the total cost.
+// The price breakdown of a lease (D1, D6, D8): from the list price of one item on a day, the term
+// and the down payment to the monthly rent, the VAT, the buyout and the total cost. Every item is
+// unique, so a quote prices exactly one unit (D8, decided by the organisers on 6 Nov).
 //
 // The numbers are computed once here, then frozen in a stored quote (D7). Everything that can
 // be derived from the frozen numbers is derived by `breakdownFromFrozen`, so a stored quote and
@@ -39,8 +40,6 @@ export type PricingData = {
 
 export type QuoteInput = {
   assetId: string;
-  /** How many units of the asset (D8); 1 for a single item. */
-  quantity: number;
   termMonths: number;
   /** Net, cents; paid at the start and taken off the financed amount. */
   downPaymentCents: number;
@@ -51,6 +50,7 @@ export type QuoteInput = {
 /** The numbers a stored quote keeps (D7). Everything else is derived from them. */
 export type FrozenQuote = {
   assetId: string;
+  /** Always 1 (D8): the stored column stays so signing can still guard it (D76). */
   quantity: number;
   isoDate: string;
   priceListVersion: number;
@@ -65,10 +65,6 @@ export type FrozenQuote = {
   buyoutCents: number;
   vatRateBasisPoints: number;
 };
-
-/** An amount for the whole fleet split over its units: `shareCents` each, and `remainderCents`
- * units carry one extra cent, so the shares add up to the total exactly. */
-export type UnitSplit = { shareCents: number; remainderCents: number };
 
 export type QuoteBreakdown = FrozenQuote & {
   /** `unitListPriceCents × quantity`. */
@@ -90,16 +86,9 @@ export type QuoteBreakdown = FrozenQuote & {
   /** Always true: VAT is charged at each invoice's date, so a later rate change moves the
    * totals. The quote shows them at the quote-date rate and says they are an estimate. */
   vatIsEstimate: true;
-  /** The per-unit split when quantity > 1, else null. */
-  perUnit: {
-    monthlyNetCents: UnitSplit;
-    monthlyGrossCents: UnitSplit;
-    buyoutCents: UnitSplit;
-  } | null;
 };
 
 export type QuoteRefusal =
-  | { code: 'invalid_quantity'; params: { quantity: number } }
   | { code: 'invalid_down_payment'; params: { downPaymentCents: number } }
   | { code: 'unknown_term'; params: { termMonths: number; terms: number[] } }
   | { code: 'unknown_asset'; params: { assetId: string } }
@@ -115,30 +104,15 @@ export type QuoteRefusal =
 
 export type QuoteResult = { ok: true; quote: QuoteBreakdown } | { ok: false; reason: QuoteRefusal };
 
-/** Splits `totalCents` over `parts` units without losing or inventing a cent. */
-export function splitEvenly(totalCents: number, parts: number): UnitSplit {
-  if (!Number.isSafeInteger(totalCents) || totalCents < 0) {
-    throw new RangeError(`totalCents must be whole non-negative cents, got ${totalCents}`);
-  }
-  if (!Number.isSafeInteger(parts) || parts < 1) {
-    throw new RangeError(`parts must be a positive integer, got ${parts}`);
-  }
-  const remainderCents = totalCents % parts;
-  return { shareCents: (totalCents - remainderCents) / parts, remainderCents };
-}
-
 /**
- * Prices a lease on `input.isoDate`. The checks run in the order a customer would fix them:
- * quantity, term, asset and price list, the category's term cap (D43), down payment, then the
- * band of what is left to finance.
+ * Prices one item on `input.isoDate`. The checks run in the order a customer would fix them:
+ * term, asset and price list, the category's term cap (D43), down payment, then the band of
+ * what is left to finance.
  * Every expected refusal is a code with params for the page to write in the visitor's language.
  */
 export function priceQuote(data: PricingData, input: QuoteInput): QuoteResult {
-  const { assetId, quantity, termMonths, downPaymentCents, isoDate } = input;
+  const { assetId, termMonths, downPaymentCents, isoDate } = input;
 
-  if (!Number.isSafeInteger(quantity) || quantity < 1) {
-    return refuse({ code: 'invalid_quantity', params: { quantity } });
-  }
   if (!Number.isSafeInteger(downPaymentCents) || downPaymentCents < 0) {
     return refuse({ code: 'invalid_down_payment', params: { downPaymentCents } });
   }
@@ -167,8 +141,8 @@ export function priceQuote(data: PricingData, input: QuoteInput): QuoteResult {
     });
   }
 
-  // D8: the fleet is financed as one amount, so the band is decided on the total.
-  const listPriceCents = price.priceCents * quantity;
+  // D8: every item is unique, so the band is decided on the one item's price.
+  const listPriceCents = price.priceCents;
   if (downPaymentCents >= listPriceCents) {
     return refuse({ code: 'down_payment_too_high', params: { downPaymentCents, listPriceCents } });
   }
@@ -199,7 +173,7 @@ export function priceQuote(data: PricingData, input: QuoteInput): QuoteResult {
     ok: true,
     quote: breakdownFromFrozen({
       assetId,
-      quantity,
+      quantity: 1,
       isoDate,
       priceListVersion: price.priceListVersion,
       unitListPriceCents: price.priceCents,
@@ -218,7 +192,7 @@ export function priceQuote(data: PricingData, input: QuoteInput): QuoteResult {
 
 /**
  * The full breakdown from the frozen numbers alone: VAT and gross per month (D1, VAT rounded
- * from the net), the totals both ways (D6) and the per-unit split (D8). Every line of the totals
+ * from the net), the totals both ways (D6). Every line of the totals
  * carries VAT at the quote-date rate, rounded per line like an invoice line, so the totals are
  * what the invoices add up to when the rate does not change. Needs no data pack,
  * so a stored quote is shown exactly as it was priced.
@@ -228,14 +202,6 @@ export function breakdownFromFrozen(frozen: FrozenQuote): QuoteBreakdown {
   const down = splitVat(frozen.downPaymentCents, frozen.vatRateBasisPoints);
   const buyout = splitVat(frozen.buyoutCents, frozen.vatRateBasisPoints);
   const totalIfReturnCents = down.grossCents + grossCents * frozen.termMonths;
-  const perUnit =
-    frozen.quantity > 1
-      ? {
-          monthlyNetCents: splitEvenly(frozen.monthlyNetCents, frozen.quantity),
-          monthlyGrossCents: splitEvenly(grossCents, frozen.quantity),
-          buyoutCents: splitEvenly(frozen.buyoutCents, frozen.quantity),
-        }
-      : null;
 
   return {
     assetId: frozen.assetId,
@@ -264,7 +230,6 @@ export function breakdownFromFrozen(frozen: FrozenQuote): QuoteBreakdown {
     totalIfReturnCents,
     totalIfBuyCents: totalIfReturnCents + buyout.grossCents,
     vatIsEstimate: true,
-    perUnit,
   };
 }
 

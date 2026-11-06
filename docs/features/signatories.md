@@ -13,11 +13,11 @@ Every company has a list of the people who may sign leases for it, each valid ov
 - **Who changes the list.** The admin (the bank's back office, from the register), or the company's own account when the company's e-mail is an active signatory, who then grants the right. Norvi's coordinator may not sign, so may not grant either.
 - **The seed** lists the company's own name and e-mail for every company whose applicant can sign (Kettu Koodi, Haapala, the broken-id company), granted by `register_check_simulated`, valid from the seed day; none for Norvi. It adds only what is missing.
 
-**Card 6 worked.** Norvi Logistics (`cust-norvi`, `applicant_can_sign: false`) applies for 4 × `ebike-004`, 2 196 000 financed, on 2026-11-05, answering can-sign **no** and naming `signatory@norvi.example.com`.
+**Card 6 worked.** Norvi Logistics (`cust-norvi`, `applicant_can_sign: false`) applies for one `ebike-004`, 549 000 financed, on 2026-11-05, answering can-sign **no** and naming `signatory@norvi.example.com`.
 
 1. The rules give `awaiting_signatory` with `signatory_needed { signatoryEmail }`. In the same transaction the list gets `signatory@norvi.example.com`, granted by `register_check_simulated`, `valid_from` empty, and a link sent 2026-11-05, expiring 2026-11-19. The audit row of `application.created` says `signingLinkTo: signatory@norvi.example.com`.
 2. The decision page shows the demo outbox: "A signing link was sent to signatory@norvi.example.com on 5 November 2026", with the link. On that page Norvi's account and the admin get 403 `NOT_SIGNATORY` if they post a decision.
-3. The signatory opens `/en/sign/<token>` on 2026-11-06: Norvi Logistics, 4 × ebike-004, 36 months, the financed amount and the monthly rent, Sign and Decline. Sign: the case is `approved` with `signatory_decided { by: signatory@norvi.example.com, decision: approved, on: 2026-11-06 }`, the entry is valid from 2026-11-06, and the audit actor is `signatory:signatory@norvi.example.com` with `signatoryRegistered: true`.
+3. The signatory opens `/en/sign/<token>` on 2026-11-06: Norvi Logistics, ebike-004, 36 months, the financed amount and the monthly rent, Sign and Decline. Sign: the case is `approved` with `signatory_decided { by: signatory@norvi.example.com, decision: approved, on: 2026-11-06 }`, the entry is valid from 2026-11-06, and the audit actor is `signatory:signatory@norvi.example.com` with `signatoryRegistered: true`.
 4. The same link again answers 409 `SIGNING_LINK_USED`; on 2026-11-19 an unused one answers 410 `SIGNING_LINK_EXPIRED`.
 
 ## Decisions

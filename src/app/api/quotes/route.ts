@@ -1,4 +1,4 @@
-// POST /api/quotes   body: { "assetId": "ebike-003", "quantity": 1, "termMonths": 36, "downPaymentCents": 0 }
+// POST /api/quotes   body: { "assetId": "ebike-003", "termMonths": 36, "downPaymentCents": 0 }
 // Prices on the request's day (the demo clock, never a date from the body) and stores the quote.
 import { readActor } from '@/server/actor';
 import { fail, handleRoute, ok, readJsonBody } from '@/server/api-response';

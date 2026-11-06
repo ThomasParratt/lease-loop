@@ -56,8 +56,13 @@ async function application(
   decision = 'approved',
   quantity = 1
 ): Promise<string> {
-  const quote = await createQuote(db, { ...terms, quantity, actor: 'cust-aino' }, data);
+  const quote = await createQuote(db, { ...terms, actor: 'cust-aino' }, data);
   if (!quote.ok) throw new Error(quote.reason.code);
+  // A quote prices one item (D8); a larger quantity can only be a row stored before that was
+  // decided, which signing still refuses (D76).
+  if (quantity !== 1) {
+    await db.quote.update({ where: { id: quote.quote.id }, data: { quantity } });
+  }
   // The application slice's write, done directly: these tests are about signing.
   const row = await db.application.create({
     data: {
@@ -237,7 +242,7 @@ describe('signContract, the last-unit race', () => {
 });
 
 describe('signContract refusals write nothing', () => {
-  it('not_enough_units for a quote of 2 × ebike-003, one unit in stock (D76): nothing written, asset still available', async () => {
+  it('not_enough_units for a stored quote row of 2 × ebike-003 from before D8 (D76): nothing written, asset still available', async () => {
     const applicationId = await application(CARD_1, 'approved', 2);
     expect(
       await signContract(db, { applicationId, actor: 'cust-aino' }, '2026-11-05', data)

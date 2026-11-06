@@ -52,3 +52,17 @@ describe('POST /api/quotes and the term cap', () => {
     expect(await holder.db.quote.count()).toBe(0);
   });
 });
+
+describe('POST /api/quotes prices one unique item (D8)', () => {
+  it('refuses a body with a quantity as 400 VALIDATION_ERROR: the body is strict', async () => {
+    const { status, body } = await post({
+      assetId: 'ebike-004',
+      quantity: 4,
+      termMonths: 36,
+      downPaymentCents: 0,
+    });
+    expect(status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(await holder.db.quote.count()).toBe(0);
+  });
+});

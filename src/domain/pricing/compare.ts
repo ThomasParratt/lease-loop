@@ -1,4 +1,4 @@
-// The term comparison: the same asset, quantity and down payment priced at every term the
+// The term comparison: the same item and down payment priced at every term the
 // item may be offered (the table's terms under the category's cap, D43), side by side, so the
 // customer sees what a longer term costs in total.
 import { priceQuote, type PricingData, type QuoteInput, type QuoteRefusal } from './quote';

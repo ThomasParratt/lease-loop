@@ -135,7 +135,6 @@ export const customerById = (id: string): Customer => byId(pack.customers, id, '
 
 export type Deal = {
   assetId: string;
-  quantity?: number;
   termMonths: number;
   downPaymentCents?: number;
   /** The quote day, which the application also uses as the start date. */
@@ -146,7 +145,6 @@ export type Deal = {
 export function quoteFor(deal: Deal): QuoteResult {
   return priceQuote(pricing, {
     assetId: deal.assetId,
-    quantity: deal.quantity ?? 1,
     termMonths: deal.termMonths,
     downPaymentCents: deal.downPaymentCents ?? 0,
     isoDate: deal.isoDate,
@@ -214,7 +212,7 @@ export function applyFor(
       financedLimits,
       knownPep: customer.is_pep,
       recordMismatches: recordMismatches(customer, answers),
-      quantity: deal.quantity ?? 1,
+      quantity: quote.quote.quantity,
       consumerLimits: pack.consumerLimits,
     })
   );

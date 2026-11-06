@@ -32,7 +32,6 @@ beforeEach(async () => {
 
 const card1 = {
   assetId: 'ebike-003',
-  quantity: 1,
   termMonths: 36,
   downPaymentCents: 0,
   today: '2026-11-05',
@@ -75,14 +74,17 @@ describe('createQuote (D7)', () => {
     });
   });
 
-  it('stores card 6 as one quote for four bikes at the band C rent', async () => {
-    const result = await createQuote(db, { ...card1, assetId: 'ebike-004', quantity: 4 }, data);
+  it('stores card 6 as one quote for one bike at the band B rent (D8: one unique item)', async () => {
+    const result = await createQuote(db, { ...card1, assetId: 'ebike-004' }, data);
     expect(result).toMatchObject({
       ok: true,
       quote: {
-        breakdown: { quantity: 4, financedCents: 2_196_000, band: 'C', monthlyNetCents: 58_993 },
+        breakdown: { quantity: 1, financedCents: 549_000, band: 'B', monthlyNetCents: 15_144 },
       },
     });
+    if (!result.ok) return;
+    const row = await db.quote.findUniqueOrThrow({ where: { id: result.quote.id } });
+    expect(row.quantity).toBe(1);
   });
 
   it('refuses a price refusal without writing anything', async () => {
@@ -174,7 +176,6 @@ describe('previewQuote (the sliders, no write)', () => {
   it('prices card 1 on today and compares the four terms without storing anything', async () => {
     const preview = previewQuote(data, {
       assetId: 'ebike-003',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       today: '2026-11-05',
@@ -188,7 +189,6 @@ describe('previewQuote (the sliders, no write)', () => {
   it('returns the refusal and no quote for ebike-010', () => {
     const preview = previewQuote(data, {
       assetId: 'ebike-010',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       today: '2026-11-05',

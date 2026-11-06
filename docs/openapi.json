@@ -4596,12 +4596,6 @@
                     "minLength": 1,
                     "maxLength": 100
                   },
-                  "quantity": {
-                    "default": 1,
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 100
-                  },
                   "termMonths": {
                     "type": "integer",
                     "exclusiveMinimum": 0,
@@ -4769,75 +4763,6 @@
                             "vatIsEstimate": {
                               "type": "boolean",
                               "const": true
-                            },
-                            "perUnit": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "monthlyNetCents": {
-                                      "type": "object",
-                                      "properties": {
-                                        "shareCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        },
-                                        "remainderCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": ["shareCents", "remainderCents"],
-                                      "additionalProperties": false
-                                    },
-                                    "monthlyGrossCents": {
-                                      "type": "object",
-                                      "properties": {
-                                        "shareCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        },
-                                        "remainderCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": ["shareCents", "remainderCents"],
-                                      "additionalProperties": false
-                                    },
-                                    "buyoutCents": {
-                                      "type": "object",
-                                      "properties": {
-                                        "shareCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        },
-                                        "remainderCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": ["shareCents", "remainderCents"],
-                                      "additionalProperties": false
-                                    }
-                                  },
-                                  "required": [
-                                    "monthlyNetCents",
-                                    "monthlyGrossCents",
-                                    "buyoutCents"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
                             }
                           },
                           "required": [
@@ -4864,8 +4789,7 @@
                             "buyoutGrossCents",
                             "totalIfReturnCents",
                             "totalIfBuyCents",
-                            "vatIsEstimate",
-                            "perUnit"
+                            "vatIsEstimate"
                           ],
                           "additionalProperties": false
                         },
@@ -5171,75 +5095,6 @@
                             "vatIsEstimate": {
                               "type": "boolean",
                               "const": true
-                            },
-                            "perUnit": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "monthlyNetCents": {
-                                      "type": "object",
-                                      "properties": {
-                                        "shareCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        },
-                                        "remainderCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": ["shareCents", "remainderCents"],
-                                      "additionalProperties": false
-                                    },
-                                    "monthlyGrossCents": {
-                                      "type": "object",
-                                      "properties": {
-                                        "shareCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        },
-                                        "remainderCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": ["shareCents", "remainderCents"],
-                                      "additionalProperties": false
-                                    },
-                                    "buyoutCents": {
-                                      "type": "object",
-                                      "properties": {
-                                        "shareCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        },
-                                        "remainderCents": {
-                                          "type": "integer",
-                                          "minimum": 0,
-                                          "maximum": 9007199254740991
-                                        }
-                                      },
-                                      "required": ["shareCents", "remainderCents"],
-                                      "additionalProperties": false
-                                    }
-                                  },
-                                  "required": [
-                                    "monthlyNetCents",
-                                    "monthlyGrossCents",
-                                    "buyoutCents"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
                             }
                           },
                           "required": [
@@ -5266,8 +5121,7 @@
                             "buyoutGrossCents",
                             "totalIfReturnCents",
                             "totalIfBuyCents",
-                            "vatIsEstimate",
-                            "perUnit"
+                            "vatIsEstimate"
                           ],
                           "additionalProperties": false
                         },
@@ -5421,17 +5275,6 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 100
-            }
-          },
-          {
-            "name": "quantity",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
             }
           },
           {
@@ -5595,75 +5438,6 @@
                                 "vatIsEstimate": {
                                   "type": "boolean",
                                   "const": true
-                                },
-                                "perUnit": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "monthlyNetCents": {
-                                          "type": "object",
-                                          "properties": {
-                                            "shareCents": {
-                                              "type": "integer",
-                                              "minimum": 0,
-                                              "maximum": 9007199254740991
-                                            },
-                                            "remainderCents": {
-                                              "type": "integer",
-                                              "minimum": 0,
-                                              "maximum": 9007199254740991
-                                            }
-                                          },
-                                          "required": ["shareCents", "remainderCents"],
-                                          "additionalProperties": false
-                                        },
-                                        "monthlyGrossCents": {
-                                          "type": "object",
-                                          "properties": {
-                                            "shareCents": {
-                                              "type": "integer",
-                                              "minimum": 0,
-                                              "maximum": 9007199254740991
-                                            },
-                                            "remainderCents": {
-                                              "type": "integer",
-                                              "minimum": 0,
-                                              "maximum": 9007199254740991
-                                            }
-                                          },
-                                          "required": ["shareCents", "remainderCents"],
-                                          "additionalProperties": false
-                                        },
-                                        "buyoutCents": {
-                                          "type": "object",
-                                          "properties": {
-                                            "shareCents": {
-                                              "type": "integer",
-                                              "minimum": 0,
-                                              "maximum": 9007199254740991
-                                            },
-                                            "remainderCents": {
-                                              "type": "integer",
-                                              "minimum": 0,
-                                              "maximum": 9007199254740991
-                                            }
-                                          },
-                                          "required": ["shareCents", "remainderCents"],
-                                          "additionalProperties": false
-                                        }
-                                      },
-                                      "required": [
-                                        "monthlyNetCents",
-                                        "monthlyGrossCents",
-                                        "buyoutCents"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
                                 }
                               },
                               "required": [
@@ -5690,8 +5464,7 @@
                                 "buyoutGrossCents",
                                 "totalIfReturnCents",
                                 "totalIfBuyCents",
-                                "vatIsEstimate",
-                                "perUnit"
+                                "vatIsEstimate"
                               ],
                               "additionalProperties": false
                             },

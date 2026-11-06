@@ -3,32 +3,29 @@
 // routes.ts; they live here so the four wave 1 slices do not all grow one file.
 import { z } from 'zod';
 import { centsSchema, isoDateSchema } from '@/data/schemas';
-import { MAX_QUANTITY } from '@/domain/pricing/financeable';
 
 const intFromQuery = z.coerce.number().int();
 
-/** Body of `POST /api/quotes`. The day is the request's, never the browser's. */
+/** Body of `POST /api/quotes`: one unique item (D8). The day is the request's, never the browser's;
+ * strict, so a `quantity` (or any other unknown key) is refused, not ignored. */
 export const createQuoteBodySchema = z.strictObject({
   assetId: z.string().min(1).max(100),
-  quantity: z.number().int().min(1).max(MAX_QUANTITY).default(1),
   termMonths: z.number().int().positive(),
   downPaymentCents: centsSchema,
 });
 
-/** Query of `GET /api/quotes/preview`, the live sliders. */
+/** Query of `GET /api/quotes/preview`, the live sliders: one unique item (D8). */
 export const previewQuoteQuerySchema = z.object({
   assetId: z.string().min(1).max(100),
-  quantity: intFromQuery.min(1).max(MAX_QUANTITY).default(1),
   termMonths: intFromQuery.positive(),
   downPaymentCents: intFromQuery.nonnegative().default(0),
 });
 
 export const quoteIdParamsSchema = z.object({ id: z.string().min(1) });
 
-const unitSplitSchema = z.object({ shareCents: centsSchema, remainderCents: centsSchema });
-
 export const quoteBreakdownSchema = z.object({
   assetId: z.string(),
+  /** Always 1 (D8): the stored column, kept for signing's guard (D76). */
   quantity: z.number().int().positive(),
   isoDate: isoDateSchema,
   priceListVersion: z.number().int(),
@@ -52,13 +49,6 @@ export const quoteBreakdownSchema = z.object({
   totalIfReturnCents: centsSchema,
   totalIfBuyCents: centsSchema,
   vatIsEstimate: z.literal(true),
-  perUnit: z
-    .object({
-      monthlyNetCents: unitSplitSchema,
-      monthlyGrossCents: unitSplitSchema,
-      buyoutCents: unitSplitSchema,
-    })
-    .nullable(),
 });
 
 /** A refusal as a code with params; the page writes it in the visitor's language. */
