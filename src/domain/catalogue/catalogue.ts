@@ -35,8 +35,10 @@ export type ModelGroup = {
 
 export const conditionFilters = ['new', 'used', 'unavailable'] as const;
 export type ConditionFilter = (typeof conditionFilters)[number];
-export const catalogueSorts = ['default', 'price_asc', 'price_desc'] as const;
+export const catalogueSorts = ['price_asc', 'price_desc'] as const;
 export type CatalogueSort = (typeof catalogueSorts)[number];
+/** The sort without `?sort=`: lowest price first. There is no "recommended" order to rank by. */
+export const DEFAULT_SORT: CatalogueSort = 'price_asc';
 
 export type CatalogueFilters = {
   category: AssetCategory | null;
@@ -141,7 +143,6 @@ export function buildCatalogue(entries: CatalogueEntry[], filters: CatalogueFilt
     };
   });
 
-  if (filters.sort === 'default') return groups;
   const direction = filters.sort === 'price_asc' ? 1 : -1;
   // A stable sort: models with the same lowest price keep the catalogue's order.
   return groups.sort((a, b) => compareNullable(a.minMonthlyCents, b.minMonthlyCents, direction));
@@ -165,7 +166,7 @@ export function modelVersions(entries: CatalogueEntry[], assetId: string): Model
     category: null,
     condition: null,
     make: null,
-    sort: 'default',
+    sort: DEFAULT_SORT,
   })[0];
   return (group?.versions ?? []).map((v) => ({
     ...v,
@@ -220,6 +221,6 @@ export function parseCatalogueFilters(params: SearchParams): CatalogueFilters {
     category,
     condition: one(params.condition, conditionFilters),
     make: category && typeof brand === 'string' && brand.trim() !== '' ? brand : null,
-    sort: one(params.sort, catalogueSorts) ?? 'default',
+    sort: one(params.sort, catalogueSorts) ?? DEFAULT_SORT,
   };
 }

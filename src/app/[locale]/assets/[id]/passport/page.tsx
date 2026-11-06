@@ -29,6 +29,20 @@ import { getContract } from '@/server/contracts';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 
+/** The two methods, one step per bullet. */
+const CO2_POINTS = [
+  'passport.method.1',
+  'passport.method.2',
+  'passport.method.3',
+  'passport.method.4',
+] as const;
+const MONEY_POINTS = [
+  'passport.moneyMethod.1',
+  'passport.moneyMethod.2',
+  'passport.moneyMethod.3',
+  'passport.moneyMethod.4',
+] as const;
+
 export async function generateMetadata({
   params,
 }: PageProps<'/[locale]/assets/[id]/passport'>): Promise<Metadata> {
@@ -155,19 +169,32 @@ export default async function PassportPage({
           ) : null}
           {/* The method, as on the landing page: on hover, not under everything else. */}
           <InfoPopover id="co2-method" label={t('impact.how.label')} className="mt-4">
-            <p>
-              {t('passport.method', {
-                footprint: kg(factors.manufacturing_new_kg[asset.category]),
-                share: formatNumber(Math.round(factors.refurbishment_share_of_new * 100), locale),
-                designLife: DESIGN_LIFE_MONTHS[asset.category],
-              })}
-            </p>
-            <p>
-              {t('passport.moneyMethod', {
-                designLife: DESIGN_LIFE_MONTHS[asset.category],
-                mandatory: euro(mandatoryRefurbishmentCents(costs, asset.category)),
-              })}
-            </p>
+            <p className="font-bold">{t('impact.how.co2Heading')}</p>
+            <ul className="list-disc space-y-1 pl-5">
+              {CO2_POINTS.map((key) => (
+                <li key={key}>
+                  {t(key, {
+                    footprint: kg(factors.manufacturing_new_kg[asset.category]),
+                    share: formatNumber(
+                      Math.round(factors.refurbishment_share_of_new * 100),
+                      locale
+                    ),
+                    designLife: DESIGN_LIFE_MONTHS[asset.category],
+                  })}
+                </li>
+              ))}
+            </ul>
+            <p className="font-bold">{t('impact.how.moneyHeading')}</p>
+            <ul className="list-disc space-y-1 pl-5">
+              {MONEY_POINTS.map((key) => (
+                <li key={key}>
+                  {t(key, {
+                    designLife: DESIGN_LIFE_MONTHS[asset.category],
+                    mandatory: euro(mandatoryRefurbishmentCents(costs, asset.category)),
+                  })}
+                </li>
+              ))}
+            </ul>
           </InfoPopover>
         </div>
       </div>
