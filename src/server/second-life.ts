@@ -79,7 +79,8 @@ export type AssessRefusal =
   | { code: 'asset_not_found'; params: { assetId: string } }
   | { code: 'asset_not_returned'; params: { assetId: string; status: string } }
   | { code: 'no_list_price'; params: { assetId: string } }
-  | { code: 'demand_taken'; params: { demandId: string } };
+  | { code: 'demand_taken'; params: { demandId: string } }
+  | { code: 'relist_unpriced'; params: { assetId: string } };
 
 /** What the admin found on inspection (D77); a missing field keeps the stored (reported) value. */
 export type Inspection = { condition?: AssetCondition; usageValue?: number };
@@ -216,6 +217,10 @@ export async function assessAsset(
   if (!built.ok) return built;
   const { proposal } = built;
   const { assessment, match } = proposal;
+  // No winner and no condition the catalogue can lease: refused, never relisted unleasable.
+  if (match.decision.code === 'relist_unpriced') {
+    return { ok: false, reason: { code: 'relist_unpriced', params: { assetId: input.assetId } } };
+  }
   const relist = match.relist;
   const id = randomUUID();
 

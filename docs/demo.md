@@ -10,6 +10,8 @@ npm run db:reset     # a fresh database: every Run button writes its card once (
 npm run dev          # http://localhost:3000
 ```
 
+A database seeded or assessed before D86 still quotes the old D12 second-life price (market value + refurbishment cost), because the quote reads the latest stored assessment: after pulling D86, run `npm run db:reset` (as above) or re-assess the returned items.
+
 Open `http://localhost:3000/en/demo` in a window about 1 280 px wide, with a second tab on `/en/audit`. Nobody is picked in "Continue as"; each Run button sets the actor and the demo clock itself (D71).
 
 ## 0:00 to 1:00, what it is

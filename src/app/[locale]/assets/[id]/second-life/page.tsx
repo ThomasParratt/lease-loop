@@ -92,7 +92,8 @@ function OptionsTable({
   ctx,
 }: {
   options: ReturnOption[];
-  chosen: AssetCondition;
+  /** The condition relisted in; null when nothing is relisted (`relist_unpriced`). */
+  chosen: AssetCondition | null;
   ctx: Ctx;
 }) {
   const { t, locale, euro } = ctx;
@@ -345,7 +346,10 @@ function Decision({ match, ctx }: { match: MatchResult; ctx: Ctx }) {
   );
   const condition = conditionText(t, decision.params.condition);
   return (
-    <Notice tone="success" title={t('secondLife.decision.title')}>
+    <Notice
+      tone={decision.code === 'relist_unpriced' ? 'warning' : 'success'}
+      title={t('secondLife.decision.title')}
+    >
       <p>
         {decision.code === 'relist_for_winner'
           ? t('secondLife.decision.relist_for_winner', {
@@ -353,7 +357,7 @@ function Decision({ match, ctx }: { match: MatchResult; ctx: Ctx }) {
               demandId: decision.params.demandId,
               refurbish,
             })
-          : t('secondLife.decision.relist_without_match', { condition, refurbish })}
+          : t(`secondLife.decision.${decision.code}`, { condition, refurbish })}
       </p>
       {winner ? (
         <p className="mt-1">
@@ -397,6 +401,9 @@ export default async function SecondLifePage({
   const ctx: Ctx = { locale, t, euro, demand };
 
   const proposal: SecondLifeProposal | null = preview?.ok ? preview.proposal : stored;
+  // Nothing any term can price and nobody waiting: no option is relisted, so none is marked
+  // chosen and there is nothing to assess (the route would refuse it with 422).
+  const unpriced = proposal?.match.decision.code === 'relist_unpriced';
 
   const facts = proposal
     ? [
@@ -457,17 +464,17 @@ export default async function SecondLifePage({
           </Card>
           <OptionsTable
             options={proposal.assessment.options}
-            chosen={proposal.match.relist.condition}
+            chosen={unpriced ? null : proposal.match.relist.condition}
             ctx={ctx}
           />
-          <PlanAndValue proposal={proposal} ctx={ctx} />
+          {unpriced ? null : <PlanAndValue proposal={proposal} ctx={ctx} />}
           <WaitingList match={proposal.match} ctx={ctx} />
           <Decision match={proposal.match} ctx={ctx} />
         </>
       ) : null}
 
       {/* Only the admin reaches this far (D85), and only the admin assesses. */}
-      {preview?.ok ? <AssessButton assetId={asset.id} locale={locale} /> : null}
+      {preview?.ok && !unpriced ? <AssessButton assetId={asset.id} locale={locale} /> : null}
 
       <div className="flex flex-wrap gap-6">
         <Link
