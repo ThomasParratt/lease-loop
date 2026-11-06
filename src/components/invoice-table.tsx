@@ -1,6 +1,7 @@
 // A contract's invoices as a table: sequence, period, due day, net, VAT rate, VAT, gross and
 // the status on `today`, with one line explaining a VAT rate change between rows (D2), and a
-// "Pay" button on every invoice still owed. A server component: the contract page passes the
+// "Pay" button on every unpaid invoice, upcoming ones included (paying early is an advance
+// payment, src/server/invoices.ts). A server component: the contract page passes the
 // contract id, the request's day and the language; only a viewer the page let in (the
 // contract's customer or admin, D73) sees the table, the same people the pay route allows.
 import { loadVatRates } from '@/data/load';

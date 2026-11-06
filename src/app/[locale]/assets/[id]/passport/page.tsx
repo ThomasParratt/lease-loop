@@ -103,7 +103,7 @@ export default async function PassportPage({
         </div>
         {asset.status === 'returned' ? (
           <Link
-            href={`/${locale}/assets/${asset.id}/second-life`}
+            href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}
             className="mt-3 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"
           >
             {t('secondLife.link')}

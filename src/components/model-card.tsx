@@ -162,7 +162,7 @@ export function UnavailableCard({ asset, locale, t }: UnavailableCardProps) {
           {asset.status === 'returned' ? (
             // Above the card's stretched passport link, so it takes its own clicks.
             <Link
-              href={`/${locale}/assets/${asset.id}/second-life`}
+              href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}
               className="relative z-10 mt-3 inline-block rounded text-sm font-bold text-brand-text underline decoration-2 underline-offset-4"
             >
               {t('secondLife.link')}
