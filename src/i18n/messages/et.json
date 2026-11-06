@@ -546,7 +546,7 @@
   "exit.ended.title": "See leping on lõppenud",
   "exit.ended.body": "Olek: {status}. Lõppes {date}. Lõpparve on allolevas loendis.",
   "exit.refusal.not_started": "Leping pole veel alanud, seega ei saa seda lõpetada.",
-  "exit.refusal.usage_below_signing": "Teatatud kasutus ({value} {unit}) on väiksem kui eseme {atSigning} {unit} liisingu alguses.",
+  "exit.refusal.usage_below_signing": "Teatatud kasutus ({value}) on väiksem kui eseme {atSigning} liisingu alguses.",
   "signatories.notFound": "Seda allkirjastajat pole enam nimekirjas. Laadige leht uuesti.",
   "audit.chain.reason.head_mismatch": "uusimad kirjed ei vasta enam salvestatud päisele (kirje on kustutatud)",
   "contract.refusal.quote_not_yet_valid": "Pakkumine on dateeritud {quoteDate}, pärast tänast. Lepingut ei saa allkirjastada enne pakkumist.",

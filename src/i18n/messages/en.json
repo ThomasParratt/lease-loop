@@ -546,7 +546,7 @@
   "exit.ended.title": "This lease has ended",
   "exit.ended.body": "Status: {status}. Ended on {date}. The final invoice is in the list below.",
   "exit.refusal.not_started": "The lease has not started yet, so it cannot be ended.",
-  "exit.refusal.usage_below_signing": "The usage reported ({value} {unit}) is below the {atSigning} {unit} the item had when it was leased.",
+  "exit.refusal.usage_below_signing": "The usage reported ({value}) is below the {atSigning} the item had when it was leased.",
   "signatories.notFound": "That signatory is no longer on the list. Reload the page.",
   "audit.chain.reason.head_mismatch": "the newest entries no longer match the stored head (an entry was deleted)",
   "contract.refusal.quote_not_yet_valid": "This quote is dated {quoteDate}, after today. A contract cannot be signed before its quote.",
