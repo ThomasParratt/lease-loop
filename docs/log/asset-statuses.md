@@ -18,3 +18,5 @@ Real clock, Helsinki. Coding session: Opus, in the main checkout on the branch `
 - The catalogue does not yet hide `leased` and `sold` items or stop them being quoted; the pricing slice decides that from the status (only `available` is leasable).
 - `Contract` has no `signed_by` column (the signer is only in the audit log and the signatory's email in `answers_json`); left for the contract slice to raise if its page needs it.
 - No meta rule checks that a write imports its schema; the agent brief template and D23 ask for it, the test of each write proves it.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; `leased` is set at signing (#16), `sold` and `returned` by the exits (#20), and the admin status route reads the actor from the cookie and checks D22's moves (wave 2 upkeep).

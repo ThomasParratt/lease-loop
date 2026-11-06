@@ -15,7 +15,7 @@ Worked example, what the reset found: `src/server/asset-events.test.ts` seeded c
 
 ## Decisions
 
-**D37 (proposed, wave 2 hardening): test isolation by reset, named handlers and no concurrency.** For the upkeep session to copy into `docs/decisions.md`.
+**D44 (proposed, wave 2 hardening; numbered D44 in `docs/decisions.md` because #25, #32 and #33 took D37 to D43): test isolation by reset, named handlers and no concurrency.** For the upkeep session to copy into `docs/decisions.md`.
 
 - _Chosen:_ one `resetDb(db)` in every DB test's `beforeEach` (every table, one FK order, one transaction); `withProductionHandlers()` / `withHandlers()` clearing and registering around each test; sequences as one `it`; `fileParallelism: true` with per-file database copies; `sequence.shuffle` for the pure domain tests; meta-rules for all three.
 - _Chosen against:_ **a transaction per test rolled back in `afterEach`** (Prisma's interactive transactions cannot wrap the services, which open their own `withAudit` transaction, and SQLite has no nested transactions without savepoints Prisma does not expose); **a fresh database copy per test** (a copy plus a new client per test costs about a second each on Windows, roughly 15 minutes over the suite); **per-file hand-written `deleteMany` lists** (what we had: ten different lists, some kept rows other tests had changed, e.g. a sold asset left `leased`, and one hid a real order dependence); **`vi.resetModules()` to re-run `event-handlers.ts`** (it would also give `events.ts` a new registry, different from the one the services under test hold); **shuffling the DB tests** (they are already independent by the reset; shuffling them buys little and makes a failing seed harder to reproduce across 20 files).

@@ -22,3 +22,5 @@ Real clock, Helsinki. Coding agent: Opus, in the worktree slot `friendly-blackwe
 - **Who may sign `awaiting_signatory`** and **the 90-day start limit** are open questions in the feature page, for `docs/decisions.md`.
 - **D8**: the quantity is carried unchanged and one asset row is locked (issue #13).
 - The race write is not on the event bus (see the feature page); if D22 must be literally "the event sets `leased`", the invoicing and passport test fixtures need to reset the asset between emits first.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the start limit is decided as one year (D45, wave 2 upkeep); who signs `awaiting_signatory` and D8 stay open in `docs/features/contracts.md`.

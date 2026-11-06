@@ -110,7 +110,7 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[]
 
 ## Open questions
 
-- **`previous_lives` after a return.** The passport reads it as the lives before the log. If the catalogue slice increments it on every return, a logged life is counted twice; agree with that slice (wave 2).
+- **`previous_lives` after a return.** The passport reads it as the lives before the log. The exits slice (wave 2) leaves `previous_lives` as it is on a return, so a logged life is not counted twice; the second-life slice (wave 3) must keep it that way when it re-lists the item.
 - **Design lives and the 24-month past-life estimate** are team assumptions, not data-pack numbers; ask the mentors whether they want them in the data pack.
 - **Money saved**: needs a money factor the data pack does not have (e.g. the new price against the refurbishment cost from `refurbishment-costs.json`).
-- No writer yet for `assessed`, `refurbished`, `repriced` (the second-life assessment slice), and nothing emits events until the contract slice imports `src/server/event-handlers.ts`.
+- No writer yet for `assessed`, `refurbished`, `repriced` (the second-life slice, wave 3). Signing (`CONTRACT_SIGNED`) and the exits (`CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`) emit today, so `leased`, `bought`, `returned` and `passed_on` are written.

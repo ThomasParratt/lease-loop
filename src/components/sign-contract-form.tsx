@@ -14,14 +14,14 @@ import { Button, Field, Notice, inputClasses } from './ui';
 type SignContractFormProps = {
   applicationId: string;
   locale: Locale;
-  /** The signing day (the server's today) and the latest start it allows (D7). */
+  /** The signing day (the server's today) and the latest start it allows (D7, D45). */
   today: string;
-  latestStartDate: string;
-  maxDays: number;
+  maxStartDate: string;
+  maxMonths: number;
 };
 
 export function SignContractForm(props: SignContractFormProps) {
-  const { applicationId, locale, today, latestStartDate, maxDays } = props;
+  const { applicationId, locale, today, maxStartDate, maxMonths } = props;
   const t = getT(locale);
   const router = useRouter();
   const [startDate, setStartDate] = useState(today);
@@ -55,7 +55,7 @@ export function SignContractForm(props: SignContractFormProps) {
       <Field
         id="sign-start-date"
         label={t('contract.sign.startDate')}
-        hint={t('contract.sign.startHint', { maxDays })}
+        hint={t('contract.sign.startHint', { maxMonths })}
       >
         {(control) => (
           <input
@@ -63,7 +63,7 @@ export function SignContractForm(props: SignContractFormProps) {
             type="date"
             required
             min={today}
-            max={latestStartDate}
+            max={maxStartDate}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className={inputClasses}

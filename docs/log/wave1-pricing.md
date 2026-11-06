@@ -25,3 +25,5 @@ Real clock, Helsinki. Coding agent: Opus, in the worktree slot `angry-fermat-3be
 - The calculator needs JavaScript; without it the page shows the server-rendered default breakdown and comparison, but the sliders and "Get a quote" do nothing.
 - No per-card scenario harness file (`src/domain/scenarios.test.ts`): the cards are pinned in this slice's tests instead.
 - The open questions in `docs/features/pricing.md` (D8's reading, VAT on the down payment and buyout).
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the leftovers stay in `docs/features/pricing.md` "Open questions".

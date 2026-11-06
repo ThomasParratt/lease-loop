@@ -19,3 +19,5 @@ Real clock, Helsinki. Coordinator: Fable; coding agent: Opus. Hour-one infrastru
 - `fs.cpSync` (macOS and Linux) runs in-process and cannot be stopped by a time limit; robocopy on Windows can. Not tested off Windows.
 - The CRLF failure of `format:check` on this machine is not fixed: changing the line-ending policy for the whole repo is a team decision.
 - The existing agent slots under `.claude/worktrees/` were left as they are.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the CRLF note stays open (no `.gitattributes` yet).

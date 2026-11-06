@@ -13,3 +13,5 @@ Real clock, Helsinki. Coding agent: Opus, worktree `nostalgic-sutherland-1bb709`
 
 - The "Open" list in `docs/reviews/wave-0.md`, handed to the slices' next owners.
 - The first `preview_start` with `-p 3107` collided with a port another slot held; launch configs for slots should leave the port to the pane (no `-p`).
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; its open list was handed on in `docs/reviews/wave-0.md`.

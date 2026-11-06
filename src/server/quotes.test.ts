@@ -147,6 +147,13 @@ describe('getQuote, card 2 (the price stays locked after the list changes)', () 
   it('returns null for an unknown id', async () => {
     expect(await getQuote(db, 'no-such-quote')).toBeNull();
   });
+
+  it('reads on a transaction client too, so another slice calls it inside its own change', async () => {
+    const created = await createQuote(db, card1, data);
+    if (!created.ok) throw new Error(created.reason.code);
+    const read = await db.$transaction((tx) => getQuote(tx, created.quote.id));
+    expect(read).toEqual(created.quote);
+  });
 });
 
 describe('storedQuoteStatusOn', () => {

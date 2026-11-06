@@ -26,3 +26,5 @@ Nothing blocked the work. Two things cost time: the brief's 311 200 does not fol
 - `contractBalanceOn` (invoicing) does not skip `cancelled` yet; the invoicing owner should add it.
 - Pass-on's next steps (the pre-filled application, the second-life quote, `previous_contract_id`) are wave 3.
 - No demo-page button for card 8: the demo page is another slice's file.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; `contractBalanceOn` skips `cancelled` and D32 to D35 are decided (wave 2 upkeep); D31 is a mentor question.

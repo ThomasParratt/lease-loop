@@ -28,3 +28,5 @@ Real clock, Helsinki. Coordinator: Fable; coding agent: Opus. Slot `relaxed-shaw
 - **Quote-page link**: the pricing page needs an "Apply" link to `/[locale]/apply/[quoteId]`; the demo page's cards 5, 6, 7 can link there too.
 - The decision page's PEP sentence still says "we will be in touch" after an admin approved; a separate "approved after review" line would read better.
 - The signatory sign-off trusts the name typed in (no login, D17); the actor is audited.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the price page links to the apply page, and the apply page says an expired quote up front (wave 2 upkeep).

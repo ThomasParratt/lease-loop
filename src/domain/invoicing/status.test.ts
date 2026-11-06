@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { contractBalanceOn, invoiceStatusOn, type InvoiceForBalance } from './status';
 
 const rent = (id: string, day: string, grossCents: number, paidOn: string | null = null) =>
-  ({ id, issueDate: day, dueDate: day, grossCents, paidOn }) satisfies InvoiceForBalance;
+  ({
+    id,
+    issueDate: day,
+    dueDate: day,
+    grossCents,
+    paidOn,
+    status: paidOn === null ? 'issued' : 'paid',
+  }) satisfies InvoiceForBalance;
 
 describe('invoiceStatusOn', () => {
   const invoice = { issueDate: '2026-12-05', dueDate: '2026-12-05', paidOn: null };
@@ -50,6 +57,22 @@ describe('contractBalanceOn', () => {
   it('counts a payment passed in, but not one dated after today', () => {
     expect(contractBalanceOn(invoices, { i2: '2026-12-10' }, '2026-12-20').openCents).toBe(0);
     expect(contractBalanceOn(invoices, { i2: '2026-12-25' }, '2026-12-20').openCents).toBe(13_466);
+  });
+
+  it('skips a cancelled rent: an early exit replaced it, so it owes nothing (D35)', () => {
+    const withCancelled = [
+      ...invoices,
+      { ...rent('i4', '2027-02-05', 13_520), status: 'cancelled' as const },
+    ];
+    const result = contractBalanceOn(withCancelled, {}, '2027-03-01');
+    expect(result).toEqual({
+      openCents: 13_466 + 13_520,
+      overdueCents: 13_466 + 13_520,
+      upcomingCents: 0,
+      paidCents: 13_466,
+      openInvoiceIds: ['i2', 'i3'],
+      overdueInvoiceIds: ['i2', 'i3'],
+    });
   });
 
   it('shows an invoice due today as open but not overdue', () => {

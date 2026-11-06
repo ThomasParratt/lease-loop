@@ -33,3 +33,5 @@ Nothing for long. The invoices squash landed on `main` mid-review, so the merge 
 - The seven open findings in `docs/reviews/wave-1.md` (3, 4, 5, 7, 8, 9, 11) and Panu's totals finding (the pricing session, on #11), each with its owner; the high one is 4: nothing sets an asset `leased` or `sold` yet.
 - `README.md` "Status" is the hardening session's; not touched.
 - Housekeeping for a person with admin rights, no action taken here: the merged branches with generated names (`claude/...`, e.g. `claude/friendly-blackwell-6149aa`, `claude/relaxed-shaw-f712d4`, `claude/vigorous-pare-5aac81`) are still on the fork and need deleting; the probe repository `Tonttu84/actions-probe` is to be deleted by its owner.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; findings 3, 4, 5, 7 and 8 of `docs/reviews/wave-1.md` are closed by #16, #20 and the wave 2 upkeep (`docs/reviews/wave-2.md`).

@@ -4,14 +4,17 @@
 // numbers and never re-prices (D7); a later price list only changes what the page explains.
 import { assetStatusSchema, isoDateSchema } from '@/data/schemas';
 import { contractSignedSchema, type ContractSigned } from '@/domain/events';
-import { addDays } from '@/domain/civil-days';
-import { termEndDate } from '@/domain/invoicing/dates';
+import { addMonthsClamped, termEndDate } from '@/domain/invoicing/dates';
 import type { FrozenQuote, QuoteStatus } from '@/domain/pricing';
 import { applicationDecisionSchema, type ContractStatus } from '@/domain/statuses';
 import { contractNumber } from './number';
 
-/** The latest start is this many days after the signing day (D7 lets the start come later). */
-export const START_DAYS_MAX = 90;
+/**
+ * The latest start is this many calendar months after the signing day (D45: today or a chosen
+ * day up to one year ahead; D7 lets the start come later). Counted with `addMonthsClamped`, so
+ * a signing on 29 February 2028 may start up to 28 February 2029.
+ */
+export const START_MONTHS_MAX = 12;
 
 export type PlanContractInput = {
   /** The new contract's id, chosen by the caller so the event can name it. */
@@ -75,7 +78,7 @@ export type SignRefusal =
   | { code: 'start_before_signing'; params: { signedOn: string; startDate: string } }
   | {
       code: 'start_too_far';
-      params: { latestStartDate: string; startDate: string; maxDays: number };
+      params: { maxStartDate: string; startDate: string; maxMonths: number };
     };
 
 export type PlanContractResult =
@@ -109,13 +112,13 @@ export function planContract(input: PlanContractInput): PlanContractResult {
   if (startDate < signedOn) {
     return { ok: false, reason: { code: 'start_before_signing', params: { signedOn, startDate } } };
   }
-  const latestStartDate = addDays(signedOn, START_DAYS_MAX);
-  if (startDate > latestStartDate) {
+  const maxStartDate = addMonthsClamped(signedOn, START_MONTHS_MAX);
+  if (startDate > maxStartDate) {
     return {
       ok: false,
       reason: {
         code: 'start_too_far',
-        params: { latestStartDate, startDate, maxDays: START_DAYS_MAX },
+        params: { maxStartDate, startDate, maxMonths: START_MONTHS_MAX },
       },
     };
   }

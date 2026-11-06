@@ -30,3 +30,5 @@ Real clock, Helsinki. Agent: Opus, worktree `friendly-blackwell-6149aa`, base `1
 - The invoice table is not mounted anywhere yet; wave 2 mounts it on the contract page. It has not been rendered in a browser.
 - The end-of-term drift policy (snap the last month or not) is open for wave 2.
 - The impact session's handlers need their own line in `src/server/event-handlers.ts`.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the invoice table is mounted on the contract page (#16); `contractBalanceOn` skips `cancelled` (D35, wave 2 upkeep).

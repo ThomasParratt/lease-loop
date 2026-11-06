@@ -8,8 +8,8 @@ import { connection } from 'next/server';
 import { SignContractForm } from '@/components/sign-contract-form';
 import { Card, LinkButton, Notice, PageHeader } from '@/components/ui';
 import { loadQuestions } from '@/data/load';
-import { addDays } from '@/domain/civil-days';
-import { START_DAYS_MAX } from '@/domain/contracts';
+import { START_MONTHS_MAX } from '@/domain/contracts';
+import { addMonthsClamped } from '@/domain/invoicing/dates';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, messages, type MessageKey } from '@/i18n/get-t';
@@ -161,8 +161,8 @@ export default async function ApplicationPage({
                 applicationId={application.id}
                 locale={locale}
                 today={today}
-                latestStartDate={addDays(today, START_DAYS_MAX)}
-                maxDays={START_DAYS_MAX}
+                maxStartDate={addMonthsClamped(today, START_MONTHS_MAX)}
+                maxMonths={START_MONTHS_MAX}
               />
             </div>
           ) : (

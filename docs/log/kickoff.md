@@ -29,3 +29,5 @@ All resolved:
 - ~~Wave 0 proper~~: done, squash-merged as `db358de`, `d096a3a`, `4142a22`; its review is `docs/reviews/wave-0.md`.
 - The two mentor questions (D8 quantity, D16 pass-on) are not asked yet.
 - D1–D16 are still proposed (D17 and D20 implemented as proposed): confirm them with the team and flip the status column.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the mentor questions (D8, D16, D31) are written up in `docs/mentor-questions.md` for Friday morning.

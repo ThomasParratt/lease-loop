@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { QuestionFlow } from '@/components/question-flow';
-import { Money, Notice, PageHeader, PriceTag } from '@/components/ui';
+import { LinkButton, Money, Notice, PageHeader, PriceTag } from '@/components/ui';
 import { loadPriceLists, loadQuestions } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
@@ -56,8 +56,25 @@ export default async function ApplyPage({ params }: PageProps<'/[locale]/apply/[
   ]);
   // Only a quote that is still valid shows "price locked until"; an expired one is refused
   // when the application is sent, so the page must not promise the price.
-  const locked =
-    quote && storedQuoteStatusOn(quote, today, priceLists).status === 'valid' ? quote : null;
+  const status = quote ? storedQuoteStatusOn(quote, today, priceLists).status : null;
+  const locked = quote && status === 'valid' ? quote : null;
+  // An expired quote is said up front instead of the questions (wave 1 review finding 7): the
+  // submit would refuse it with quote_expired after every answer was given.
+  if (quote && status === 'expired') {
+    return page(
+      <Notice tone="warning">
+        {t('quote.expiredNotice')}
+        <LinkButton
+          href={`/${locale}/assets/${quote.breakdown.assetId}`}
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+        >
+          {t('quote.cheaper.action')}
+        </LinkButton>
+      </Notice>
+    );
+  }
 
   const bank = (await loadQuestions()).questions;
   const dictionary: Record<string, string> = messages[locale];

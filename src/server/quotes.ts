@@ -27,7 +27,7 @@ import {
 } from '@/domain/pricing';
 import { quoteRowSchema } from '@/domain/rows/quote';
 import { getAsset } from './assets';
-import { withAudit } from './audit';
+import { withAudit, type TransactionClient } from './audit';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
 
@@ -172,7 +172,10 @@ export async function createQuote(
 }
 
 /** The stored quote with its breakdown from the frozen numbers, or null. Never re-prices. */
-export async function getQuote(db: PrismaClient, id: string): Promise<StoredQuote | null> {
+export async function getQuote(
+  db: PrismaClient | TransactionClient,
+  id: string
+): Promise<StoredQuote | null> {
   const row = await db.quote.findUnique({ where: { id } });
   return row ? toStoredQuote(row) : null;
 }

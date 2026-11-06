@@ -12,3 +12,5 @@ Real clock, Helsinki. Coding agent: Opus, in the main checkout, branch `fix/deci
 ## Left undone
 
 - Duplicate applications on a double-submit (`quote_id` is not unique) and the stale `from` in the asset-status audit: judged not worth code (see the open questions in the feature pages).
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the stale `from` in the asset-status audit is gone (the update is now conditional on the checked status, wave 2 upkeep); the double-submit stays in `docs/features/question-flow.md`.

@@ -2,6 +2,7 @@
 // data/customers.json: the three types share one table, and the fields a type does not have
 // are null in the row and absent in the shape.
 import type { Customer as CustomerRow, PrismaClient } from '@/generated/prisma/client';
+import type { TransactionClient } from './audit';
 import { customerSchema, type Customer } from '@/data/schemas';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
@@ -73,13 +74,16 @@ export function toCustomerRowData(customer: Customer) {
 }
 
 /** Every customer, sorted by name (the order the actor picker shows them in). */
-export async function listCustomers(db: PrismaClient): Promise<Customer[]> {
+export async function listCustomers(db: PrismaClient | TransactionClient): Promise<Customer[]> {
   const rows = await db.customer.findMany({ orderBy: [{ name: 'asc' }, { id: 'asc' }] });
   return rows.map(toCustomer);
 }
 
 /** One customer, or null when there is no customer with that id. */
-export async function getCustomer(db: PrismaClient, id: string): Promise<Customer | null> {
+export async function getCustomer(
+  db: PrismaClient | TransactionClient,
+  id: string
+): Promise<Customer | null> {
   const row = await db.customer.findUnique({ where: { id } });
   return row ? toCustomer(row) : null;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { contractSignedSchema } from '@/domain/events';
 import type { QuoteStatus } from '@/domain/pricing';
-import { planContract, START_DAYS_MAX, type PlanContractInput } from './sign';
+import { planContract, START_MONTHS_MAX, type PlanContractInput } from './sign';
 
 /** Card 1: `ebike-003`, 36 months, no down payment, quoted 5 Nov 2026 on list v1. */
 const card1Quote: PlanContractInput['quote'] = {
@@ -275,19 +275,28 @@ describe('planContract refusals (codes with params)', () => {
     });
   });
 
-  it(`accepts a start ${START_DAYS_MAX} days after signing (D7: signing day before start day)`, () => {
-    const plan = signed(planContract(input({ startDate: '2027-02-03' })));
-    expect(plan.contract).toMatchObject({ signedOn: '2026-11-05', startDate: '2027-02-03' });
+  it(`accepts a start ${START_MONTHS_MAX} months after signing (D45; D7: signing day before start day)`, () => {
+    const plan = signed(planContract(input({ startDate: '2027-11-05' })));
+    expect(plan.contract).toMatchObject({ signedOn: '2026-11-05', startDate: '2027-11-05' });
     expect(plan.event.signedOn).toBe('2026-11-05');
   });
 
-  it(`start_too_far one day past ${START_DAYS_MAX} days after signing`, () => {
-    expect(planContract(input({ startDate: '2027-02-04' }))).toEqual({
+  it(`start_too_far one day past ${START_MONTHS_MAX} months after signing`, () => {
+    expect(planContract(input({ startDate: '2027-11-06' }))).toEqual({
       ok: false,
       reason: {
         code: 'start_too_far',
-        params: { latestStartDate: '2027-02-03', startDate: '2027-02-04', maxDays: START_DAYS_MAX },
+        params: { maxStartDate: '2027-11-05', startDate: '2027-11-06', maxMonths: 12 },
       },
+    });
+  });
+
+  it('caps a 29 February signing at 28 February a year on (the leap-day trap)', () => {
+    const leap = { signedOn: '2028-02-29' };
+    expect(planContract(input({ ...leap, startDate: '2029-02-28' })).ok).toBe(true);
+    expect(planContract(input({ ...leap, startDate: '2029-03-01' }))).toMatchObject({
+      ok: false,
+      reason: { code: 'start_too_far', params: { maxStartDate: '2029-02-28' } },
     });
   });
 

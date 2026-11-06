@@ -55,3 +55,5 @@ Nothing for long: one bash heredoc that would not parse (written with the editor
 - Cards 8, 9, 10: 11 `it.todo`s with the pinned number in the name (the early-exit price and market value 311 200; the refurbishment plan 35 000 + 4 500 + 12 000 and the `wait-02` / `wait-13` match; the passport page). They belong to waves 2 and 3.
 - The matcher's tie-break for both twin pairs (2 todos in `traps.test.ts`).
 - The demo page's one button per card (kickoff brief section 8) is not part of this slot.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the card 8 todos are the wave 2 hardening's, cards 9 and 10 wave 3's.

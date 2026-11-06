@@ -30,3 +30,5 @@ Real clock, Helsinki. Agent: Opus, worktree `nostalgic-sutherland-1bb709`, base 
 - **Handler registration is import-time.** A slice's handlers register when its module is imported; wave 1 must import every handler module from one place (e.g. `src/server/event-handlers.ts`) that the emitting service imports, or a handler silently does not run. Not built here because no handler exists yet.
 - `routes.ts` will pass 600 lines when every slice adds its schemas: split it then into `src/server/routes/<slice>.ts` files concatenated by `routes.ts`.
 - The 404 of `PATCH /api/assets/[id]/status` is in the generic `default` error response, not listed per route; add a `errors` field to the row if the judges want per-route error codes.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; every handler module is registered from `src/server/event-handlers.ts`; the wave 2 hardening owns the test-isolation helper for it (D43).

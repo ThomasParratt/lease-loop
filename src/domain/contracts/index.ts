@@ -3,7 +3,7 @@ export { contractNumber } from './number';
 export {
   planContract,
   priceLockOf,
-  START_DAYS_MAX,
+  START_MONTHS_MAX,
   type PlanContractInput,
   type PlanContractResult,
   type PlannedContract,

@@ -11,6 +11,7 @@ import {
 } from '@/domain/statuses';
 import { invoiceRowSchema } from '@/domain/rows/invoice';
 import { withAudit, type TransactionClient } from './audit';
+import { contractCustomerId } from './contracts';
 import { emit } from './events';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
@@ -96,29 +97,24 @@ export async function listInvoices(
   return rows.map(toInvoiceView);
 }
 
-/** The customer an invoice bills, for the access check. Null for an unknown invoice. */
+/**
+ * The customer an invoice bills, for the access check. Null for an unknown invoice. The
+ * invoice row is ours; its contract is read through the contract slice's `contractCustomerId`
+ * (team rule 3), never with a query on the Contract table.
+ */
 export async function invoiceCustomerId(
-  db: PrismaClient,
+  db: PrismaClient | TransactionClient,
   invoiceId: string
 ): Promise<string | null> {
   const row = await db.invoice.findUnique({
     where: { id: invoiceId },
-    select: { contract: { select: { customer_id: true } } },
+    select: { contract_id: true },
   });
-  return row?.contract.customer_id ?? null;
+  return row ? contractCustomerId(db, row.contract_id) : null;
 }
 
-/** The customer of a contract, for the access check. Null for an unknown contract. */
-export async function contractCustomerId(
-  db: PrismaClient,
-  contractId: string
-): Promise<string | null> {
-  const row = await db.contract.findUnique({
-    where: { id: contractId },
-    select: { customer_id: true },
-  });
-  return row?.customer_id ?? null;
-}
+/** The customer of a contract: the contract slice's read, re-exported for the invoice routes. */
+export { contractCustomerId };
 
 /** Thrown inside the transaction when another request paid first, so nothing is written. */
 class LostPaymentRace extends Error {}

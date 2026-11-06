@@ -33,3 +33,5 @@ Real clock, Helsinki. Coding agent: Opus, in the worktree `sleepy-germain-94b2e7
 - **Dates** in the new models are ISO day strings (`String`), as `AGENTS.md` rule 4 passes them; `DateTime` only for `created_at` / `updated_at`.
 - **The actor** is a plain string (a customer id, `admin` or `anonymous`), so it goes straight into `withAudit`. `POST /api/actor` answers 404 `UNKNOWN_ACTOR` for an id that is not a customer; `anonymous` cannot be chosen, `DELETE` is the way back.
 - **The picker** is a client component that fetches the route with JSON and calls `router.refresh()`; the page passes it the customers (`id`, `name`), the current actor and the labels.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; later schema work is in `docs/features/row-schemas.md` (D27) and the audit chain (D36).

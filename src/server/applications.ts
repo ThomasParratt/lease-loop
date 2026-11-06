@@ -28,7 +28,7 @@ import {
 } from '@/domain/question-flow/engine';
 import { ADMIN_ACTOR } from './actor';
 import { listAssets } from './assets';
-import { withAudit } from './audit';
+import { withAudit, type TransactionClient } from './audit';
 import { getCustomer } from './customers';
 import type { PrismaClient } from './prisma-client';
 import { parseRow, parseStoredJson } from './row-rules';
@@ -213,7 +213,7 @@ export async function createApplication(
 }
 
 export async function getApplication(
-  db: PrismaClient,
+  db: PrismaClient | TransactionClient,
   id: string
 ): Promise<ApplicationView | null> {
   const row = await db.application.findUnique({ where: { id } });

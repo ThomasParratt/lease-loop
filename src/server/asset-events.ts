@@ -61,7 +61,10 @@ export async function appendAssetEvent(
 }
 
 /** An asset's events in the order they were written. */
-export async function listAssetEvents(db: PrismaClient, assetId: string): Promise<PassportEvent[]> {
+export async function listAssetEvents(
+  db: PrismaClient | TransactionClient,
+  assetId: string
+): Promise<PassportEvent[]> {
   const rows = await db.assetEvent.findMany({
     where: { asset_id: assetId },
     orderBy: { id: 'asc' },

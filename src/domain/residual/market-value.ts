@@ -11,7 +11,7 @@
 //   basis points), the product is taken in BigInt, and the one division rounds half up to the
 //   cent. Nothing is rounded in between.
 import type { AssetCategory, AssetCondition, ResidualCurves, UsageUnit } from '@/data/schemas';
-import { factorToMillionths, percentToBasisPoints } from '../money-math';
+import { factorToMillionths, percentToBasisPoints, roundHalfUpDivBig } from '../money-math';
 
 type CurvePoint = readonly [number, number];
 type UsageRule = ResidualCurves['usage_adjustment'][AssetCategory];
@@ -87,12 +87,6 @@ export function usageAdjustment(
 const BP = 10_000n;
 const MILLION = 1_000_000n;
 
-/** Half up for non-negative BigInts. */
-function roundHalfUp(numerator: bigint, denominator: bigint): bigint {
-  const quotient = numerator / denominator;
-  return (numerator % denominator) * 2n >= denominator ? quotient + 1n : quotient;
-}
-
 /** The market value of one unit by the curve, the condition and the usage. */
 export function marketValueCents(input: MarketValueInput, curves: ResidualCurves): MarketValue {
   const { listPriceCents, category, ageMonths, condition, usage } = input;
@@ -119,7 +113,7 @@ export function marketValueCents(input: MarketValueInput, curves: ResidualCurves
   const denominator = BigInt(curve.denominator) * BP * MILLION * BP;
 
   return {
-    valueCents: Number(roundHalfUp(numerator, denominator)),
+    valueCents: Number(roundHalfUpDivBig(numerator, denominator)),
     ageMonths,
     curvePercent: Math.round(curve.numerator / curve.denominator) / 100,
     conditionMultiplier: multiplier,

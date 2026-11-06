@@ -1,5 +1,6 @@
 // The status an invoice shows on a day, and what is open on a contract. Derived, never stored:
 // the table stores only `issued` or `paid` and the paid day. Today comes in as an argument.
+import type { InvoiceStatus } from '@/domain/statuses';
 import { parseIsoDate } from './dates';
 
 export type DisplayStatus = 'paid' | 'due' | 'overdue' | 'upcoming';
@@ -23,7 +24,15 @@ export function invoiceStatusOn(invoice: InvoiceForStatus, today: string): Displ
   return today > invoice.dueDate ? 'overdue' : 'due';
 }
 
-export type InvoiceForBalance = InvoiceForStatus & { id: string; grossCents: number };
+export type InvoiceForBalance = InvoiceForStatus & {
+  id: string;
+  grossCents: number;
+  /**
+   * The stored status; a `cancelled` rent (replaced by an early exit's invoice) is skipped.
+   * Required, so no caller can leave it out and count a cancelled rent again.
+   */
+  status: InvoiceStatus;
+};
 
 export type ContractBalance = {
   /** Issued and not paid: due today or overdue. */
@@ -39,7 +48,8 @@ export type ContractBalance = {
 /**
  * Sums a contract's invoices by status on `today`. `payments` maps an invoice id to its paid
  * day and overrides the invoice's own `paidOn` (a payment recorded after the rows were read);
- * a payment dated after `today` does not count yet.
+ * a payment dated after `today` does not count yet. A `cancelled` invoice owes nothing and is
+ * in none of the sums (D35).
  */
 export function contractBalanceOn(
   invoices: readonly InvoiceForBalance[],
@@ -55,6 +65,7 @@ export function contractBalanceOn(
     overdueInvoiceIds: [],
   };
   for (const invoice of invoices) {
+    if (invoice.status === 'cancelled') continue;
     const paidOn = payments[invoice.id] ?? invoice.paidOn;
     const status = invoiceStatusOn(
       { ...invoice, paidOn: paidOn !== null && paidOn <= today ? paidOn : null },

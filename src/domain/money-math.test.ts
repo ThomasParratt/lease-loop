@@ -8,12 +8,29 @@ import {
   percentOf,
   percentToBasisPoints,
   roundHalfUpDiv,
+  roundHalfUpDivBig,
   splitVat,
 } from './money-math';
 
 let table: CoefficientTable;
 beforeAll(async () => {
   table = await loadCoefficientTable();
+});
+
+describe('roundHalfUpDivBig', () => {
+  it('rounds like roundHalfUpDiv, past the safe-integer range too', () => {
+    expect(roundHalfUpDivBig(5n, 10n)).toBe(1n);
+    expect(roundHalfUpDivBig(272_037_500_000n, 1_000_000n)).toBe(272_038n);
+    expect(roundHalfUpDivBig(10_730_176n, 1_000n)).toBe(10_730n);
+    const big = 2n ** 80n;
+    expect(roundHalfUpDivBig(big * 3n + big / 2n, big)).toBe(4n);
+    expect(roundHalfUpDivBig(big * 3n + big / 2n - 1n, big)).toBe(3n);
+  });
+
+  it('throws on a negative numerator or a denominator of zero', () => {
+    expect(() => roundHalfUpDivBig(-1n, 2n)).toThrow(RangeError);
+    expect(() => roundHalfUpDivBig(1n, 0n)).toThrow(RangeError);
+  });
 });
 
 describe('roundHalfUpDiv', () => {

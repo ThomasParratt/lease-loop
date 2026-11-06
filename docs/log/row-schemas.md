@@ -19,3 +19,5 @@ Real clock, Helsinki. Coding session: Opus, in the main checkout on branch `feat
 - D28 (`previous_contract_id @unique`): proposed, not migrated; the contract slice owns the table and the migration. D29's optional `current_contract_id` column: not added.
 - `AssetEvent.details_json` is still read as `unknown`: a schema per event kind is the passport owner's.
 - `Customer.preferred_locale` has no schema: nothing writes it, and `localeSchema` was dropped as unused (review finding 7).
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; D28 stays proposed and waits for D8; the review of #18 is in `docs/reviews/wave-2.md`.

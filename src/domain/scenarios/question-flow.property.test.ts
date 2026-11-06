@@ -22,6 +22,7 @@ const QUOTE_REFUSALS = [
   'invalid_quantity',
   'invalid_down_payment',
   'unknown_term',
+  'term_over_category_max',
   'unknown_asset',
   'no_price_list_on_date',
   'down_payment_too_high',

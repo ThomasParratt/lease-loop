@@ -27,3 +27,5 @@ Real clock, Helsinki. Agent: Opus, worktree `vigorous-pare-5aac81`, base `4142a2
 - Nothing emits events yet, so the handlers run only in tests until the contract slice imports `src/server/event-handlers.ts`.
 - `assessed`, `refurbished`, `repriced` have no writer yet (the second-life assessment slice will call `appendAssetEvent`).
 - The e-bike's avoided car km factor is not used (the usage in the data pack is a lifetime total, not per life).
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; signing (#16) and the exits (#20) emit the four events now, so the passport is written outside the tests too.

@@ -21,3 +21,5 @@ Real clock, Helsinki. Coding agent: Opus, in the worktree slot `nostalgic-suther
 - The audit page re-verifies the whole table on each load; a checkpoint would make it incremental.
 - The `civil-days` sweep test times out under load on Windows (not this slice): give it a longer timeout in the next hardening pass.
 - No screenshot check of the badge at 375 px.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; the open items stay in `docs/features/audit-chain.md` "Open questions".

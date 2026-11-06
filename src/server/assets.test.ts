@@ -76,7 +76,7 @@ describe('changeAssetStatus', () => {
     const result = await changeAssetStatus(db, {
       id: 'ebike-001',
       status: 'reserved',
-      actor: 'team-test',
+      actor: 'admin',
     });
 
     expect(result).toMatchObject({ ok: true, asset: { id: 'ebike-001', status: 'reserved' } });
@@ -88,15 +88,44 @@ describe('changeAssetStatus', () => {
   it('accepts leased and sold (D22), the statuses the data pack does not use', async () => {
     await seedAssets(db, dataPack);
     for (const status of ['leased', 'sold'] as const) {
-      const result = await changeAssetStatus(db, { id: 'ebike-001', status, actor: 'team-test' });
+      const result = await changeAssetStatus(db, { id: 'ebike-001', status, actor: 'admin' });
       expect(result).toMatchObject({ ok: true, asset: { status } });
     }
+  });
+
+  it('refuses anyone but admin and writes nothing (wave 1 finding 5)', async () => {
+    await seedAssets(db, dataPack);
+    const result = await changeAssetStatus(db, {
+      id: 'ebike-001',
+      status: 'reserved',
+      actor: 'cust-aino',
+    });
+    expect(result).toEqual({ ok: false, reason: 'admin_only' });
+    expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).status).toBe(
+      'available'
+    );
+    expect(await db.auditLog.count()).toBe(0);
+  });
+
+  it('refuses a change outside D22 with a code and both statuses, and writes nothing', async () => {
+    await seedAssets(db, dataPack);
+    // ebike-009 is reserved in the data pack: a held item cannot be leased past the hold.
+    const result = await changeAssetStatus(db, {
+      id: 'ebike-009',
+      status: 'leased',
+      actor: 'admin',
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'transition_not_allowed', params: { from: 'reserved', to: 'leased' } },
+    });
+    expect(await db.auditLog.count()).toBe(0);
   });
 
   it('refuses a status outside the list itself, whoever calls it, and writes nothing', async () => {
     await seedAssets(db, dataPack);
     // A caller that skips the route's body check (a handler, a script) cannot slip a bad value in.
-    const input = { id: 'ebike-001', status: 'stolen' as never, actor: 'team-test' };
+    const input = { id: 'ebike-001', status: 'stolen' as never, actor: 'admin' };
 
     await expect(changeAssetStatus(db, input)).rejects.toThrow();
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).status).toBe(
@@ -106,7 +135,7 @@ describe('changeAssetStatus', () => {
   });
 
   it('answers not_found for an unknown id and writes nothing', async () => {
-    const result = await changeAssetStatus(db, { id: 'nope', status: 'reserved', actor: 'x' });
+    const result = await changeAssetStatus(db, { id: 'nope', status: 'reserved', actor: 'admin' });
     expect(result).toEqual({ ok: false, reason: 'not_found' });
     expect(await db.auditLog.count()).toBe(0);
   });

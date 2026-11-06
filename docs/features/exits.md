@@ -69,7 +69,7 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 - **D22**: `CONTRACT_BOUGHT_OUT` sets the asset `sold`; `UNIT_RETURNED` and `UNIT_PASSED_ON` set it `returned`, on the bus (`src/server/catalogue-handlers.ts`), each a conditional write on `leased`.
 - **D23**: every status (the contract's, the invoice's, the asset's), mode, condition, reason and invoice kind is parsed with its schema before use or write; a bad value throws.
 - **D1, D2**: one half-up rounding per amount, the VAT per invoice line at the rate of the invoice day.
-- **D32 to D35** (proposed): `ended_early` for every exit before the end, every unpaid rent cancelled, no bill for an end-of-term return, a cancelled invoice owes nothing.
+- **D32 to D35** (decided, 2026-11-05): `ended_early` for every exit before the end, every unpaid rent cancelled, no bill for an end-of-term return, a cancelled invoice owes nothing.
 
 ## Pure functions
 
@@ -99,12 +99,12 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 
 ## Open questions
 
-Written up in `docs/decisions.md`: D31 (card 8's curve age, provisional) and D32 to D35 (proposed: `ended_early`, the cancelled rents, the end-of-term return, what a cancelled invoice owes).
+Written up in `docs/decisions.md`: D31 (card 8's curve age, provisional) and D32 to D35 (decided: `ended_early`, the cancelled rents, the end-of-term return, what a cancelled invoice owes). The three mentor questions, card 8 among them, are in [mentor-questions.md](../mentor-questions.md).
 
 - **Card 8: yes, provisional: market value by months since lease start (D31), mentor question open.** Decided by Johannes on 2026-11-06, to be confirmed with the mentors in the morning. If they answer D11 for every item, `curveAgeInMonths` returns `ageInMonths` for every item: a one-line change, and card 8 is 202 523 as good with 1 800 km.
 - **The condition and usage are self-reported** until the assessment (wave 3). The exit bills on what the customer says. The assessment may find another condition, and nothing re-bills yet.
 - **A return at the end of the term issues no invoice.** The cost shown is the refurbishment, but the invoice kinds (`down_payment`, `rent`, `buyout`, `early_exit`) have no refurbishment charge, so nothing is billed and the page says the lessor bears it. Options: add a `refurbishment` kind (a text column, no migration), or decide that normal wear at the end is the lessor's.
-- **`cancelled`** was added to `invoiceStatuses` (a text column, no migration). `contractBalanceOn` in invoicing does not know it yet: it would count a cancelled rent as open. Nothing calls it on an ended contract today; the invoicing owner should skip `cancelled` there.
+- **`cancelled`** was added to `invoiceStatuses` (a text column, no migration). `contractBalanceOn` in invoicing skips a `cancelled` invoice (D35, wave 2 upkeep), so a cancelled rent is never counted as open.
 - **Every unpaid rent is cancelled, not only the future ones.** The brief said "unpaid rents with a period after today". Cancelling only those would bill an overdue rent twice, once on its own invoice and once inside the D14 balance. The balance after the paid rents covers every rent not paid.
 - **Pass on, next steps (wave 3):** the next person's application pre-filled for them, the second-life quote (D12), and `previous_contract_id` on their contract. Today the exit stops at `passed_on`, with the asset `returned` and the passport entry that names the next customer.
 - **The farm machine's `per started N engine_hours since last service`** counts the blocks on the returned usage, because the pack has no service history.

@@ -1368,7 +1368,7 @@
     },
     "/api/assets/{id}/status": {
       "patch": {
-        "summary": "Change an asset's status and write the audit row in the same transaction",
+        "summary": "Admin only: change an asset's status along D22's transitions, audited",
         "tags": ["assets"],
         "parameters": [
           {
@@ -1391,14 +1391,9 @@
                   "status": {
                     "type": "string",
                     "enum": ["available", "reserved", "returned", "leased", "sold"]
-                  },
-                  "actor": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 100
                   }
                 },
-                "required": ["status", "actor"],
+                "required": ["status"],
                 "additionalProperties": false
               }
             }

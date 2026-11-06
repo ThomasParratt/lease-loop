@@ -5,13 +5,13 @@ import { messages } from '@/i18n/get-t';
 import { signRefusalText } from './sign-refusal';
 
 describe('signRefusalText', () => {
-  it('writes start_too_far with the 90 days and the latest start as a date', () => {
+  it('writes start_too_far with the 12 months and the latest start as a date (D45)', () => {
     const text = signRefusalText('en', {
       code: 'start_too_far',
-      params: { latestStartDate: '2027-02-03', startDate: '2027-03-01', maxDays: 90 },
+      params: { maxStartDate: '2027-11-05', startDate: '2027-11-06', maxMonths: 12 },
     });
     expect(text).toBe(
-      'The lease must start within 90 days of signing, by 3 February 2027 at the latest.'
+      'The lease must start within 12 months of signing, by 5 November 2027 at the latest.'
     );
   });
 

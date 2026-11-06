@@ -91,77 +91,25 @@ The pure card files are in `src/domain/scenarios/`, the end-to-end ones in `src/
 
 ## Features
 
-Per-feature state (missing, in progress, done, verified): [docs/features/STATUS.md](docs/features/STATUS.md).
+One page per slice under `docs/features/` ([template](docs/features/README.md)); the state of each (missing, in progress, done, verified) is [STATUS.md](docs/features/STATUS.md).
 
-One page per feature slice under `docs/features/` (template: [docs/features/README.md](docs/features/README.md)):
-
-- [Catalogue, demo clock, actor and audit trail](docs/features/catalogue.md) (wave 0)
-- [Circular impact and the passport](docs/features/circular-impact.md) (wave 1)
-- [Pricing and quotes](docs/features/pricing.md) (wave 1): the price page with live sliders, the line-by-line breakdown, the term comparison, the catalogue's offer (`financeOffer`) and "Apply at this price", which locks the quote at its date and list version (cards 1, 2, 6, 7; smart problem 6); the maximum term per item category (D43: a laptop up to 36 months, from `data/term-limits.json`)
-- [The question flow and the application](docs/features/question-flow.md) (wave 1)
-- [Invoicing: the schedule, VAT by invoice date, the balance](docs/features/invoicing.md) (wave 1): the monthly schedule billed in advance, paying an invoice, the outstanding balance for an early exit
-- [Contracts: signing and the contract page](docs/features/contracts.md) (wave 2): the Sign form on the approved application page, signing an approved application from its stored quote, the last-unit race, the price lock explained (cards 1, 2) and the invoices under the contract (card 3)
-- [Row schemas](docs/features/row-schemas.md): the Zod rules every stored row is parsed with before the write, held to `prisma/schema.prisma` by a test (D27)
-- [Exits: buy out, return, pass on and the early exit](docs/features/exits.md) (wave 2): the D14 early exit line by line, the market value by the residual curve, the refurbishment plan, the contract page section (card 8; the exits cards 9 and 10 start from)
-- [The look: tokens, the price tag, life stamps and drawings](docs/features/look.md): one warm look for every page through colour roles, the price tag, the life stamp and a drawing per kind of item; the demo tools in their own strip above the customer header (D21)
-- [The tamper-evident audit chain](docs/features/audit-chain.md) (wave 2): every audit row hash-chained to the one before it in the same transaction, the verifier, the chain badge with the head hash and the `demo:tamper` script
-- [My leases](docs/features/my-leases.md): the acting customer's contracts and unsigned applications in the top navigation (every one for admin), so any contract is two clicks away
+- [Catalogue, asset statuses, demo clock, actor and audit trail](docs/features/catalogue.md)
+- [Pricing and quotes](docs/features/pricing.md)
+- [The question flow and the application](docs/features/question-flow.md)
+- [Contracts: signing and the contract page](docs/features/contracts.md)
+- [Invoicing: the schedule, VAT by invoice date, the balance](docs/features/invoicing.md)
+- [Exits: buy out, return, pass on and the early exit](docs/features/exits.md)
+- [Circular impact and the passport](docs/features/circular-impact.md)
+- [Row schemas](docs/features/row-schemas.md)
+- [The look: tokens, the price tag, life stamps and drawings](docs/features/look.md)
+- [The tamper-evident audit chain](docs/features/audit-chain.md)
+- [Test isolation](docs/features/test-isolation.md)
+- [My leases](docs/features/my-leases.md)
 
 ## Team notes
 
-- `AGENTS.md`: the organiser's rules plus our working rules; every agent and person reads it first.
-- `docs/kickoff-brief.md`: the plan (scope, decisions, schema ownership, events, waves, the agent brief template).
-- `docs/decisions.md`: every decision with its reason; `docs/stack-notes.md`: the traps of this stack; `docs/log/`: one time log per task; `docs/reviews/`: the wave reviews.
-- `tests/meta-rules.test.ts`: the engineering rules checked against the repository itself, in `npm test`.
-- The practice repo (`ThomasParratt/leasing-platform`) is a read-only parts bin cloned beside this one; port functions with their tests, never structure.
-- A branch is named after the feature it builds, `<type>/<slice>` with the conventional-commit type as prefix: `feat/pricing`, `feat/invoices`, `chore/wave0-upkeep`, `test/wave1-hardening`; a session that starts on a generated name renames it with `git branch -m` before its first push.
-- Nobody pushes to `main` directly, not even docs or tooling: every change is a branch and a pull request on the fork, CI runs on the PR, and it is squash-merged with a conventional subject.
-
-### Database
-
-SQLite through Prisma 7, schema in `prisma/schema.prisma`, `snake_case` columns. Models: `Asset` and `Customer` (both seeded from the data pack by `npm run db:setup`, idempotently), `Quote`, `Application`, `Contract`, `Invoice`, `AssetEvent` (the passport; its autoincrement id is the order), `ReturnAssessment` and `AuditLog`. Who owns and writes each model is `docs/kickoff-brief.md` section 6. Money is integer cents, rent factors integer millionths, VAT rates basis points, business dates ISO day strings. SQLite has no enums: the asset values are Zod enums in `src/data/schemas.ts`, and the allowed decisions, contract and invoice statuses, invoice kinds and event kinds in `src/domain/statuses.ts`. The server function that writes a value parses it with its schema itself, before the write (D23), so a caller that skips the route cannot store a bad one. An asset is `available`, `reserved` (held, the data pack's meaning), `leased` (on a contract), `returned` or `sold` (bought out) (D22). Customers are read through `listCustomers` / `getCustomer` in `src/server/customers.ts`, in the `Customer` shape of `src/data/schemas.ts`.
-
-### Who is acting
-
-There is no login (D17). The "continue as" picker (`src/components/actor-picker.tsx`, in the header) posts `{ actor }` (a customer id or `admin`) to `POST /api/actor`, which sets the `lease-loop-actor` cookie; `DELETE /api/actor` clears it. Pages and routes call `readActor(db)` from `src/server/actor.ts` once per request and pass the actor to `withAudit`; an unknown or missing cookie reads as `anonymous`.
-
-### API
-
-Every API route has one row in the route table, `src/server/routes.ts`: method, the Next.js path pattern (`/api/assets/[id]/status`), a summary, a tag, and the Zod schemas of its params, query, body and success `data`. Route files import their schemas from there. `npm run openapi` turns the table into [docs/openapi.json](docs/openapi.json) (OpenAPI 3.1, success bodies wrapped in the `ok()` envelope, errors in the `fail()` one). Tests fail when a `route.ts` has no row (or a row no file) and when the committed `docs/openapi.json` differs from the table, so add the row first and run `npm run openapi` after.
-
-### Events
-
-When one change touches several slices' rows at one instant, the owner emits one event inside `withAudit` and the other slices react in the same transaction (`docs/kickoff-brief.md` section 7). The payloads are Zod schemas in `src/domain/events.ts`: `CONTRACT_SIGNED`, `CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`, `INVOICE_PAID`. `src/server/events.ts` has `onEvent(type, handler)` and `emit(tx, event)`: handlers get the same `tx`, run in registration order, and a handler that throws rolls the whole change back.
-
-### Pages
-
-`/[locale]` is the landing page, `/[locale]/catalogue` the catalogue (what can be leased today, one card per model; filtered by `?category=`, then `?condition=`, `?brand=` and `?sort=`, D42), `/[locale]/demo` the demo page (the clock and, from wave 1, one button per scenario card), `/[locale]/audit` the newest 50 audit rows, `/[locale]/assets/[id]` the price page and the stored quote, `/[locale]/assets/[id]/passport` the passport, `/[locale]/apply/[quoteId]` the application and `/[locale]/applications/[id]` its decision. The page header is split in two (`src/components/site-header.tsx`): a teal staff strip with the demo tools (the "continue as" actor picker, the demo page, and the audit log for admin only), and the customer header with the catalogue, how it works and the language switcher, folding into a menu on a phone. The layout reads the customers and the current actor once per request for the picker. Pages are built from the kit in `src/components/ui` (`PageHeader`, `Card`, `Button`, `LinkButton`, `Badge`, `DefinitionList`, `Field`, `Notice`, `Money`, `DateText`, `NavLinks`, `PriceTag`, `LifeStamp`, `StaffNote`, one `index.ts`), `ItemArt` for the drawings, and the tokens in `src/app/globals.css` (D21, [docs/features/look.md](docs/features/look.md)): pages use the roles `brand`, `brand-soft`, `accent`, `focus`, `success`, `warning`, `danger`, `info`, `neutral`, `staff`, `surface`, `raised`, `muted`, `line`, `line-strong`, `ink`, `ink-muted` (e.g. `bg-brand`, `text-ink-muted`, `bg-success-soft`), never raw colour classes or the scales under them. Each token switches with the colour scheme, so no page needs a `dark:` class.
-
-### Demo clock
-
-The demo page moves the app to any day, so a scenario card dated September 2026 or February 2028 runs on its own date. `POST /api/demo/clock` with `{ "asOf": "2026-09-15" }` sets the `lease-loop-as-of` cookie and `{ "asOf": null }` clears it. Pages and routes call `todayForRequest()` from `src/server/demo-clock.ts` once and pass the day down; it is `todayIso()` unless the cookie holds a real calendar day (an invalid one is ignored). The catalogue's "prices on" follows it. It is the only date the server takes from the browser.
-
-### Pricing and quotes
-
-`/[locale]/assets/[id]` (linked from every catalogue card; an item that needs a down payment or several units to fit the bands opens set up that way, with a notice saying why, D41) has two sliders (the term over the terms the item may be offered, the table's 12/24/36/48 under its category's cap (D43) and the down payment, 0 to the price in 1 % steps) and a quantity field, beside the item from 768 px. Each change asks `GET /api/quotes/preview`, which prices on the request's day and returns the breakdown (list price, × quantity, down payment, financed amount, band and factor, net rent, VAT and gross, per-unit split, buyout, total if you return it and if you buy it) and every term side by side; the browser never computes a price. "Apply at this price" posts to `POST /api/quotes`, which stores a `Quote` row through `withAudit` (`quote.created`), valid 14 days, and opens `/[locale]/apply/[quoteId]`, which shows "Price locked until" while the quote is valid. The breakdown and the term comparison are collapsible sections under the price panel. `GET /api/quotes/[id]` rebuilds the breakdown from the stored numbers and never re-prices. The pure functions are in `src/domain/pricing/` (`priceQuote`, `compareTerms`, `financeOffer`, `quoteStatusOn`, `breakdownFromFrozen`, `addDays`); refusals (`below_minimum`, `above_maximum`, `down_payment_too_high`, …) are codes with params written from `pricing.refusal.*`. Full description, the worked examples and the decisions: [docs/features/pricing.md](docs/features/pricing.md).
-
-### Application
-
-The question flow (CHALLENGE.md smart problem 4) is pure code in `src/domain/question-flow/`:
-
-- `engine.ts`: `visibleQuestions(bank, context, answers)` applies `ask_when` as `data/DATA.md` says (all conditions; empty = always; `in`, `gte`, `lte`; `answers.<id>`), in the bank's order. `customer_type` is the applicant's own `q_customer_type` answer once given, the context's before. `nextQuestion` is the first visible question without an answer; `pruneAnswers` drops answers to questions that are no longer visible, repeating until stable (can-sign no → signatory named → yes: the signatory goes). `whyWeAsk(question, locale)` falls back to English. The context is `{ customerType, category, financedCents, termMonths }`, built by the caller from the quote.
-- `eligibility.ts`: `evaluate(rules, input)` → `{ decision, reasons: { code, params }[] }` (D9). Any failed rule rejects and every failure is listed (`too_young` with `eighteenOn`, `residency_not_allowed`, `unaffordable` at 30 % of net income against the gross rent, `invalid_business_id`, `financed_out_of_range`, `missing_answer`); else a PEP goes to `manual_review`; else a company applicant who cannot sign is `awaiting_signatory`; else `approved` with `all_checks_passed`. Affordability applies only when the bank asked for income (consumers from 200 000 financed). A 29 February birthday turns 18 on 1 March.
-- `business-id.ts`: the Y-tunnus check digit (weights 7 9 10 5 8 4 2, mod 11; remainder 1 is never valid). `answers.ts`: the answers → eligibility input, answer validation by type, euros typed by a person → cents without floats, gross = net + VAT through the shared `splitVat` of `src/domain/money-math.ts` (D1), and `answersFromCustomer` for the demo prefill.
-
-`src/server/applications.ts` has `createApplication` (reads the quote through pricing's `getQuote` and the customer through `getCustomer`, prunes, refuses incomplete or malformed answers and an expired quote, evaluates, writes the row through `withAudit`), `decideApplication` (D10: an admin decides a manual review, and one that also needs a signatory then waits for them; the named signatory signs or declines; anything else is final) and `getApplication`. Routes: `POST /api/applications`, `GET /api/applications/[id]`, `POST /api/applications/[id]/decision`. Pages: `/[locale]/apply/[quoteId]` asks one question at a time for the acting customer, with "why we ask", back, progress, a review with "change" per answer and a notice when a change removes answers; `/[locale]/applications/[id]` writes the decision and each reason from `decision.reason.<code>` in the visitor's language, with the admin's review buttons, the signatory's sign form, or on a yes the Sign form that turns it into a contract. The rules worked through cards 5, 6 and 7, the signatures and the open questions: [docs/features/question-flow.md](docs/features/question-flow.md).
-
-### Invoices
-
-At signing, the `CONTRACT_SIGNED` handler (`src/server/invoice-handlers.ts`, registered through `src/server/event-handlers.ts`) builds the schedule with `buildSchedule` from `src/domain/invoicing` and writes it in the signing transaction. Invoice 0 is the down payment, issued on the signing day and left out when the down payment is zero. Invoices 1 to term are each one full month of rent, issued and due on the first day of the period, with the start day clamped to short months. Each invoice takes the VAT rate in force on its issue date (D2–D5). `GET /api/invoices?contractId=` lists a contract's invoices. `POST /api/invoices/[id]/pay` pays one on the request's day, writes the audit row and emits `INVOICE_PAID`. Both routes are open to the contract's customer and admin only. `<InvoiceTable contractId today locale t />` (`src/components/invoice-table.tsx`) is the table for the contract page, with one line explaining a VAT change. `outstandingBalanceAfter` gives the D14 balance after n rents, row by row, for the early exit. Anything that emits an event imports `@/server/event-handlers` first.
-
-### Passport and impact
-
-Every lease, return, buyout and pass-on writes a row to the asset event log (`AssetEvent`, ordered by id) through the handlers in `src/server/passport-handlers.ts`, registered by `src/server/event-handlers.ts` (a service that emits imports that module). `src/domain/passport.ts` folds the log into lives (`livesFromEvents`, `passportFor`; the lives `previous_lives` counts come first, undated, 24 months assumed). `src/domain/second-life/co2.ts` is the CO2 method of D15: a later life avoids footprint × (1 − refurbishment share) × its months ÷ the design life, capped at the design life that is left; the first life earns nothing; grams rounded once to whole kg. `GET /api/assets/[id]/passport` returns the asset, its lives and the CO2; the page is `/[locale]/assets/[id]/passport`, and the landing page's impact strip shows the fleet total and the total per category. Card 10: `ebike-008` has saved 29 kg from its second life and reaches 58 kg after a 24-month third life. The method, worked example and open questions: [docs/features/circular-impact.md](docs/features/circular-impact.md).
+How we work (rules, branches, reviews) and how the app is put together (database, actor, API, events, pages, each slice): [docs/team-notes.md](docs/team-notes.md).
+Open questions for the mentors: [docs/mentor-questions.md](docs/mentor-questions.md); decisions: [docs/decisions.md](docs/decisions.md).
 
 ---
 

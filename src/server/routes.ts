@@ -64,9 +64,9 @@ export const listAssetsQuerySchema = z.object({ category: assetCategorySchema.op
 
 export const assetIdParamsSchema = z.object({ id: z.string().min(1) });
 
+/** Body of `PATCH /api/assets/[id]/status`. The actor is the cookie's, never the body's (D17). */
 export const changeAssetStatusBodySchema = z.strictObject({
   status: assetStatusSchema,
-  actor: z.string().trim().min(1).max(100),
 });
 
 // ---------- actor ----------
@@ -230,7 +230,7 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'PATCH',
     path: '/api/assets/[id]/status',
-    summary: "Change an asset's status and write the audit row in the same transaction",
+    summary: "Admin only: change an asset's status along D22's transitions, audited",
     tag: 'assets',
     params: assetIdParamsSchema,
     body: changeAssetStatusBodySchema,

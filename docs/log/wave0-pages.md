@@ -25,3 +25,5 @@ Real clock, Helsinki. Coding agent: Opus, in the worktree slot `dazzling-hugle-b
 - No OpenAPI entry for `POST /api/demo/clock`: the route table and generator belong to wave 0b; add the row when it lands.
 - The footer still says "Starter skeleton — replace me".
 - Dark-mode contrast of the tokens was checked by eye, not measured.
+
+Closed by the wave 2 upkeep, 2026-11-05: the task is merged; what was left is in `docs/reviews/wave-0.md` "Open".

@@ -61,7 +61,7 @@ The tests therefore use a derived bound, `amortisationTolerance(financed, term)`
 
 ## Decisions
 
-D1 (rounding), D2 (VAT on the invoice date), D3 (the schedule, billed in advance, day clamped), D4 (full first month), D5 (the down payment is invoice 0): implemented as proposed. D14: the balance is implemented; the exit itself (buy and return variants) is wave 2. See [docs/decisions.md](../decisions.md).
+D1 (rounding), D2 (VAT on the invoice date), D3 (the schedule, billed in advance, day clamped), D4 (full first month), D5 (the down payment is invoice 0): implemented as proposed. D14: the balance is here; the exit itself (buy and return) is [exits.md](exits.md). D35: a `cancelled` invoice (an early exit replaced it) owes nothing and is left out of `contractBalanceOn`. See [docs/decisions.md](../decisions.md).
 
 Choices made in this wave, beyond the brief:
 
@@ -90,14 +90,15 @@ outstandingBalanceAfter({ financedCents, annualInterestPercent, monthlyNetCents,
 amortisationSchedule(input): AmortisationRow[]   // { month, openingCents, interestCents, paymentCents, closingCents }
 amortisationTolerance(financedCents, termMonths): number
 invoiceStatusOn({ issueDate, dueDate, paidOn }, today): 'paid' | 'due' | 'overdue' | 'upcoming'
-contractBalanceOn(invoices, payments: Record<id, paidOn>, today)
+contractBalanceOn(invoices /* status 'cancelled' skipped (D35) */, payments: Record<id, paidOn>, today)
   : { openCents; overdueCents; upcomingCents; paidCents; openInvoiceIds; overdueInvoiceIds }
 
 // src/server/invoices.ts
 writeSchedule(tx, contractId, invoices: ScheduledInvoice[]): Promise<number>
 listInvoices(db, contractId): Promise<InvoiceView[]>
 payInvoice(db, { id, paidOn, actor }): Promise<{ ok: true; invoice } | { ok: false; reason: 'not_found' | 'already_paid' }>
-invoiceCustomerId(db, invoiceId) / contractCustomerId(db, contractId): Promise<string | null>
+invoiceCustomerId(db, invoiceId): Promise<string | null>   // the contract read through contracts.ts
+contractCustomerId                                       // re-exported from src/server/contracts.ts
 
 // src/server/invoice-handlers.ts — registered on CONTRACT_SIGNED via src/server/event-handlers.ts
 handleContractSigned(tx, event, vatRates?): Promise<number>   // event.signedOn dates invoice 0

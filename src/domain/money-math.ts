@@ -28,6 +28,18 @@ export function roundHalfUpDiv(numerator: number, denominator: number): number {
 }
 
 /**
+ * The same half-up rule as `roundHalfUpDiv`, on BigInts, for a product of several factors that
+ * outgrows a safe integer (the market value: list price × curve × condition × usage). One rule,
+ * two number types; nothing else in the money code rounds.
+ */
+export function roundHalfUpDivBig(numerator: bigint, denominator: bigint): bigint {
+  if (numerator < 0n) throw new RangeError(`numerator must be ≥ 0, got ${numerator}`);
+  if (denominator <= 0n) throw new RangeError(`denominator must be > 0, got ${denominator}`);
+  const quotient = numerator / denominator;
+  return (numerator % denominator) * 2n >= denominator ? quotient + 1n : quotient;
+}
+
+/**
  * Turns a coefficient such as 0.027584 into integer millionths (27 584). Throws if the factor
  * is negative or has more than six decimals, so the conversion is always exact.
  */

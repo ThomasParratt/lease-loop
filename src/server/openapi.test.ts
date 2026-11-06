@@ -60,7 +60,7 @@ describe('docs/openapi.json', () => {
     ]);
     expect(patch?.requestBody?.content[JSON_TYPE]?.schema).toMatchObject({
       type: 'object',
-      required: expect.arrayContaining(['status', 'actor']),
+      required: ['status'],
     });
     const list = operation('/api/assets', 'GET');
     expect(list?.parameters).toEqual([

@@ -264,7 +264,10 @@ export async function listContracts(
 }
 
 /** The customer of a contract, for the access checks. Null for an unknown contract. */
-export async function contractCustomerId(db: PrismaClient, id: string): Promise<string | null> {
+export async function contractCustomerId(
+  db: PrismaClient | TransactionClient,
+  id: string
+): Promise<string | null> {
   const row = await db.contract.findUnique({ where: { id }, select: { customer_id: true } });
   return row?.customer_id ?? null;
 }
