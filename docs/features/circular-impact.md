@@ -2,7 +2,7 @@
 
 ## What it does
 
-Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided, per item on the passport page (its total with a "How is this counted?" popup holding the method with that item's numbers and the note on money saved) and on the landing page's "Why it's greener": the total CO2 saved as the big number, and under it the same total per category ("29 kg CO₂e saved by e-bike leasing"), which adds up to it. A "How is this counted?" button under the numbers shows the method in a few sentences on hover, focus or tap (the refurbishment share read from `co2-factors.json`). The strip names no items: each item's saving is on its passport, reached from the catalogue (greyed returned and leased units link straight to theirs) (smart problem 7, problem 3's passport bonus, scenario card 10).
+Every item has a passport: its lives across leases, with dates, months, contract and what happened between lives (assessed, refurbished, repriced). Each later life is credited with the CO2 it avoided and the money it saved (D80), per item on the passport page (both totals, each life's "29 kg CO₂e and €316.62 saved", and a "How is this counted?" popup holding both methods with that item's numbers) and on the landing page's "Why it's greener": the total CO2 saved as the big number, the total money saved under it, and the same totals per category ("29 kg CO₂e and €316.62 saved by e-bike leasing"), which add up to them. A "How is this counted?" button under the numbers shows the method in a few sentences on hover, focus or tap (the refurbishment share read from `co2-factors.json`). The strip names no items: each item's saving is on its passport, reached from the catalogue (greyed returned and leased units link straight to theirs) (smart problem 7, problem 3's passport bonus, scenario card 10).
 
 ## The rule: the method, worked through card 10
 
@@ -38,7 +38,31 @@ On the signing day the third life has 0 months and the passport shows 29 kg; the
 
 **Rounding.** Everything is computed in grams, unrounded, and rounded once, half up, to whole kg where it is shown (`gramsToKg`). An item's total is rounded from its unrounded grams; the fleet total is the sum of the rounded category rows, so the breakdown adds up.
 
-**Money saved is not shown**: `co2-factors.json` has no money factor, and the page says so. The e-bike's avoided car km factor is not used either: the data pack's usage is a lifetime total, not per life.
+### Money saved (D80)
+
+In euros, from the data pack's money: a later life is credited with the share of a new item's price it used and charged what getting the item ready for it really cost:
+
+```
+money saved = new list price × months counted ÷ design life months − refurbishment cost of that life
+              (never below 0; months counted as for the CO2)
+```
+
+- **New list price:** the item's net list price on the day (the price list in force, as the catalogue shows it), so the saving is in today's money and moves when a new list starts: card 10's life 2 shows 314,80 € on 5 Nov and 332,80 € on 6 Nov.
+- **Refurbishment cost:** what the return assessment spent before that life (the `refurbished` event's `costCents`, from `refurbishment-costs.json`). A past life from before our records has **no record of the exact costs**, so it is charged only the costs we know were there: the steps the cost table does on every relisting (`when: "always"`: e-bike safety inspection 4 500, laptop data wipe 2 500, farm machine safety inspection 40 000). Its amount is shown as **estimated**, on the passport (per life and under the total) and on the landing page.
+- **Worn out:** a life past the design life counts 0 months and saves nothing; a life whose refurbishment cost more than the use it gave saves 0, never a negative amount, and never takes away from another life.
+
+Card 10, `ebike-008`, 188 900 on price list v2 (from 6 Nov 2026): a 24-month life is 188 900 × 24 ÷ 120 = 37 780 of a new bike's use.
+
+| Life       | Months counted | Refurbishment                      | Saved                   |
+| ---------- | -------------- | ---------------------------------- | ----------------------- |
+| 1 (past)   | 0              | —                                  | 0 (first life)          |
+| 2 (past)   | 24             | 4 500, estimated (inspection only) | 37 780 − 4 500 = 33 280 |
+| 3 (logged) | 24             | 4 500 (card 10's assessment)       | 37 780 − 4 500 = 33 280 |
+| **Total**  |                |                                    | **66 560** (665,60 €)   |
+
+Had card 10's refurbishment cost 39 500 (a battery and the inspection), life 3 would save 0. Integer cents, one division, half up (D1); an item's total and each category row are rounded once from the exact sum, and the fleet total is the sum of the rows, so the landing page's breakdown adds up.
+
+The e-bike's avoided car km factor is not used: the data pack's usage is a lifetime total, not per life.
 
 ### How lives come from the event log
 
@@ -54,7 +78,7 @@ The rows are written by the handlers in `src/server/passport-handlers.ts`: `CONT
 
 ## Decisions
 
-Implements **D15** (`docs/decisions.md`, status: implemented as proposed). To the challenge's question, "is the saving the same when the item was almost worn out?": no. A later life is credited with the share of a new item's life it replaces, so an almost worn-out item earns almost nothing and no footprint is counted twice. Crediting a whole footprint per reuse, as the data file's hint suggests, would credit a 2-month second life the same as a 10-year one.
+Implements **D15** (`docs/decisions.md`, status: implemented as proposed) and **D80** (money saved, by the same method). To the challenge's question, "is the saving the same when the item was almost worn out?": no. A later life is credited with the share of a new item's life it replaces, so an almost worn-out item earns almost nothing and no footprint is counted twice. Crediting a whole footprint per reuse, as the data file's hint suggests, would credit a 2-month second life the same as a 10-year one.
 
 ## Pure functions
 
@@ -70,6 +94,17 @@ co2SavedForAsset(method, { category, lives: { months }[] }):
   { perLifeGrams: number[]; perLifeKg: number[]; totalGrams: number; totalKg: number }
 fleetImpact(method, assets: { category, lives }[]):
   { perCategory: { category, assetsWithLaterLife, kg }[]; assetsWithLaterLife: number; totalKg: number }
+countedMonths(method, life): number                          // shared with the money saved
+```
+
+`src/domain/second-life/money-saved.ts` (pure):
+
+```ts
+mandatoryRefurbishmentCents(costs, category): number  // the `always` steps
+refurbishmentByLife(lives: { between }[], fallbackCents): number[]
+moneySavedByLife(method, { category, lifeIndex, months, monthsUsedBefore?, newPriceCents, refurbishmentCents }): number  // cents
+moneySavedForAsset(method, { category, newPriceCents: number | null, lives: { months, refurbishmentCents }[] }): { perLifeCents: number[]; totalCents: number }
+fleetMoneySaved(method, assets): { perCategory: { category, cents }[]; totalCents: number }
 ```
 
 `src/domain/passport.ts` (pure):
@@ -86,15 +121,15 @@ passportFor(asset: Asset, events: PassportEvent[], asOf?: string): Passport
 ```ts
 appendAssetEvent(tx, { assetId, contractId?, kind, onDate, details? }): Promise<PassportEvent>
 listAssetEvents(db, assetId): Promise<PassportEvent[]>
-readPassport(db, assetId, asOf): Promise<{ asset, passport, co2 } | null>
-readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[] }>
+readPassport(db, assetId, asOf): Promise<{ asset, passport, co2, money } | null>
+readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; money: FleetMoney; assets: { asset, kg }[] }>
 ```
 
 `src/server/passport-handlers.ts`: `registerPassportHandlers(): () => void`, called once by `src/server/event-handlers.ts`.
 
 ## Files
 
-- `src/domain/second-life/co2.ts`, `src/domain/passport.ts` and their tests
+- `src/domain/second-life/co2.ts`, `src/domain/second-life/money-saved.ts`, `src/domain/passport.ts` and their tests
 - `src/server/asset-events.ts`, `src/server/passport-handlers.ts`, `src/server/event-handlers.ts` and tests; `tests/helpers/contract-fixture.ts`
 - `src/app/api/assets/[id]/passport/route.ts` (`GET`, row in `src/server/routes.ts`, in `docs/openapi.json`)
 - `src/app/[locale]/assets/[id]/passport/page.tsx`, `src/components/impact-strip.tsx` (mounted on the landing page), a "Passport" link on the price page
@@ -104,7 +139,8 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[]
 
 - `co2.test.ts`: "an item returned after 2 of 60 months earns 2/60 of the net footprint, not the whole" (4.84 → 5 kg); "a worn-out item whose lives already used the design life earns nothing more"; "a life longer than the remaining design life is capped"; "rounds the total once, not each life"; "card 10: ebike-008, two past lives and a 24-month third life, has saved 58 kg" (`[0, 29, 29]`, 58 080 g).
 - `passport.test.ts`: whole months (15 Jan → 14 Feb is one month, 31 Jan clamps), open life, two events on one day in log order, "card 10: ebike-008 shows its two past lives, undated and estimated".
-- `asset-events.test.ts`: card 10 through the database (58 kg after 24 months, 29 kg on the signing day), a new item with no history, the fleet total.
+- `money-saved.test.ts`: the first life saves nothing, a whole design life saves the new price minus the cost, 7 of 60 months rounded once (9 167), an almost worn-out item counts only what is left, a costlier refurbishment saves 0 and never takes away from another life, the mandatory steps per category (4 500, 2 500, 40 000), `refurbishmentByLife` (the logged cost, the fallback, a malformed cost refused), "card 10: ebike-008 on 6 Nov 2026 has saved 332,80 €, and 665,60 € after its third life".
+- `asset-events.test.ts`: card 10 through the database (58 kg and 66 560 cents after 24 months, 29 kg and 33 280 on the signing day; a 39 500 refurbishment leaves life 3 at 0), a new item with no history, the fleet totals.
 - `passport-handlers.test.ts`: each event writes its row; a later handler failure rolls the row back with the audit row.
 - `src/domain/scenarios/card-10-third-life.test.ts` (scenario harness): the passport from the data pack and a logged third life feeds the CO2 counter, [0, 29, 29] → 58 kg; an open third life at 12 months adds 15 kg.
 
@@ -112,5 +148,4 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[]
 
 - **`previous_lives` after a return.** The passport reads it as the lives before the log. The exits slice (wave 2) leaves `previous_lives` as it is on a return, so a logged life is not counted twice; the second-life slice (PR #53) keeps it that way: the relist writes the status, condition and usage only, so card 10's third life is the logged one.
 - **Design lives and the 24-month past-life estimate** are team assumptions, not data-pack numbers; ask the mentors whether they want them in the data pack.
-- **Money saved**: needs a money factor the data pack does not have (e.g. the new price against the refurbishment cost from `refurbishment-costs.json`).
 - Every event has its writer: signing (`CONTRACT_SIGNED`) and the exits (`CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`) write `leased`, `bought`, `returned` and `passed_on`; the assessment (`assessAsset`, PR #53) writes `assessed`, `refurbished` and `repriced`. Card 10's third-life lease runs on a database in `src/server/scenarios/card-10.test.ts` (37 101, 1 359 a month, 58 kg after 24 months).
