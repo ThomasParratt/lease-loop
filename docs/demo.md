@@ -52,7 +52,7 @@ Switch to the `/en/audit` tab and reload: every change the run made is a row, wi
 npm run demo:tamper
 ```
 
-Reload: the badge names the first broken row. That is tamper-evident, not tamper-proof ([audit-chain.md](features/audit-chain.md)). `npm run db:reset` restores it after the demo.
+Reload: the badge names the first broken row. Then the attack a hash chain alone cannot see: `npm run db:reset`, run a card again, and `npm run demo:tamper -- --rewrite` edits a row and recomputes every hash after it. Reload: still broken, "its signature does not match: it was rewritten without the key", because the key lives in `.env`, not the database, and the anchor file beside it kept the old hashes (D81). That is tamper-evident, not tamper-proof ([audit-chain.md](features/audit-chain.md)). `npm run db:reset` restores it after the demo.
 
 ## 10:30 to 11:00, language and phone
 

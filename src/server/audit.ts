@@ -6,14 +6,22 @@
 // the row before it and its own hash over that plus its canonical content, so an edit, a
 // deletion or a reordering made outside the app shows up in verifyAuditChain. Tamper-evident,
 // not tamper-proof: the head hash is the anchor a person copies out of the database.
+//
+// The seal (D81) closes the two holes D36 left: every row's hash and the head are signed with
+// the Ed25519 key in .env (audit-signing.ts), so a rewrite with fresh hashes needs the key, and
+// after the commit the head is appended to an anchor file outside the database (audit-anchors.ts).
 import {
   GENESIS_HASH,
   hashAuditEntry,
-  verifyAuditChain as verifyChainRows,
-  type AuditChainVerdict,
+  headSigningMessage,
+  rowSigningMessage,
+  verifySealedChain,
+  type AuditSealVerdict,
 } from '@/domain/audit';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { auditEntrySchema } from '@/domain/rows/audit-entry';
+import { appendAuditAnchor, readAuditAnchors } from './audit-anchors';
+import { auditSigner, SIGNING_KEY_ENV } from './audit-signing';
 import { parseRow } from './row-rules';
 
 export type AuditEntry = {
@@ -49,9 +57,16 @@ export async function withAudit<T>(
 ): Promise<T> {
   // Checked before the change runs: an entry that cannot be written must not cost the work.
   parseRow('audit entry', auditEntrySchema, entry);
+  // Fail closed: an unsigned row would read as a break, so no change is made without the key.
+  const signer = auditSigner();
+  if (!signer) {
+    throw new Error(`${SIGNING_KEY_ENV} is not set. Run \`npm run db:setup\` to add one to .env.`);
+  }
   // Normalised to the millisecond ISO form the database gives back, so the hash re-verifies.
   const createdAt = new Date(now).toISOString();
-  return db.$transaction(async (tx) => {
+  // Set inside the transaction, read after its commit.
+  const committed: { anchor?: { length: number; hash: string } } = {};
+  const result = await db.$transaction(async (tx) => {
     const result = await work(tx);
     // SQLite serialises writers, so no other transaction can chain to the same previous row
     // between this read and the insert; the unique prev_hash column is the second guard (two
@@ -82,18 +97,31 @@ export async function withAudit<T>(
         details_json: detailsJson,
         prev_hash: prevHash,
         hash,
+        signature: signer.sign(rowSigningMessage(hash)),
       },
     });
     // The head beside the log, in the same transaction (review finding 11): the verifier sees a
     // deleted newest row as a count or hash that no longer matches.
     const length = await tx.auditLog.count();
+    const headSignature = signer.sign(headSigningMessage({ length, hash }));
     await tx.auditHead.upsert({
       where: { id: AUDIT_HEAD_ID },
-      create: { id: AUDIT_HEAD_ID, length, hash },
-      update: { length, hash },
+      create: { id: AUDIT_HEAD_ID, length, hash, signature: headSignature },
+      update: { length, hash, signature: headSignature },
     });
+    committed.anchor = { length, hash };
     return result;
   });
+  // After the commit, never before: the file may lag behind the log but never hold a head the
+  // log does not have. A failed append costs only the anchor; the change is already committed.
+  if (committed.anchor) {
+    try {
+      await appendAuditAnchor(db, { ...committed.anchor, at: createdAt });
+    } catch (error) {
+      console.error('audit anchor not written', error);
+    }
+  }
+  return result;
 }
 
 export type AuditLogEntry = {
@@ -123,13 +151,24 @@ export async function listAuditLog(db: PrismaClient, limit = 50): Promise<AuditL
   }));
 }
 
-/** Walks the whole audit log in id order and names the first broken row (see domain/audit). */
-export async function verifyAuditChain(db: PrismaClient): Promise<AuditChainVerdict> {
+/** The verdict and the public key that checked the signatures (null when no key is set). */
+export type AuditVerification = AuditSealVerdict & { publicKey: string | null };
+
+/**
+ * Walks the whole audit log in id order and names the first broken row: the hash chain, the
+ * signatures and the anchors outside the database (see domain/audit).
+ */
+export async function verifyAuditChain(db: PrismaClient): Promise<AuditVerification> {
+  // The anchors first (review of #69): withAudit appends an anchor after its commit, so a file
+  // read before the rows can only lag behind them. Read together, a change committed between
+  // the reads would leave an anchor longer than the rows read: a rewrite that never happened.
+  const anchors = await readAuditAnchors(db);
   const [rows, head] = await Promise.all([
     db.auditLog.findMany({ orderBy: { id: 'asc' } }),
     db.auditHead.findUnique({ where: { id: AUDIT_HEAD_ID } }),
   ]);
-  return verifyChainRows(
+  const signer = signerForVerifying();
+  const verdict = verifySealedChain(
     rows.map((row) => ({
       id: row.id,
       prevHash: row.prev_hash,
@@ -140,9 +179,12 @@ export async function verifyAuditChain(db: PrismaClient): Promise<AuditChainVerd
       entityId: row.entity_id,
       details: row.details_json === null ? null : parseStoredJson(row.details_json),
       createdAt: row.created_at.toISOString(),
+      signature: row.signature,
     })),
-    head ? { length: head.length, hash: head.hash } : null
+    head ? { length: head.length, hash: head.hash, signature: head.signature } : null,
+    { checkSignature: signer?.check ?? null, anchors }
   );
+  return { ...verdict, publicKey: signer?.publicKey ?? null };
 }
 
 /** The newest row's hash, or the genesis hash for an empty log. */
@@ -157,5 +199,19 @@ function parseStoredJson(text: string): unknown {
     return JSON.parse(text);
   } catch {
     return text;
+  }
+}
+
+/**
+ * The signer for the verifier, or null when the key in .env cannot be read (review of #69,
+ * finding 7): the page then says the signatures were not checked instead of failing with a
+ * 500. The reason goes to the server log only. Writes still refuse a bad key (withAudit).
+ */
+function signerForVerifying() {
+  try {
+    return auditSigner();
+  } catch (error) {
+    console.error('audit signatures not checked:', error instanceof Error ? error.message : error);
+    return null;
   }
 }

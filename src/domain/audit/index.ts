@@ -10,3 +10,17 @@ export {
   type AuditChainRow,
   type AuditChainVerdict,
 } from './chain';
+export {
+  formatAnchorLine,
+  headSigningMessage,
+  parseAnchorLines,
+  rowSigningMessage,
+  verifySealedChain,
+  type AuditAnchor,
+  type AuditSealBreak,
+  type AuditSealVerdict,
+  type SealOptions,
+  type SealedHead,
+  type SealedRow,
+  type SignatureCheck,
+} from './seal';

@@ -1,8 +1,15 @@
+import { generateKeyPairSync } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 // docs/features/test-isolation.md (D37).
 const domainTests = ['src/domain/**/*.test.ts'];
+
+// The audit log's signing key for this run (D81): fresh every run, so no key is ever written in
+// the repository. withAudit refuses to write without one.
+const testSigningKey = generateKeyPairSync('ed25519')
+  .privateKey.export({ format: 'der', type: 'pkcs8' })
+  .toString('base64');
 
 export default defineConfig({
   resolve: {
@@ -10,6 +17,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // AUDIT_ANCHOR_FILE emptied (review of #69, finding 6): set in the shell, every test database
+    // would append to that one file and every reset would delete it.
+    env: { AUDIT_SIGNING_KEY: testSigningKey, AUDIT_ANCHOR_FILE: '' },
     globalSetup: ['./tests/global-setup.ts'],
     // Files run in parallel: each DB test file copies its own SQLite file (tests/helpers/test-db.ts)
     // and `isolate` gives each file its own module graph, so its own event-handler registry.
