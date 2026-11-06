@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import type { ReactNode } from 'react';
 import { ModelCard, UnavailableCard } from '@/components/model-card';
 import { Notice, cx } from '@/components/ui';
 import { assetCategorySchema } from '@/data/schemas';
@@ -151,6 +152,17 @@ export default async function CataloguePage({
             href: catalogueHref(locale, { ...filters, condition }),
             active: filters.condition === condition,
           }))}
+          // "Clear filters" sits at the end of the first row, not on a row of its own.
+          aside={
+            refined ? (
+              <Link
+                href={catalogueHref(locale, { ...NO_FILTERS, category: filters.category })}
+                className="text-sm font-bold whitespace-nowrap text-brand-text underline decoration-2 underline-offset-4"
+              >
+                {t('catalogue.filter.clear')}
+              </Link>
+            ) : null
+          }
         />
         {brands.length > 1 ? (
           <ChipGroup
@@ -172,16 +184,6 @@ export default async function CataloguePage({
             active: filters.sort === sort,
           }))}
         />
-        {refined ? (
-          <div className="py-3 text-right">
-            <Link
-              href={catalogueHref(locale, { ...NO_FILTERS, category: filters.category })}
-              className="text-sm font-bold text-brand-text underline decoration-2 underline-offset-4"
-            >
-              {t('catalogue.filter.clear')}
-            </Link>
-          </div>
-        ) : null}
       </nav>
 
       {groups.length === 0 && unavailable.length === 0 ? (
@@ -219,11 +221,18 @@ type Chip = { key: string; label: string; href: string; active: boolean };
  * the current one filled. A row per filter keeps one filter's last chip from running into the
  * next filter's name.
  */
-function ChipGroup({ label, chips }: { label: string; chips: Chip[] }) {
+function ChipGroup({ label, chips, aside }: { label: string; chips: Chip[]; aside?: ReactNode }) {
   return (
-    <div className="grid gap-2 py-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
-      <span className="text-sm font-bold text-ink-muted">{label}</span>
-      <ul className="flex flex-wrap gap-1.5">
+    <div className="grid gap-2 py-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center">
+      {/* On a phone the label and the aside share the first line; from sm they are the
+          first and last columns, with the chips between them. */}
+      <div className="flex items-center justify-between gap-3 sm:contents">
+        <span className="text-sm font-bold text-ink-muted sm:col-start-1 sm:row-start-1">
+          {label}
+        </span>
+        {aside ? <span className="sm:col-start-3 sm:row-start-1">{aside}</span> : null}
+      </div>
+      <ul className="flex flex-wrap gap-1.5 sm:col-start-2 sm:row-start-1">
         {chips.map((chip) => (
           <li key={chip.key}>
             <Link
