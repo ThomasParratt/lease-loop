@@ -151,6 +151,19 @@ export async function listAuditLog(db: PrismaClient, limit = 50): Promise<AuditL
   }));
 }
 
+/** The details of the newest audit row of one action on one entity, or null when there is none. */
+export async function latestAuditDetails(
+  db: PrismaClient,
+  where: { action: string; entityType: string; entityId: string }
+): Promise<unknown> {
+  const row = await db.auditLog.findFirst({
+    where: { action: where.action, entity_type: where.entityType, entity_id: where.entityId },
+    orderBy: { id: 'desc' },
+    select: { details_json: true },
+  });
+  return row?.details_json ? parseStoredJson(row.details_json) : null;
+}
+
 /** The verdict and the public key that checked the signatures (null when no key is set). */
 export type AuditVerification = AuditSealVerdict & { publicKey: string | null };
 

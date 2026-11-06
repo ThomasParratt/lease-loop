@@ -23,7 +23,7 @@
 //
 // D23: the mode, the reason, the condition and the contract's status are parsed with their
 // schemas before use; a bad value throws.
-import { assetConditionSchema, type VatRates } from '@/data/schemas';
+import { assetConditionSchema, type AssetCondition, type VatRates } from '@/data/schemas';
 import {
   contractBoughtOutSchema,
   returnReasonSchema,
@@ -41,7 +41,12 @@ import {
   type InvoiceKind,
 } from '../statuses';
 import { vatRateOn } from '../vat';
-import { earlyExitCost, type EarlyExitCost, type EarlyExitInput } from './early-exit';
+import {
+  earlyExitCost,
+  LEASABLE_CONDITION,
+  type EarlyExitCost,
+  type EarlyExitInput,
+} from './early-exit';
 import { exitModeSchema, type ExitMode } from './mode';
 
 export type ExitReason = 'end_of_term' | 'early_exit';
@@ -63,6 +68,10 @@ export type ExitRefusal =
   | { code: 'not_started'; params: { startDate: string } }
   | { code: 'pass_on_needs_next_customer'; params: Record<string, never> }
   | { code: 'next_customer_is_self'; params: { customerId: string } }
+  | {
+      code: 'pass_on_below_leasable';
+      params: { condition: AssetCondition; needed: AssetCondition };
+    }
   | { code: 'reason_mismatch'; params: { reason: ExitReason; endDate: string } }
   | { code: 'usage_unit_mismatch'; params: { unit: string; expected: string } }
   | { code: 'usage_below_signing'; params: { value: number; atSigning: number; unit: string } }
@@ -130,7 +139,13 @@ export function exitBilling(input: ExitBillingInput): ExitBilling {
         .map((invoice) => invoice.id);
 
   const billed = mode === 'buy' || !cost.atOrAfterEnd;
-  const netCents = mode === 'buy' ? cost.buy.totalCents : cost.return.totalCents;
+  // D90: a pass-on bills the return without the refurbishment.
+  const netCents =
+    mode === 'buy'
+      ? cost.buy.totalCents
+      : mode === 'pass_on'
+        ? cost.passOn.totalCents
+        : cost.return.totalCents;
   if (!billed || netCents === 0) return { ok: true, invoice: null, cancelInvoiceIds };
 
   const rate = vatRateOn(input.vatRates, today);
@@ -188,6 +203,17 @@ export function planExit(input: PlanExitInput): PlanExitResult {
     return {
       ok: false,
       reason: { code: 'next_customer_is_self', params: { customerId: contract.customerId } },
+    };
+  }
+  // D90 (review 2): a pass-on relists the item as it is, without refurbishment, so only an item
+  // at least `good` (LEASABLE_CONDITION) may go straight to the next person; else return it.
+  if (mode === 'pass_on' && conditionRank(condition) < conditionRank(LEASABLE_CONDITION)) {
+    return {
+      ok: false,
+      reason: {
+        code: 'pass_on_below_leasable',
+        params: { condition, needed: LEASABLE_CONDITION },
+      },
     };
   }
   const atOrAfterEnd = today >= contract.endDate;

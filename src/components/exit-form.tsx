@@ -133,6 +133,15 @@ export function ExitForm(props: ExitFormProps) {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const invoice = preview.invoice;
   const returnTitle = preview.atOrAfterEnd ? t('exit.option.returnAtEnd') : t('exit.option.return');
+  const passOnTitle = preview.atOrAfterEnd ? t('exit.option.passOnAtEnd') : t('exit.option.passOn');
+  const estimateNote =
+    asks && answered
+      ? undefined
+      : t('exit.estimateNote', {
+          condition: t(`condition.${props.initial.condition}`),
+          usage: formatNumber(props.initial.usageValue, locale),
+          unit: t(`exit.unit.${usageUnit}`),
+        });
 
   return (
     <form onSubmit={submit} className="space-y-5" aria-busy={loading || pending}>
@@ -230,7 +239,7 @@ export function ExitForm(props: ExitFormProps) {
         </Field>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <ExitOptionList
           title={t('exit.option.buy')}
           option={preview.buy}
@@ -243,16 +252,17 @@ export function ExitForm(props: ExitFormProps) {
           option={preview.return}
           locale={locale}
           t={t}
-          chosen={mode !== 'buy'}
-          note={
-            asks && answered
-              ? undefined
-              : t('exit.estimateNote', {
-                  condition: t(`condition.${props.initial.condition}`),
-                  usage: formatNumber(props.initial.usageValue, locale),
-                  unit: t(`exit.unit.${usageUnit}`),
-                })
-          }
+          chosen={mode === 'return'}
+          note={estimateNote}
+        />
+        {/* D90: a pass-on charges no refurbishment; shown beside the return to compare. */}
+        <ExitOptionList
+          title={passOnTitle}
+          option={preview.passOn}
+          locale={locale}
+          t={t}
+          chosen={mode === 'pass_on'}
+          note={estimateNote}
         />
       </div>
 

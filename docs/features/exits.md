@@ -2,16 +2,17 @@
 
 ## What it does
 
-A customer (or admin) ends an active contract by buying the item, giving it back or passing it on to a named person, at the end of the term or early; the contract page shows what each exit costs today, line by line, before anything is written. The exit writes the contract's status and end day, bills the buyout or early-exit invoice, cancels the unpaid rents it replaces, sets the asset `sold` or `returned` and writes the passport entry, all in one audited transaction.
+A customer (or admin) ends an active contract by buying the item, giving it back or passing it on to a named person, at the end of the term or early; the contract page shows what each exit costs today, line by line, before anything is written. The exit writes the contract's status and end day, bills the buyout or early-exit invoice, cancels the unpaid rents it replaces, sets the asset `sold` or `returned` and writes the passport entry, all in one audited transaction. A pass-on (D90) also starts the named person's quote in that transaction and holds the item for them.
 
 ## The rule
 
 **Early exit (D14), before the end date:**
 
 - buy = the outstanding balance after the paid rents: the financed amount amortised at the band's annual rate with the monthly rent (`outstandingBalanceAfter` from invoicing, not re-implemented);
-- return or pass on = max(0, balance − market value) + the refurbishment to `good`, the leasable condition (the note of `data/refurbishment-costs.json`: a returned item must reach at least good to be leased again).
+- return = max(0, balance − market value) + the refurbishment to `good`, the leasable condition (the note of `data/refurbishment-costs.json`: a returned item must reach at least good to be leased again);
+- pass on (D90) = max(0, balance − market value), no refurbishment: the item goes straight to the next person, so a pass-on is refused below `good` (`pass_on_below_leasable`) and the customer returns it instead.
 
-**On or after the end date** (the contract's last day): buy = the frozen buyout; return or pass on = only the refurbishment.
+**On or after the end date** (the contract's last day): buy = the frozen buyout; return = only the refurbishment; pass on = 0 (D90).
 
 **Market value** (`data/residual-curves.json`, read exactly as its `how_to_use` says): net list price at the first lease × curve(age) × condition multiplier × usage adjustment.
 
@@ -27,7 +28,7 @@ A customer (or admin) ends an active contract by buying the item, giving it back
 **The bill:**
 
 - A buy issues one invoice: kind `buyout` on or after the end (the frozen buyout), kind `early_exit` before it (the D14 balance).
-- A return or pass-on before the end issues one `early_exit` invoice for its cost. On or after the end it issues none (see open questions).
+- A return or pass-on before the end issues one `early_exit` invoice for its cost (the pass-on's without the refurbishment, D90). On or after the end it issues none (see open questions).
 - An amount of 0 is not a refusal, but no invoice is issued for it.
 - The invoice is issued and due on the exit day, at the VAT rate of that day (D2), with the next sequence number.
 
@@ -37,7 +38,7 @@ A customer (or admin) ends an active contract by buying the item, giving it back
 
 Card 1: `ebike-003` (Nordvolt Trail 500, model year 2026), 36 months, no down payment, signed and started 2026-11-05, financed 389 000, band B (7.9 % a year), rent 10 730 net, buyout 58 350, last day 2029-11-04. Aino has paid 7 rents and leaves on **2027-06-05**, when month 7 is complete: the 8th period starts that day, unpaid, and is cancelled with the rest. She reports **good, 1 800 km** (an assumption of the tests: the pack says nothing about her bike).
 
-| Line                                            | Buy                        | Return / pass on         |
+| Line                                            | Buy                        | Return                   |
 | ----------------------------------------------- | -------------------------- | ------------------------ |
 | Rents paid                                      | 7 of 36                    | 7 of 36                  |
 | Still owed after 7 rents (D14)                  | 330 675                    | 330 675                  |
@@ -51,9 +52,15 @@ Card 1: `ebike-003` (Nordvolt Trail 500, model year 2026), 36 months, no down pa
 | Contract status                                 | `ended_early`              | `ended_early`            |
 | Rents cancelled                                 | 29 (8 to 36)               | 29                       |
 
+The pass-on (D90) has the same lines without the 4 500 safety inspection: **71 445** net, invoice 71 445 + 18 576 = 90 021 (next section).
+
 Market value (D31): the bike is on its first life, so its age is the whole months since the lease started, 2026-11-05 to 2027-06-05: **7 months**. The curve between 6 months (82 %) and 12 months (70 %) gives 82 − 1 × 12 / 6 = **80 %**. Good is × 0.85; 1 800 km is one whole step, −2 %, so × 0.98. 389 000 × 0.80 × 0.85 × 0.98 = 259 229.6, so **259 230**. As new with 0 km it is 389 000 × 0.80 = **311 200**, the brief's number, and the return 330 675 − 311 200 + 4 500 = **23 975**.
 
 **Chosen against (D11 for every item).** Counting from 1 January of the model year gives 17 months, 62.5 % on the curve: 202 523 as good with 1 800 km (return 132 652) and 243 125 as new (return 92 050). `market-value.test.ts` pins both rules.
+
+### Pass on (D90): the next deal starts in the exit
+
+A pass-on hands the item straight to the named person, so no refurbishment is charged: card 8 passed on in month 7 costs 330 675 − 259 230 = **71 445** net (invoice 71 445 + 18 576 VAT), the return's 75 945 without the 4 500 safety inspection, and the preview shows the pass-on beside the return with the refurbishment at 0. At the end of the term a pass-on costs nothing. The 29 unpaid rents are cancelled as in any early exit. Only an item at least `good` (`LEASABLE_CONDITION`) may be passed on: below that it would be relisted without the refurbishment D86 requires, so `planExit` refuses it (`pass_on_below_leasable { condition, needed }`) and the page tells the customer to return it instead. In the same audited transaction the item is relisted as reported (`returned` → `available`), the next person gets a stored quote dated the exit day, priced from the market value 259 230 as its second-life price through the normal band and factor, 36 months, no down payment, with their `customer_id` on it (`nextDealQuote` in `src/domain/exits/next-deal.ts`, `createQuoteInTx` in `src/server/quotes.ts`), the passport writes `repriced` with the market value (as the second-life path does), and the item is set `reserved` (D22 `available` → `reserved`), so it leaves the public catalogue and nobody else can quote it. The quote waits on the next person's My leases page ("Passed on to you: open the offer", `listReservedQuotesFor`); the leaving customer's ended contract only says a quote was made, without a link. Only the named customer (or the admin on their behalf, D47) may apply for it (`quote_reserved_for_another_customer`, 403), and the signing checks it again; their signing leases the item from `reserved`. A quote that cannot be priced refuses the whole exit (`next_quote_refused`) and nothing is written. Tests: `early-exit.test.ts`, `next-deal.test.ts`, `exit-plan.test.ts` (below good refused), `exits.test.ts` (reserved, `repriced`, below good writes nothing), `scenarios/pass-on-next-deal.test.ts` (Lena signs; Aino and a third customer cannot quote, apply or sign).
 
 ### Card 9 and card 10: the exits they start from
 
@@ -62,7 +69,7 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 - **A relisted item's exit (review finding 1).** The market value starts from D60's list price and age, the same read the assessment uses (`firstLeaseCurve`, `src/domain/second-life/first-lease.ts`), never from the contract's unit price, which for a relisted item is its second-life amount. Card 9 leased again and returned early on 2027-11-06 at 19 000 km: 549 000 at 58 months (D11, 26 %); it was leased fair, so D77 values it fair (× 0.65); the 600 km since the new battery are no whole step (D83, × 1.00): **92 781**, and the battery is not due again.
 - **The usage the value counts (D83).** The market value's usage adjustment takes the usage since the last battery replacement (`usageSinceReset`, the reported total less the total at the newest assessment that replaced it), and so does the battery's own `usage.value >= N` rule in the refurbishment lines; with no replacement on record (every first lease) that is the reported total, so card 8 does not move. The report is still checked against the total at signing (D77). Card 10's exit preview starts from 179 900 (v1) at 70 months: 31 348 as good with 9 800 km. An item ours from new is aged from its **first** lease on every later lease (finding 3).
 - **D77: the report checked against the asset at signing.** The asset row is not written during a lease, so it is the item as leased. The exit bills and records the worse of the reported condition and that one; a usage below the one at signing is refused `usage_below_signing { value, atSigning, unit }`. The admin's assessment then decides on the inspection ([second-life.md](second-life.md)).
-- A return or pass-on sets the asset `returned` with the (D77) condition and the reported usage, the state cards 9 and 10 start from. Pass-on writes `passed_on` in the passport with the next customer.
+- A return sets the asset `returned` with the (D77) condition and the reported usage, the state cards 9 and 10 start from. A pass-on goes through `returned` in the same transaction and ends `reserved` for the next customer (D90); it writes `passed_on` in the passport with the next customer, then `repriced`.
 
 **What the form asks.** "Give it back" and "Pass it on" ask "How is the item now?": the condition (starting at "Choose…") and the usage (empty), with a line saying they set what giving it back costs, and the exit cannot be sent until both are answered. Until then the return column is marked as an estimate from the item's last known state. "Buy it" asks for neither: the buy price is the D14 balance (or the frozen buyout) and does not depend on them, so the form says so and sends the item's last known values.
 
@@ -70,7 +77,8 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 
 - **D31** (decided 2026-11-06 as an assumption, stated in the README): the curve age of a first-life item from its lease start; **D11** (`ageInMonths`, from the model year) for an item with previous lives. `curveAgeInMonths` picks the rule.
 - **D14**: the balance by amortisation, buy = balance, return = max(0, balance − market value) + refurbishment, shown line by line.
-- **D16**: pass on names the next person (a picker of the customers, the leaving customer left out). It is assessed and costed like a return. The next person applies in the normal way on the second-life price after the assessment, and the new contract carries `previous_contract_id` (D66, PR #53).
+- **D16** (superseded in part by D90): pass on names the next person (a picker of the customers, the leaving customer left out), and the new contract carries `previous_contract_id` (D66, PR #53). Its "assessed and costed like a return" no longer holds.
+- **D90** (decided 2026-11-06, Johannes; review of PR #89): a pass-on charges no refurbishment and is refused below `good`; it starts the next person's quote at the market value in the same transaction, named for them, writes `repriced`, and holds the item `reserved` for them until they sign.
 - **D22**: `CONTRACT_BOUGHT_OUT` sets the asset `sold`; `UNIT_RETURNED` and `UNIT_PASSED_ON` set it `returned`, on the bus (`src/server/catalogue-handlers.ts`), each a conditional write on `leased`.
 - **D23**: every status (the contract's, the invoice's, the asset's), mode, condition, reason and invoice kind is parsed with its schema before use or write; a bad value throws.
 - **D1, D2**: one half-up rounding per amount, the VAT per invoice line at the rate of the invoice day.
@@ -84,7 +92,7 @@ Market value (D31): the bike is on its first life, so its age is the whole month
 - `marketValueCents({ listPriceCents, category, ageMonths, condition, usage }, curves) → { valueCents, ageMonths, curvePercent, conditionMultiplier, usageSteps, usageAdjustmentPercent }` (`src/domain/residual/market-value.ts`). The page fields (`curvePercent`, …) are for display; the value uses the exact fractions. `curvePercent(points, age)` and `usageAdjustment(rule, usage)` are exported too.
 - `refurbishmentPlan({ category, condition, usage, usageAtLastService?, usageAtLastReset?, targetCondition }, costs) → { steps, fixedCents, upgradeCents, totalCents, usageAfter, usageSinceResetAfter, conditionAfter }` (`src/domain/refurbishment/plan.ts`). A step is `{ kind: 'fixed', id, costCents, resetsUsage, quantity }` or `{ kind: 'upgrade', id, from, to, costCents }`. `parseWhenRule(text)` throws on an unknown rule.
 - `earlyExitCost({ contract, annualInterestPercent, invoices, today, asset, reported, curves, costs }) → { atOrAfterEnd, monthsPaid, balanceCents, balanceRows, remainingRentsNetCents, marketValue, refurbishment, buy, return }` (`src/domain/exits/early-exit.ts`). `buy` and `return` are `{ totalCents, lines }`. A line is `{ code, effect: add | subtract | subtotal | info | total, params }`, with every amount in `params.amountCents`.
-- `planExit({ contract, mode, today, reported, reason?, nextCustomerId?, invoices, asset, annualInterestPercent, curves, costs, vatRates }) → { ok, plan: { mode, reason, status, endedOn, event, invoice, cancelInvoiceIds, cost } } | { ok: false, reason: { code, params } }` (`src/domain/exits/exit-plan.ts`). The refusals are `contract_not_active`, `not_started` (an exit before the start date, so `ended_on` is never before `start_date`), `pass_on_needs_next_customer`, `next_customer_is_self`, `reason_mismatch`, `usage_unit_mismatch`, `usage_below_signing` (D77) and `no_vat_rate_on_date`; the service adds `asset_not_leased` when the catalogue handler finds the asset changed behind the exit (finding 4). The input carries `atSigning` (the asset as leased), `curve` (D60), `usageAtLastService` (finding 7) and `usageAtLastReset` (D83, the total at the last battery replacement). The event is built and parsed with the schemas of `src/domain/events.ts`.
+- `planExit({ contract, mode, today, reported, reason?, nextCustomerId?, invoices, asset, annualInterestPercent, curves, costs, vatRates }) → { ok, plan: { mode, reason, status, endedOn, event, invoice, cancelInvoiceIds, cost } } | { ok: false, reason: { code, params } }` (`src/domain/exits/exit-plan.ts`). The refusals are `contract_not_active`, `not_started` (an exit before the start date, so `ended_on` is never before `start_date`), `pass_on_needs_next_customer`, `next_customer_is_self`, `pass_on_below_leasable` (D90), `reason_mismatch`, `usage_unit_mismatch`, `usage_below_signing` (D77) and `no_vat_rate_on_date`; the service adds `asset_not_leased` when the catalogue handler finds the asset changed behind the exit (finding 4). The input carries `atSigning` (the asset as leased), `curve` (D60), `usageAtLastService` (finding 7) and `usageAtLastReset` (D83, the total at the last battery replacement). The event is built and parsed with the schemas of `src/domain/events.ts`.
 - `exitBilling({ mode, cost, today, invoices, vatRates }) → { invoice, cancelInvoiceIds }`: the bill alone, so the invoice handler recomputes the same bill from the event.
 
 ## Files
@@ -113,6 +121,6 @@ Written up in `docs/decisions.md`: D31 (card 8's curve age, an assumption) and D
 - **A return at the end of the term issues no invoice.** The cost shown is the refurbishment, but the invoice kinds (`down_payment`, `rent`, `buyout`, `early_exit`) have no refurbishment charge, so nothing is billed and the page says the lessor bears it. Options: add a `refurbishment` kind (a text column, no migration), or decide that normal wear at the end is the lessor's.
 - **`cancelled`** was added to `invoiceStatuses` (a text column, no migration). `contractBalanceOn` in invoicing skips a `cancelled` invoice (D35, wave 2 upkeep), so a cancelled rent is never counted as open.
 - **Every unpaid rent is cancelled, not only the future ones.** The brief said "unpaid rents with a period after today". Cancelling only those would bill an overdue rent twice, once on its own invoice and once inside the D14 balance. The balance after the paid rents covers every rent not paid.
-- **Pass on, what is still missing:** the second-life quote (D12) and `previous_contract_id` on the next contract are built (PR #53); the next person's application is not pre-filled for them, and nothing reserves the item for the named person between the assessment and their quote.
+- **Pass on, what is still missing (D90):** the next person's application is not pre-filled for them. The hold does not end by itself: when the quote expires (30 days) the item stays `reserved` until the admin sets it `available` by hand (D22 allows it), and the leaving customer is not re-billed if the next person never signs.
 - **The farm machine's `per started N engine_hours since last service`** counts from the usage of the newest assessment that did the step (`usageAtLastService`), 0 when there is none (the pack has no service history): farm-005 serviced at 4 200 h and returned again at 4 500 h bills one major service, not five (review finding 7).
 - **The body's `reason`** is optional. The server derives it from the day and refuses one that contradicts it (`reason_mismatch`).

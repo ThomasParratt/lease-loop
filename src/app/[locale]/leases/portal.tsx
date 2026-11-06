@@ -50,6 +50,33 @@ export async function CustomerPortal({ customerId, today, locale, t }: PortalPro
         />
       </dl>
 
+      {portal.offers.length > 0 ? (
+        // D90: a lease passed on to this customer; the item is held for them until the quote ends.
+        <section aria-labelledby="portal-offers">
+          <h2 id="portal-offers" className="mb-4 text-2xl">
+            {t('portal.passedOn.title')}
+          </h2>
+          <ul className="space-y-3">
+            {portal.offers.map(({ quote, asset }) => (
+              <li key={quote.id}>
+                <Notice tone="info">
+                  {t('portal.passedOn.body', {
+                    item: asset ? `${asset.make} ${asset.model}` : quote.breakdown.assetId,
+                    date: day(quote.validUntil),
+                  })}{' '}
+                  <Link
+                    href={`/${locale}/apply/${encodeURIComponent(quote.id)}`}
+                    className="font-bold text-brand-text underline decoration-2 underline-offset-4"
+                  >
+                    {t('portal.passedOn.link')}
+                  </Link>
+                </Notice>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section aria-labelledby="portal-contracts">
         <h2 id="portal-contracts" className="mb-4 text-2xl">
           {t('leases.contracts')}

@@ -9,7 +9,8 @@
 // On or after the end date (the last day of the term):
 // - buy    = the buyout frozen in the contract;
 // - return = only the refurbishment.
-// A pass-on costs what a return costs (D16: the item is assessed and re-priced like any return).
+// D90: a pass-on costs the return without the refurbishment: the item goes straight from hand to
+// hand, so before the end it is max(0, balance − market value) and at the end nothing.
 //
 // `monthsPaid` is the number of paid rent invoices, capped at the term. Every line is a code
 // with params (amounts in cents), so the page writes it in the visitor's language.
@@ -43,6 +44,7 @@ export type ExitLine = {
     | 'value_exceeds_balance'
     | 'refurb_fixed'
     | 'refurb_upgrade'
+    | 'refurb_waived'
     | 'total';
   effect: ExitLineEffect;
   params: Record<string, string | number>;
@@ -99,6 +101,8 @@ export type EarlyExitCost = {
   refurbishment: RefurbishmentPlan;
   buy: ExitOption;
   return: ExitOption;
+  /** D90: the return's lines without the refurbishment. */
+  passOn: ExitOption;
 };
 
 function refurbishmentLines(plan: RefurbishmentPlan, quantity: number): ExitLine[] {
@@ -116,6 +120,9 @@ function refurbishmentLines(plan: RefurbishmentPlan, quantity: number): ExitLine
         }
   );
 }
+
+/** D90: a pass-on shows the refurbishment at 0, so the difference from a return is visible. */
+const refurbWaived: ExitLine = { code: 'refurb_waived', effect: 'add', params: { amountCents: 0 } };
 
 const total = (amountCents: number): ExitLine => ({
   code: 'total',
@@ -178,6 +185,7 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
         ],
       },
       return: { totalCents: refurbCents, lines: [...refurbLines, total(refurbCents)] },
+      passOn: { totalCents: 0, lines: [refurbWaived, total(0)] },
     };
   }
 
@@ -231,6 +239,7 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
       params: { amountCents: valueCents - balanceCents },
     });
   }
+  const passOnLines: ExitLine[] = [...returnLines, refurbWaived, total(afterValue)];
   returnLines.push(...refurbLines, total(afterValue + refurbCents));
 
   return {
@@ -256,5 +265,6 @@ export function earlyExitCost(input: EarlyExitInput): EarlyExitCost {
       ],
     },
     return: { totalCents: afterValue + refurbCents, lines: returnLines },
+    passOn: { totalCents: afterValue, lines: passOnLines },
   };
 }

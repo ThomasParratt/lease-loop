@@ -26,6 +26,7 @@ import {
   type TermComparison,
 } from '@/domain/pricing';
 import { quoteRowSchema } from '@/domain/rows/quote';
+import { withSecondLifePrice } from '@/domain/second-life/assess';
 import { getAsset } from './assets';
 import { withAudit, type TransactionClient } from './audit';
 import type { PrismaClient } from './prisma-client';
@@ -52,6 +53,8 @@ export type StoredQuote = {
   quoteDate: string;
   validUntil: string;
   createdAt: string;
+  /** D90: the named next customer of a pass-on, the only one who may apply; null for anyone. */
+  customerId: string | null;
   breakdown: QuoteBreakdown;
 };
 
@@ -79,6 +82,7 @@ export function toStoredQuote(row: QuoteRow): StoredQuote {
     quoteDate: row.quote_date,
     validUntil: row.valid_until,
     createdAt: row.created_at.toISOString(),
+    customerId: row.customer_id ?? null,
     breakdown: breakdownFromFrozen({
       assetId: row.asset_id,
       quantity: row.quantity,
@@ -130,7 +134,92 @@ export async function createQuote(
   const q = priced.quote;
   const id = randomUUID();
   const validUntil = addDays(input.today, QUOTE_VALID_DAYS);
-  const row = await withAudit(
+  return { ok: true, quote: toStoredQuote(await auditedQuoteRow(db, input, q, id, validUntil)) };
+}
+
+/** The frozen numbers as a parsed Quote row (D27): a number that does not follow fails here. */
+function quoteRowData(
+  id: string,
+  q: QuoteBreakdown,
+  today: string,
+  validUntil: string,
+  customerId: string | null = null
+) {
+  return parseRow('quote', quoteRowSchema, {
+    id,
+    asset_id: q.assetId,
+    quantity: q.quantity,
+    quote_date: today,
+    valid_until: validUntil,
+    price_list_version: q.priceListVersion,
+    list_price_cents: q.unitListPriceCents,
+    down_payment_cents: q.downPaymentCents,
+    financed_cents: q.financedCents,
+    band: q.band,
+    factor_millionths: q.factorMillionths,
+    term_months: q.termMonths,
+    monthly_net_cents: q.monthlyNetCents,
+    buyout_cents: q.buyoutCents,
+    vat_rate_bp_at_quote: q.vatRateBasisPoints,
+    customer_id: customerId,
+  });
+}
+
+export type QuoteInTxInput = {
+  /** The caller's id for the row, so its audit entry can name it before the write. */
+  id: string;
+  /** D90: the named next customer; only they may apply for it. */
+  customerId: string;
+  assetId: string;
+  /** D90: the unit price the quote is priced from (the market value on the exit day). */
+  unitPriceCents: number;
+  termMonths: number;
+  downPaymentCents: number;
+  today: string;
+};
+
+/**
+ * D90: the quote slice's write on the caller's `tx` (the pass-on's audited transaction): priced
+ * through the normal band and factor with the asset at `unitPriceCents`, as a second-life price
+ * (D86), stored only while the asset is `available` (read on the same `tx`).
+ */
+export async function createQuoteInTx(
+  tx: TransactionClient,
+  input: QuoteInTxInput,
+  data: PricingData
+): Promise<CreateQuoteResult> {
+  const priced = priceQuote(withSecondLifePrice(data, input.assetId, input.unitPriceCents), {
+    assetId: input.assetId,
+    termMonths: input.termMonths,
+    downPaymentCents: input.downPaymentCents,
+    isoDate: input.today,
+  });
+  if (!priced.ok) return priced;
+  const asset = await getAsset(tx, input.assetId);
+  if (asset?.status !== 'available') {
+    return {
+      ok: false,
+      reason: {
+        code: 'asset_not_available',
+        params: { assetId: input.assetId, status: asset?.status ?? 'missing' },
+      },
+    };
+  }
+  const validUntil = addDays(input.today, QUOTE_VALID_DAYS);
+  const row = await tx.quote.create({
+    data: quoteRowData(input.id, priced.quote, input.today, validUntil, input.customerId),
+  });
+  return { ok: true, quote: toStoredQuote(row) };
+}
+
+async function auditedQuoteRow(
+  db: PrismaClient,
+  input: CreateQuoteInput,
+  q: QuoteBreakdown,
+  id: string,
+  validUntil: string
+) {
+  return withAudit(
     db,
     {
       actor: input.actor,
@@ -146,29 +235,8 @@ export async function createQuote(
         validUntil,
       },
     },
-    (tx) =>
-      tx.quote.create({
-        // The row's own rules (D27): a frozen number that does not follow fails here.
-        data: parseRow('quote', quoteRowSchema, {
-          id,
-          asset_id: q.assetId,
-          quantity: q.quantity,
-          quote_date: input.today,
-          valid_until: validUntil,
-          price_list_version: q.priceListVersion,
-          list_price_cents: q.unitListPriceCents,
-          down_payment_cents: q.downPaymentCents,
-          financed_cents: q.financedCents,
-          band: q.band,
-          factor_millionths: q.factorMillionths,
-          term_months: q.termMonths,
-          monthly_net_cents: q.monthlyNetCents,
-          buyout_cents: q.buyoutCents,
-          vat_rate_bp_at_quote: q.vatRateBasisPoints,
-        }),
-      })
+    (tx) => tx.quote.create({ data: quoteRowData(id, q, input.today, validUntil) })
   );
-  return { ok: true, quote: toStoredQuote(row) };
 }
 
 /** The stored quote with its breakdown from the frozen numbers, or null. Never re-prices. */
@@ -223,4 +291,20 @@ export function previewQuote(
       isoDate: today,
     }),
   };
+}
+
+/**
+ * D90: the quotes held for one customer (a pass-on named them) that are still valid on `today`,
+ * newest first, for their My leases page.
+ */
+export async function listReservedQuotesFor(
+  db: PrismaClient,
+  customerId: string,
+  today: string
+): Promise<StoredQuote[]> {
+  const rows = await db.quote.findMany({
+    where: { customer_id: customerId, valid_until: { gte: today }, quote_date: { lte: today } },
+    orderBy: { created_at: 'desc' },
+  });
+  return rows.map(toStoredQuote);
 }

@@ -183,3 +183,20 @@ export async function relistReturnedAsset(
   });
   if (count !== 1) throw new AssetNotReturnedError(input.assetId);
 }
+
+/**
+ * D90: holds the item a pass-on relisted for the customer it named (D22: `available` →
+ * `reserved`), on the caller's `tx`, so it leaves the public catalogue and nobody else can quote
+ * or sign it. The named customer's quote leases it from `reserved` (catalogue-handlers.ts).
+ */
+export async function reserveAvailableAsset(tx: TransactionClient, assetId: string): Promise<void> {
+  const from = assetStatusSchema.parse('available');
+  const to = assetStatusSchema.parse('reserved');
+  const check = checkAssetStatusChange(from, to);
+  if (!check.ok) throw new Error(`reserving is not a D22 transition: ${check.reason.code}`);
+  const { count } = await tx.asset.updateMany({
+    where: { id: assetId, status: from },
+    data: { status: to },
+  });
+  if (count !== 1) throw new Error(`Asset ${assetId} is no longer available to reserve`);
+}

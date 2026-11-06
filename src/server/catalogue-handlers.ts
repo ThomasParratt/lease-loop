@@ -21,13 +21,21 @@ export class AssetNotAvailableError extends Error {
   }
 }
 
-/** Sets the asset `leased` if, and only if, it is still `available`; else throws. */
-export async function leaseAvailableAsset(tx: TransactionClient, assetId: string): Promise<void> {
+/**
+ * Sets the asset `leased` if, and only if, it is still `available`; else throws. D90: a quote held
+ * for its named customer (`heldForSigner`) may also lease the item a pass-on `reserved` for them.
+ */
+export async function leaseAvailableAsset(
+  tx: TransactionClient,
+  assetId: string,
+  heldForSigner = false
+): Promise<void> {
   // D23: the values are parsed before the write.
   const from = assetStatusSchema.parse('available');
+  const held = assetStatusSchema.parse('reserved');
   const to = assetStatusSchema.parse('leased');
   const { count } = await tx.asset.updateMany({
-    where: { id: assetId, status: from },
+    where: { id: assetId, status: { in: heldForSigner ? [from, held] : [from] } },
     data: { status: to },
   });
   if (count !== 1) throw new AssetNotAvailableError(assetId);

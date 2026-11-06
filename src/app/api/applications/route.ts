@@ -33,6 +33,12 @@ export const POST = handleRoute(async (request) => {
       return forbiddenResponse(result.refusal);
     case 'not_applicant':
       return fail(403, 'NOT_APPLICANT', 'You can apply only in your own name');
+    case 'quote_reserved_for_another_customer':
+      return fail(
+        403,
+        'QUOTE_RESERVED_FOR_ANOTHER_CUSTOMER',
+        'The quote is held for another customer'
+      );
     case 'quote_expired':
       return fail(409, 'QUOTE_EXPIRED', 'The quote is no longer valid');
     case 'quote_not_yet_valid':

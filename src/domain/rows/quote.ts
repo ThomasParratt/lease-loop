@@ -35,6 +35,8 @@ export const quoteRowSchema = z
     monthly_net_cents: centsSchema,
     buyout_cents: centsSchema,
     vat_rate_bp_at_quote: vatRateBpSchema,
+    /** D90: the named next customer of a pass-on; null or left out for anyone (D55). */
+    customer_id: idSchema.nullable().optional(),
   })
   .superRefine((row, ctx) => {
     checkLockedPrice(row, ctx);

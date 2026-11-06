@@ -109,10 +109,11 @@ describe('planExit, card 8: Aino leaves in month 7', () => {
     expect(p.invoice).toMatchObject({ kind: 'early_exit', netCents: 75_945, vatCents: 19_746 });
   });
 
-  it('a pass-on names the next customer and costs what a return costs (D16)', () => {
+  it('D90: an early pass-on names the next customer, cancels the unpaid rents and bills 71 445 net, no refurbishment', () => {
     const p = plan({ mode: 'pass_on', nextCustomerId: 'cust-matti' });
     expect(p.event).toMatchObject({ type: 'UNIT_PASSED_ON', nextCustomerId: 'cust-matti' });
-    expect(p.invoice?.netCents).toBe(75_945);
+    expect(p.invoice?.netCents).toBe(71_445);
+    expect(p.status).toBe('ended_early');
   });
 
   it('an overdue unpaid rent is cancelled too: the balance already contains it', () => {
@@ -173,6 +174,26 @@ describe('planExit refusals and guards', () => {
       ok: false,
       reason: { code: 'next_customer_is_self' },
     });
+  });
+
+  it('refuses a pass-on below good: it would relist without refurbishment (D90, review 2)', () => {
+    for (const condition of ['fair', 'poor'] as const) {
+      expect(
+        planExit(
+          input({
+            mode: 'pass_on',
+            nextCustomerId: 'cust-lena',
+            reported: { condition, usage: { unit: 'km', value: 1_800 } },
+          })
+        )
+      ).toEqual({
+        ok: false,
+        reason: { code: 'pass_on_below_leasable', params: { condition, needed: 'good' } },
+      });
+    }
+    expect(
+      planExit(input({ mode: 'pass_on', nextCustomerId: 'cust-lena' })) // reported good
+    ).toMatchObject({ ok: true });
   });
 
   it('refuses a reason that contradicts the day, and a usage in the wrong unit', () => {
