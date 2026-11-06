@@ -132,7 +132,7 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; money: FleetMoney; asse
 - `src/domain/second-life/co2.ts`, `src/domain/second-life/money-saved.ts`, `src/domain/passport.ts` and their tests
 - `src/server/asset-events.ts`, `src/server/passport-handlers.ts`, `src/server/event-handlers.ts` and tests; `tests/helpers/contract-fixture.ts`
 - `src/app/api/assets/[id]/passport/route.ts` (`GET`, row in `src/server/routes.ts`, in `docs/openapi.json`)
-- `src/app/[locale]/assets/[id]/passport/page.tsx`, `src/components/impact-strip.tsx` (mounted on the landing page), a "Passport" link on the price page
+- `src/app/[locale]/assets/[id]/passport/page.tsx`, `src/components/impact-strip.tsx` (mounted on the landing page), `src/components/passport-card.tsx` (the "Item passport" card on the price page, under the item's specs: forest green like a passport cover, a booklet icon, one line on what the passport holds)
 - `passport.*` and `impact.*` keys in the four message files
 
 ## Tests that pin the numbers
