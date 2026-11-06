@@ -56,4 +56,3 @@ export const returnAssessmentRowSchema = z
       });
     }
   }, ON_VALID_FIELDS);
-export type ReturnAssessmentRow = z.infer<typeof returnAssessmentRowSchema>;

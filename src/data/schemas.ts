@@ -187,7 +187,6 @@ export const vatRateSchema = z.strictObject({
   /** True for the made-up hackathon rate. */
   fictional: z.boolean().optional(),
 });
-export type VatRate = z.infer<typeof vatRateSchema>;
 
 export const vatRatesSchema = z.strictObject({
   country: countryCodeSchema,
@@ -275,7 +274,6 @@ export const questionsFileSchema = z.strictObject({
   eligibility_rules: z.array(eligibilityRuleSchema),
   questions: z.array(questionSchema).min(1),
 });
-export type QuestionsFile = z.infer<typeof questionsFileSchema>;
 
 // ---------------------------------------------------------------------------
 // data/customers.json: test applicants, each built to exercise one rule (read `story`).

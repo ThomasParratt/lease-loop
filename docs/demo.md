@@ -35,7 +35,7 @@ Click **Run** on each card, in card order; the page lands where the judges compa
 | 7:00 | 9 Second life      | see the note below                               | `ebike-007` back fair: no refurbishment beyond the battery and inspection (39 500), **`wait-02` at 8 710** a month for 12 m                                                     |
 | 7:45 | 10 Third life      | the passport (`/en/assets/ebike-008/passport`)   | three lives, relisted at 37 101, leased again at 1 359 a month, **58 kg** CO₂ and **665,60 €** saved by the end of the third lease (29 kg and 332,80 € so far, estimated)       |
 
-**Cards 9 and 10.** Once the wave 3 hardening PR (#57) is merged, the Run buttons do all of it ([the wave 3 review](reviews/wave-3.md), finding 2): card 9 assesses `ebike-007` and lands on `/en/assets/ebike-007/second-life` (the options, the waiting list with each verdict, `wait-02` first and `wait-13` second because it needs 12 000 more work), card 10 assesses `ebike-008`, leases it a third time and lands on its passport. Without #57 they stop at the returned asset; show them by hand:
+**Cards 9 and 10.** The Run buttons do all of it (#57): card 9 assesses `ebike-007` and lands on `/en/assets/ebike-007/second-life` (the options, the waiting list with each verdict, `wait-02` first and `wait-13` second because it needs 12 000 more work), card 10 assesses `ebike-008`, leases it a third time and lands on its passport. To show them by hand instead:
 
 - Card 9: pick "Admin" in "Continue as", open `/en/assets/ebike-007/second-life` and click "Assess and relist".
 - Card 10: as "Admin", open `/en/assets/ebike-008/second-life` and click "Assess and relist"; pick `cust-olavi`, quote `ebike-008` for 24 months, apply and sign; open `/en/assets/ebike-008/passport`.

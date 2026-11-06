@@ -1,6 +1,6 @@
 # Team notes
 
-How the team works and how the app is put together, moved out of the README (the README keeps the organiser's text, the status and the feature list). The plan is [kickoff-brief.md](kickoff-brief.md); the open questions for the mentors are [mentor-questions.md](mentor-questions.md).
+How the team works and how the app is put together, moved out of the README (the README keeps the organiser's text, the status and the feature list). The plan is [kickoff-brief.md](kickoff-brief.md); the mentor questions (all answered) are [mentor-questions.md](mentor-questions.md).
 
 - `AGENTS.md`: the organiser's rules plus our working rules; every agent and person reads it first.
 - `docs/kickoff-brief.md`: the plan (scope, decisions, schema ownership, events, waves, the agent brief template).

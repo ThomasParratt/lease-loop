@@ -197,7 +197,6 @@ createApplication(db, { quoteId, customerId, answers, today, actor, onBehalfOf? 
 decideApplication(db, { id, decision, reviewedBy, today, actor }); // the admin's review; awaiting_signatory → not_signatory for everyone (D39)
 recordSignatoryDecision(tx, { id, decision, by, today }); // inside decideByToken (signatories.md)
 getApplication(db, id): Promise<ApplicationView | null>;
-mayReadApplication(actor, application): boolean; // the applicant or admin (D57)
 // createApplication also refuses { reason: 'quote_in_use', applicationId } (D56)
 ```
 
@@ -247,5 +246,4 @@ mayReadApplication(actor, application): boolean; // the applicant or admin (D57)
 - Affordability uses the chosen term's gross rent; the page could suggest the shortest term that passes (Mikko's 36 months).
 - The form should still disable its button while sending: a double submit now gets 409 `QUOTE_IN_USE` for the second request (D56).
 - `grossFromNetCents` is a local copy until the money/VAT helper on main replaces it.
-- The decision page (`/applications/[id]`) still shows an application to anyone with the link: D57 covers the API only; the page should apply `mayReadApplication` too (the signing link reaches the signatory without it).
 - The consumer limits are a team file of their own beside `data/term-limits.json` (D43, merged after this work began); the two could become one file.
