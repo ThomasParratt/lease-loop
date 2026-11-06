@@ -84,7 +84,7 @@ Then open `http://localhost:3000/en/demo`: one **Run** button per scenario card,
 
 ## Anything else the judges should know?
 
-**Decisions and mentor questions.** Every reading we took is a numbered decision with its reason and what we chose against: [docs/decisions.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/decisions.md) (D1 to D89). Every question we put to the mentors is answered and the code follows the answer ([docs/mentor-questions.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/mentor-questions.md)): the fleet quantity of card 6 (D8, issue #13), passing on to a named person (D16, issue #54) and the age, price and battery reset a returned item is valued with (D60 and D83). Card 8's curve age (D31) is an assumption stated in the README "Status" section.
+**Decisions and mentor questions.** Every reading we took is a numbered decision with its reason and what we chose against: [docs/decisions.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/decisions.md) (D1 to D90). Every question we put to the mentors is answered and the code follows the answer ([docs/mentor-questions.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/mentor-questions.md)): the fleet quantity of card 6 (D8, issue #13), passing on to a named person (D16, issue #54) and the age, price and battery reset a returned item is valued with (D60 and D83). Card 8's curve age (D31) is an assumption stated in the README "Status" section.
 
 **Docs.** One page per feature, each with its rule worked on the scenario-card numbers, its decisions, its pure functions and the tests that pin the numbers:
 
@@ -110,6 +110,6 @@ Then open `http://localhost:3000/en/demo`: one **Run** button per scenario card,
 
 The wave reviews are in [docs/reviews/](https://github.com/ThomasParratt/northfina-lease-loop/tree/main/docs/reviews), the time logs of every task in [docs/log/](https://github.com/ThomasParratt/northfina-lease-loop/tree/main/docs/log).
 
-**How we used AI tools.** The product has none. The code was written with Claude Code: coordinating sessions on Claude Fable and Claude Opus planned the waves and merged the pull requests, and every agent or session that wrote code or tests ran on Claude Opus (`AGENTS.md`, "Which model does what"; decision D18). Each feature was built in its own worktree on its own branch, test first, then one hardening agent and one review agent after every wave; each pull request was squash-merged as one conventional commit.
+**How we used AI tools.** The product has no AI; building it did. Claude Code wrote most of the code. We planned the structure and the rules it had to follow, decided how to read every part of the brief (D1–D90), and checked that the logic held up. When it was wrong, we said so: money saved had to be real money, a sunk refurbishment cost shouldn't raise a price, and a clock rule that would have broken the demo stayed out. We tested the app by hand, found the issues and sent the agents back to fix them, and when the organisers answered a question, their rule beat ours.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
