@@ -385,6 +385,7 @@
   "contract.refusal.application_not_approved": "This application cannot be signed yet: its decision is \"{decision}\".",
   "contract.refusal.quote_expired": "The quote was valid until {validUntil}. Get a new quote at today's price to sign.",
   "contract.refusal.asset_not_available": "Sorry, this item was just leased to someone else.",
+  "contract.refusal.not_enough_units": "This lease is for {requested} units, but one contract can hold only {available} for now. Lease them one by one, or ask us about a fleet.",
   "contract.refusal.start_before_signing": "The lease cannot start ({startDate}) before the signing day ({signedOn}).",
   "contract.refusal.start_too_far": "The lease must start within {maxMonths} months of signing, by {maxStartDate} at the latest.",
   "contract.refusal.too_young_at_start": "You must be 18 on the day the lease starts. Choose a start on or after {adultFrom}.",

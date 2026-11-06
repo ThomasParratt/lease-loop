@@ -385,6 +385,7 @@
   "contract.refusal.application_not_approved": "Taotlust ei saa veel allkirjastada: selle otsus on \"{decision}\".",
   "contract.refusal.quote_expired": "Pakkumine kehtis kuni {validUntil}. Allkirjastamiseks küsige uus pakkumine tänase hinnaga.",
   "contract.refusal.asset_not_available": "Kahjuks liisiti see toode just kellelegi teisele.",
+  "contract.refusal.not_enough_units": "See liising on {requested} ühikule, kuid ühte lepingusse mahub praegu ainult {available}. Liisi need ükshaaval või küsi meilt pargilepingut.",
   "contract.refusal.start_before_signing": "Liising ei saa alata ({startDate}) enne allkirjastamise päeva ({signedOn}).",
   "contract.refusal.start_too_far": "Liising peab algama {maxMonths} kuu jooksul allkirjastamisest, hiljemalt {maxStartDate}.",
   "contract.refusal.too_young_at_start": "Pead olema liisingu alguspäeval 18-aastane. Vali alguskuupäev {adultFrom} või hiljem.",

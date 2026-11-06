@@ -385,6 +385,7 @@
   "contract.refusal.application_not_approved": "Ansökan kan inte undertecknas än: beslutet är \"{decision}\".",
   "contract.refusal.quote_expired": "Offerten gällde till {validUntil}. Begär en ny offert till dagens pris för att underteckna.",
   "contract.refusal.asset_not_available": "Tyvärr hyrdes artikeln just ut till någon annan.",
+  "contract.refusal.not_enough_units": "Avtalet gäller {requested} enheter, men ett avtal kan än så länge bara omfatta {available}. Leasa dem en i taget eller fråga oss om ett flottavtal.",
   "contract.refusal.start_before_signing": "Leasingen kan inte börja ({startDate}) före undertecknandet ({signedOn}).",
   "contract.refusal.start_too_far": "Leasingen måste börja inom {maxMonths} månader från undertecknandet, senast {maxStartDate}.",
   "contract.refusal.too_young_at_start": "Du måste vara 18 år den dag leasingen börjar. Välj en start den {adultFrom} eller senare.",

@@ -51,8 +51,12 @@ const CARD_1: QuoteTerms = {
 };
 
 /** A stored quote (through pricing) and an application with `decision` for `cust-aino`. */
-async function application(terms: QuoteTerms = CARD_1, decision = 'approved'): Promise<string> {
-  const quote = await createQuote(db, { ...terms, quantity: 1, actor: 'cust-aino' }, data);
+async function application(
+  terms: QuoteTerms = CARD_1,
+  decision = 'approved',
+  quantity = 1
+): Promise<string> {
+  const quote = await createQuote(db, { ...terms, quantity, actor: 'cust-aino' }, data);
   if (!quote.ok) throw new Error(quote.reason.code);
   // The application slice's write, done directly: these tests are about signing.
   const row = await db.application.create({
@@ -233,6 +237,18 @@ describe('signContract, the last-unit race', () => {
 });
 
 describe('signContract refusals write nothing', () => {
+  it('not_enough_units for a quote of 2 × ebike-003, one unit in stock (D76): nothing written, asset still available', async () => {
+    const applicationId = await application(CARD_1, 'approved', 2);
+    expect(
+      await signContract(db, { applicationId, actor: 'cust-aino' }, '2026-11-05', data)
+    ).toEqual({
+      ok: false,
+      reason: { code: 'not_enough_units', params: { requested: 2, available: 1 } },
+    });
+    expect(await writesSoFar()).toEqual({ contracts: 0, invoices: 0, passport: 0, audit: 0 });
+    expect((await getAsset(db, 'ebike-003'))?.status).toBe('available');
+  });
+
   it('already_signed on a second signing of the same application', async () => {
     const applicationId = await application();
     await signContract(db, { applicationId, actor: 'cust-aino' }, '2026-11-05', data);
