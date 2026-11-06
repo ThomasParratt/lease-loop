@@ -38,19 +38,19 @@ beforeEach(async () => {
 const TODAY = '2026-11-05';
 const answersOf = (id: string) => answersFromCustomer(customers.find((c) => c.id === id)!);
 
-type QuoteRow = { asset: string; quantity?: number; financed: number; term: number; net: number };
+type QuoteRow = { asset: string; financed: number; term: number; net: number };
 
 /** The quote rows the pricing slice would write; the numbers are the pinned card numbers.
  * The fixture writes the row; the code under test reads it only through pricing's `getQuote`. */
-async function insertQuote({ asset, quantity = 1, financed, term, net }: QuoteRow) {
+async function insertQuote({ asset, financed, term, net }: QuoteRow) {
   const row = await db.quote.create({
     data: {
       asset_id: asset,
-      quantity,
+      quantity: 1,
       quote_date: TODAY,
       valid_until: '2026-12-05',
       price_list_version: 1,
-      list_price_cents: financed / quantity,
+      list_price_cents: financed,
       down_payment_cents: 0,
       financed_cents: financed,
       band: 'B',
@@ -66,8 +66,7 @@ async function insertQuote({ asset, quantity = 1, financed, term, net }: QuoteRo
 
 const card1 = () => insertQuote({ asset: 'ebike-003', financed: 389_000, term: 36, net: 10_730 });
 const card5 = () => insertQuote({ asset: 'laptop-008', financed: 289_000, term: 36, net: 7_972 });
-const card6 = () =>
-  insertQuote({ asset: 'ebike-004', quantity: 4, financed: 2_196_000, term: 36, net: 58_993 });
+const card6 = () => insertQuote({ asset: 'ebike-004', financed: 549_000, term: 36, net: 15_144 });
 const card7 = () =>
   insertQuote({ asset: 'farm-002', financed: 12_500_000, term: 48, net: 272_038 });
 
@@ -81,11 +80,11 @@ describe('flowSetupFor', () => {
     expect(found).toMatchObject({
       ok: true,
       setup: {
-        context: { category: 'e_bike', financedCents: 2_196_000, termMonths: 36 },
+        context: { category: 'e_bike', financedCents: 549_000, termMonths: 36 },
         quoteDate: '2026-11-05',
         quoteValidUntil: '2026-12-05',
       },
-      quote: { monthlyNetCents: 58_993, vatRateBp: 2_550 },
+      quote: { monthlyNetCents: 15_144, vatRateBp: 2_550 },
     });
   });
 });

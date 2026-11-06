@@ -33,7 +33,6 @@ const quote: QuoteBreakdown = {
   totalIfReturnCents: 12 * 13_466,
   totalIfBuyCents: 12 * 13_466 + 73_229,
   vatIsEstimate: true,
-  perUnit: null,
 };
 
 function render(terms: number[]) {
@@ -43,7 +42,7 @@ function render(terms: number[]) {
       locale="en"
       terms={terms}
       unitPriceCents={389_000}
-      initial={{ termMonths: terms[0]!, downPaymentCents: 0, quantity: 1 }}
+      initial={{ termMonths: terms[0]!, downPaymentCents: 0 }}
       initialPreview={{
         today: '2026-11-05',
         quote: { ...quote, termMonths: terms[0]! },

@@ -117,7 +117,6 @@ function rentsFor(input: AssessInput, data: AssessData, financedCents: number): 
     (termMonths) => {
       const quote = priceQuote(priced, {
         assetId: input.assetId,
-        quantity: 1,
         termMonths,
         downPaymentCents: 0,
         isoDate: input.isoDate,

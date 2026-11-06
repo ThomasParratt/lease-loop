@@ -15,18 +15,13 @@ const norvi = customerById('cust-norvi');
 const haapala = customerById('cust-haapala');
 const typo = customerById('cust-broken-id');
 
-const bike = (isoDate = DAY, quantity = 1) => ({
+const bike = (isoDate = DAY) => ({
   assetId: 'ebike-003',
-  quantity,
   termMonths: 36,
   isoDate,
 });
-const laptops = (quantity: number) => ({
-  assetId: 'laptop-004',
-  quantity,
-  termMonths: 36,
-  isoDate: DAY,
-});
+/** farm-008 at 1 290 000 financed: PEP is asked; a company is not asked revenue or owners. */
+const farm = { assetId: 'farm-008', termMonths: 48, isoDate: DAY };
 
 /** `{ decision, codes }` of a completed application, or the step it stopped at. */
 function outcome(app: Application) {
@@ -215,19 +210,18 @@ describe('the customer type and the record (D38)', () => {
   });
 
   it('the record says no PEP and the answer says yes: a manual review, with details required', () => {
-    const six = laptops(6); // 2 094 000 financed: PEP is asked, revenue and owners are not
-    expect(outcome(applyFor(kettu, six, { answers: { q_pep: 'yes' } }))).toBe(
+    expect(outcome(applyFor(kettu, farm, { answers: { q_pep: 'yes' } }))).toBe(
       'incomplete:q_pep_details'
     );
     expect(
-      outcome(applyFor(kettu, six, { answers: { q_pep: 'yes', q_pep_details: 'MP since 2019' } }))
+      outcome(applyFor(kettu, farm, { answers: { q_pep: 'yes', q_pep_details: 'MP since 2019' } }))
     ).toBe('manual_review:pep');
   });
 
   it('the trap: Norvi’s coordinator, who may not sign on record, answers "yes, I can sign"', () => {
     const app = applyFor(
       norvi,
-      { assetId: 'ebike-004', quantity: 4, termMonths: 36, isoDate: DAY },
+      { assetId: 'ebike-004', termMonths: 36, isoDate: DAY },
       {
         answers: { q_can_sign: 'yes' },
       }
@@ -245,7 +239,7 @@ describe('the customer type and the record (D38)', () => {
 });
 
 describe('conflicting and extra answers', () => {
-  const fleet = { assetId: 'ebike-004', quantity: 4, termMonths: 36, isoDate: DAY };
+  const fleet = { assetId: 'ebike-004', termMonths: 36, isoDate: DAY };
 
   it('an answer to a question this deal does not ask is dropped, not refused', () => {
     const app = applyFor(aino, bike(), {
@@ -298,9 +292,9 @@ describe('conflicting and extra answers', () => {
   );
 
   it('PEP details without PEP are dropped; PEP without details is incomplete', () => {
-    const app = applyFor(norvi, fleet, { answers: { q_pep: 'no', q_pep_details: 'minister' } });
+    const app = applyFor(norvi, farm, { answers: { q_pep: 'no', q_pep_details: 'minister' } });
     expect(app.ok && app.answers).not.toHaveProperty('q_pep_details');
-    expect(outcome(applyFor(norvi, fleet, { answers: { q_pep: 'yes' } }))).toBe(
+    expect(outcome(applyFor(norvi, farm, { answers: { q_pep: 'yes' } }))).toBe(
       'incomplete:q_pep_details'
     );
   });
@@ -326,31 +320,24 @@ describe('conflicting and extra answers', () => {
 });
 
 describe('precedence: a failed rule, a differing answer and a PEP at once', () => {
-  const threeBikes = bike(DAY, 3); // 1 167 000 financed: PEP asked, affordable for Olavi
+  // farm-008 at 1 290 000 financed: PEP is asked, and a consumer's farm machine is held
   const pep = { q_pep: 'yes', q_pep_details: 'MP since 2019' };
 
   it('a rejection wins over the record and the PEP, and lists the failures only', () => {
-    const app = applyFor(
-      mikko,
-      { assetId: 'laptop-008', quantity: 4, termMonths: 36, isoDate: DAY },
-      {
-        answers: { ...pep, q_birth_date: '2009-03-11' },
-      }
-    );
+    const app = applyFor(mikko, farm, {
+      answers: { ...pep, q_birth_date: '2009-03-11' },
+    });
     expect(outcome(app)).toBe('rejected:too_young+unaffordable');
   });
 
-  it('a differing answer and a PEP together: manual review with pep first, then the question, then the consumer cap (three bikes over two)', () => {
-    const app = applyFor(olavi, threeBikes, { answers: { ...pep, q_birth_date: '1956-06-19' } });
+  it('a differing answer and a PEP together: manual review with pep first, then the question, then the category hold', () => {
+    const app = applyFor(olavi, farm, { answers: { ...pep, q_birth_date: '1956-06-19' } });
     expect(app.ok && app.result).toEqual({
       decision: 'manual_review',
       reasons: [
         { code: 'pep', params: {} },
         { code: 'answer_differs_from_record', params: { question: 'q_birth_date' } },
-        {
-          code: 'quantity_over_consumer_cap',
-          params: { category: 'e_bike', quantity: 3, maxQuantity: 2 },
-        },
+        { code: 'category_needs_review', params: { category: 'farm_machine' } },
       ],
     });
   });
@@ -369,7 +356,7 @@ describe('precedence: a failed rule, a differing answer and a PEP at once', () =
       [...entries].sort(([a], [b]) => (a < b ? 1 : -1)),
     ];
     const results = orders.map((order) =>
-      applyFor(olavi, threeBikes, { answers: Object.fromEntries(order) })
+      applyFor(olavi, farm, { answers: Object.fromEntries(order) })
     );
     for (const app of results) expect(app).toEqual(results[0]);
     expect(differing(results[0]!)).toEqual(['q_birth_date', 'q_country']);

@@ -55,7 +55,6 @@ export function ContractSummary({ details, asset, locale, t }: ContractSummaryPr
           <Badge status={contract.status}>{t(`contract.status.${contract.status}`)}</Badge>
           <span className="text-sm text-ink-muted">
             {asset ? `${asset.make} ${asset.model}` : contract.assetId}
-            {contract.quantity > 1 ? ` × ${contract.quantity}` : ''}
           </span>
         </div>
         <DefinitionList

@@ -119,9 +119,12 @@ describe('runDemoCard', () => {
     expect((await getApplication(db, idOf(run.landing)))?.decision).toBe('rejected');
   });
 
-  it('card 6: four ebike-004 for Norvi, 58 993 a month, awaiting the signatory', async () => {
+  it('card 6: one ebike-004 for Norvi, 15 144 a month, awaiting the signatory', async () => {
     const run = ran(await runDemoCard(db, 6));
-    expect(run.steps[0]).toMatchObject({ params: { quantity: 4, monthlyNetCents: 58_993 } });
+    expect(run.steps[0]).toMatchObject({
+      params: { assetId: 'ebike-004', monthlyNetCents: 15_144 },
+    });
+    expect(run.steps[0]!.params).not.toHaveProperty('quantity');
     expect((await getApplication(db, idOf(run.landing)))?.decision).toBe('awaiting_signatory');
   });
 

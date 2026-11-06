@@ -1,16 +1,14 @@
 # Questions for the mentors
 
-Three readings of the brief we took in code and want confirmed on Friday (issues #13 and #54, and D60 from second life); D31 is now a stated assumption (below). For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
+Three readings of the brief we took in code and wanted confirmed on Friday (issues #13 and #54, and D60 from second life; #13 is answered); D31 is now a stated assumption (below). For each: what we read, what the code does today, and what changes if the answer is different. The decisions are in [decisions.md](decisions.md).
 
 Not a question here: Thomas's question-flow validation (#25, merged) added four rules (D37 to D40: the birth-date range, answers checked against the customer record, only the named signatory signs, only the acting customer applies). They are listed for information; the scenario suite on `main` passes with them.
 
-## 1. Fleet quantity: is card 6 "4 × `ebike-004`" four units on one asset row? (D8, issue #13)
+## 1. Fleet quantity: answered (D8, issue #13 closed)
 
-**Our reading.** A quote, an application and a contract carry a quantity (default 1). The financed amount is the list price × the quantity − the down payment, and the band and the question thresholds are read on that total: four bikes are band C, one bike is band B, and the total crosses the PEP threshold.
+**Answered by the organisers on 2026-11-06.** Every item is unique; card 6 is 1 × `ebike-004` and is about the signing flow; quantities and multi-item contracts are not needed. Johannes decided: no multiples in the UI or the API.
 
-**What the code does today.** `priceQuote` multiplies by the quantity (`src/domain/pricing/`); the application and the contract copy it unchanged ([pricing.md](features/pricing.md), [contracts.md](features/contracts.md)). The data pack has one `ebike-004` row, so signing takes that one row out of the catalogue (`leased`) and the other three are "to be delivered". One contract, one invoice per month.
-
-**If the answer differs.** If the mentors mean four separate items, signing must lock N available rows of the same model (Thomas's grouping of identical units in the schema, issue #13, additive) and refuse when fewer are free; D28 (one next lease per lease) waits on this answer, since a fleet passed on to two people would have two successors. If they mean one item only, the quantity input goes and card 6 is priced for one bike.
+**What the code does now.** A quote prices one item: no quantity in `POST /api/quotes`, `GET /api/quotes/preview` or the price page, no per-item split. Card 6 is 549 000 financed, band B, 15 144 a month, and ends `awaiting_signatory` because the applicant may not sign. An item below the smallest lease is not leasable on that list (D78, replacing D41's "two together"). The `quantity` column stays at 1, and signing still refuses a larger one (D76) for rows stored before the answer. Our earlier reading (the band on the fleet's total, band C at 58 993) is in D8's history.
 
 ## 2. Pass on: is the next user a named person? (D16, issue #54)
 

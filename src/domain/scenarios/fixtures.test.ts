@@ -36,7 +36,7 @@ describe('the scenario fixtures', () => {
     expect(financedLimits).toEqual({ minCents: 30_000, maxCents: 25_000_000 });
   });
 
-  it('price with quantity 1 and no down payment by default', () => {
+  it('price one unit and no down payment by default', () => {
     const q = quoteFor({ assetId: 'ebike-003', termMonths: 36, isoDate: '2026-11-05' });
     expect(q.ok && [q.quote.quantity, q.quote.downPaymentCents]).toEqual([1, 0]);
   });
@@ -53,8 +53,8 @@ describe('the scenario fixtures', () => {
   it('stop at the first unanswered question, and at an answer that cannot be taken', () => {
     const deal = { assetId: 'ebike-003', termMonths: 36, isoDate: '2026-11-05' };
     // the persona's answers fill every question; a follow-up they do not know can stay open
-    const three = { ...deal, quantity: 3 }; // 1 167 000 financed: PEP is asked
-    expect(applyFor(customerById('cust-aino'), three, { answers: { q_pep: 'yes' } })).toEqual({
+    const farm = { assetId: 'farm-008', termMonths: 48, isoDate: '2026-11-05' }; // 1 290 000 financed: PEP is asked
+    expect(applyFor(customerById('cust-aino'), farm, { answers: { q_pep: 'yes' } })).toEqual({
       ok: false,
       step: 'incomplete',
       questionId: 'q_pep_details',

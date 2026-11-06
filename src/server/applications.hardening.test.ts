@@ -36,29 +36,37 @@ const TODAY = '2026-11-05';
 const VALID_UNTIL = '2026-11-19';
 const answersOf = (id: string) => answersFromCustomer(customers.find((c) => c.id === id)!);
 
-/** A frozen quote row as the pricing slice writes it (card 6's fleet unless told otherwise). */
+/** A frozen quote row as the pricing slice writes it (card 6's one bike unless told otherwise). */
 async function insertQuote(
   row: Partial<{
     asset: string;
-    quantity: number;
     financed: number;
+    band: string;
+    factor: number;
     term: number;
     net: number;
   }> = {}
 ) {
-  const { asset = 'ebike-004', quantity = 4, financed = 2_196_000, term = 36, net = 58_993 } = row;
+  const {
+    asset = 'ebike-004',
+    financed = 549_000,
+    band = 'B',
+    factor = 27_584,
+    term = 36,
+    net = 15_144,
+  } = row;
   const created = await db.quote.create({
     data: {
       asset_id: asset,
-      quantity,
+      quantity: 1,
       quote_date: TODAY,
       valid_until: VALID_UNTIL,
       price_list_version: 1,
-      list_price_cents: financed / quantity,
+      list_price_cents: financed,
       down_payment_cents: 0,
       financed_cents: financed,
-      band: 'C',
-      factor_millionths: 26_864,
+      band,
+      factor_millionths: factor,
       term_months: term,
       monthly_net_cents: net,
       buyout_cents: 0,
@@ -68,10 +76,9 @@ async function insertQuote(
   return created.id;
 }
 
-const card1 = () =>
-  insertQuote({ asset: 'ebike-003', quantity: 1, financed: 389_000, net: 10_730 });
+const card1 = () => insertQuote({ asset: 'ebike-003', financed: 389_000, net: 10_730 });
 const card7 = () =>
-  insertQuote({ asset: 'farm-002', quantity: 1, financed: 12_500_000, term: 48, net: 272_038 });
+  insertQuote({ asset: 'farm-002', financed: 12_500_000, term: 48, net: 272_038 });
 
 const apply = (
   quoteId: string,

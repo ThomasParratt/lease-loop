@@ -23,7 +23,6 @@ import { termControl } from '@/components/quote-terms';
 import {
   allowedTermsOf,
   financeOffer,
-  MAX_QUANTITY,
   termsOf,
   type FinanceOffer,
   type QuoteStatus,
@@ -91,28 +90,21 @@ export default async function PricePage({
           months: terms[terms.length - 1]!,
         })
       : undefined;
-  // How the item can be financed at the default term: an item leased only several together
-  // or with a down payment opens set up that way, with a notice saying why (D41).
+  // How the item can be financed at the default term: an item that needs a down payment opens
+  // set up that way, one below the smallest amount says it is not leasable on this list (D78).
   const offer = financeOffer(data, { assetId: asset.id, termMonths, isoDate: today });
-  // ?quantity= and ?down= override the preset; out-of-range values are clamped, a missing or
-  // broken one falls back to the offer's.
-  const quantity = clampInt(
-    query.quantity,
-    1,
-    MAX_QUANTITY,
-    offer.kind === 'needs_quantity' ? offer.quantity : 1
-  );
+  // ?down= overrides the preset; an out-of-range value is clamped, a missing or broken one
+  // falls back to the offer's.
   const initial = {
     termMonths,
     downPaymentCents: price.ok
       ? clampInt(
           query.down,
           0,
-          price.priceCents * quantity - 1,
-          offer.kind === 'needs_down_payment' && quantity === 1 ? offer.downPaymentCents : 0
+          price.priceCents - 1,
+          offer.kind === 'needs_down_payment' ? offer.downPaymentCents : 0
         )
       : 0,
-    quantity,
   };
   // The model's other versions (new and used), priced like the catalogue's cards.
   const versions = modelVersions(
@@ -262,19 +254,14 @@ export default async function PricePage({
   );
 }
 
-/** Why the price below is set up for several units or a down payment (D41). */
+/** Why the price below is set up with a down payment, or why the item cannot be leased (D78). */
 function OfferNotice({ offer, locale, t }: { offer: FinanceOffer; locale: Locale; t: Translate }) {
   const euro = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  if (offer.kind === 'needs_quantity') {
+  if (offer.kind === 'none' && offer.reason.code === 'below_minimum') {
     const { financedCents, minimumCents } = offer.reason.params;
     return (
-      <Notice
-        tone="info"
-        className="mt-6"
-        title={t('asset.offer.quantityTitle', { count: offer.quantity })}
-      >
-        {t('asset.offer.quantityBody', {
-          count: offer.quantity,
+      <Notice tone="warning" className="mt-6" title={t('asset.offer.belowMinimumTitle')}>
+        {t('asset.offer.belowMinimumBody', {
           priceCents: euro(financedCents),
           minimumCents: euro(minimumCents),
         })}

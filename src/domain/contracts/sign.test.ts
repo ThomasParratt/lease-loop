@@ -321,15 +321,15 @@ describe('planContract refusals (codes with params)', () => {
   });
 });
 
-describe('planContract quantity: no more units than signing can lock (D76, issue #13)', () => {
+describe('planContract quantity: a guard on stored rows, one unit per contract (D76, D8)', () => {
   it('signs a quantity of 1 and carries it into the contract and the event', () => {
     const plan = signed(planContract(input()));
     expect(plan.contract.quantity).toBe(1);
     expect(plan.event.quantity).toBe(1);
   });
 
-  it('refuses card 6, 4 × ebike-004, with not_enough_units: one row, one unit', () => {
-    const quote = { ...card1Quote, assetId: 'ebike-004', quantity: 4, monthlyNetCents: 58_993 };
+  it('refuses a stored row of 4 × ebike-004 from before D8 was decided: not_enough_units', () => {
+    const quote = { ...card1Quote, assetId: 'ebike-004', quantity: 4 };
     expect(planContract(input({ quote }))).toEqual({
       ok: false,
       reason: { code: 'not_enough_units', params: { requested: 4, available: 1 } },

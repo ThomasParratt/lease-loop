@@ -33,7 +33,6 @@ describe('drill: an item in every status through the quote', () => {
       assetId: 'ebike-003',
       termMonths: 36,
       downPaymentCents: 0,
-      quantity: 1,
       today: '2026-11-06',
       actor: 'cust-aino',
     });

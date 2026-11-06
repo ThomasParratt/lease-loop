@@ -24,7 +24,6 @@ beforeAll(async () => {
   const norvi = await quoteAndApply(db, {
     customerId: 'cust-norvi',
     assetId: 'ebike-004',
-    quantity: 4,
     termMonths: 36,
     quoteOn: TODAY,
   });

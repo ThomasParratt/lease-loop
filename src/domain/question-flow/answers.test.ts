@@ -70,7 +70,7 @@ describe('eligibilityInputFromAnswers', () => {
   const context: FlowContext = {
     customerType: 'company',
     category: 'e_bike',
-    financedCents: 2_196_000,
+    financedCents: 549_000,
     termMonths: 36,
   };
 
@@ -86,7 +86,7 @@ describe('eligibilityInputFromAnswers', () => {
         q_country: '',
       },
       startDate: '2026-11-05',
-      grossMonthlyRentCents: 74_036,
+      grossMonthlyRentCents: 19_006,
     });
     expect(input).toMatchObject({
       customerType: 'company',
@@ -95,7 +95,7 @@ describe('eligibilityInputFromAnswers', () => {
       signatoryEmail: 'ceo@norvi.example.com',
       isPep: false,
       country: undefined,
-      financedCents: 2_196_000,
+      financedCents: 549_000,
     });
   });
 
@@ -118,10 +118,10 @@ describe('eligibilityInputFromAnswers: the record country (review finding 12)', 
   const company: FlowContext = {
     customerType: 'company',
     category: 'e_bike',
-    financedCents: 2_196_000,
+    financedCents: 549_000,
     termMonths: 36,
   };
-  const base = { context: company, startDate: '2026-11-05', grossMonthlyRentCents: 74_036 };
+  const base = { context: company, startDate: '2026-11-05', grossMonthlyRentCents: 19_006 };
 
   it('a company is not asked its country: the record country is checked (DE is out)', () => {
     const input = eligibilityInputFromAnswers({ ...base, answers: {}, recordCountry: 'DE' });
@@ -141,7 +141,7 @@ describe('eligibilityInputFromAnswers: the record country (review finding 12)', 
 describe('answersFromCustomer', () => {
   it('fills every visible question for every persona, at every amount', () => {
     for (const c of customers) {
-      for (const financedCents of [30_000, 389_000, 2_196_000, 12_500_000]) {
+      for (const financedCents of [30_000, 389_000, 1_290_000, 12_500_000]) {
         for (const category of ['e_bike', 'laptop', 'farm_machine']) {
           const ctx = { customerType: c.type, category, financedCents, termMonths: 36 };
           const answers = pruneAnswers(bank, ctx, answersFromCustomer(c));

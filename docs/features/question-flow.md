@@ -28,7 +28,7 @@ A question is asked when **all** its `ask_when` conditions hold; an empty list m
 
 Not asked: the consumer questions (name, birth date, country, employment, income), `q_signatory_email` (can-sign is yes) and `q_usage_purpose` (not an e-bike).
 
-**Card 6**, Norvi Logistics Oy, four `ebike-004`: financed **2 196 000**. PEP is asked (≥ 1 000 000), revenue and owners are not (< 5 000 000), the usage purpose is (an e-bike), and `q_can_sign` is.
+**Card 6**, Norvi Logistics Oy, one `ebike-004` (D8): financed **549 000**. PEP is not asked (< 1 000 000), nor are revenue and owners (< 5 000 000); the usage purpose is (an e-bike), and `q_can_sign` is.
 
 **Card 1**, Aino, `ebike-003`, **389 000**: only the consumer questions, the income question (consumer and ≥ 200 000) and the usage purpose; no PEP.
 
@@ -50,7 +50,7 @@ The request body is parsed before anything is read (`createApplicationBodySchema
 - `quoteId` and `customerId` are trimmed, 1 to 100 characters; the trimmed customer id must be the actor.
 - An answer is a string of at most 500 characters or a list of at most 20 items of 200; a question id is `q_` plus lower-case letters, digits and underscores, at most 64 characters (`MAX_QUESTION_ID_LENGTH`); an application has at most 64 answers (`MAX_ANSWERS`, the bank has 19).
 - The application id in the path is 1 to 100 characters; `reviewedBy` on a decision is trimmed, 1 to 200.
-- Cents and quantities are safe integers (Zod 4's `int()`): `1e308` and `2^53` are refused; the quote body caps the quantity at 100.
+- Cents are safe integers (Zod 4's `int()`): `1e308` and `2^53` are refused; the quote body has no quantity and refuses one (D8).
 
 ### Answers against the customer record (D38, D40)
 
@@ -92,16 +92,16 @@ At 36 and 48 months the age is the only reason; at 24 both reasons are listed. O
 
 After the rules pass, `plausibilityHolds` (`plausibility.ts`) adds reasons that send the case to `manual_review`, after `pep` and the record differences; a failed rule still rejects first. The consumer limits are a team file beside the pack, `data/consumer-limits.json` (`consumerLimitsSchema`): e-bike 2, laptop 2, farm machine 1; farm machines always checked; income ceiling 10 000 000.
 
-| Hold (decision)                         | When                                                                     | Reason code                                                      |
-| --------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| Consumer quantity (D48)                 | a consumer, more units than the category's cap                           | `quantity_over_consumer_cap { category, quantity, maxQuantity }` |
-| Category (D49)                          | a consumer, a category flagged `consumer_manual_review` (farm machines)  | `category_needs_review { category }`                             |
-| Income (D50)                            | a monthly net income above 10 000 000                                    | `income_implausible { incomeCents, ceilingCents }`               |
-| Revenue (D51)                           | a company whose revenue (asked from 5 000 000) is below the financed sum | `revenue_below_financed { revenueCents, financedCents }`         |
-| Owners (D52)                            | "(NN %)" shares summing over 100 %, or a name twice                      | `owners_implausible { reason: over_100 \| duplicate }`           |
-| PEP denied (D58, in `recordMismatches`) | a PEP on record answers "no"                                             | `answer_differs_from_record { question: q_pep }` beside `pep`    |
+| Hold (decision)                         | When                                                                                      | Reason code                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Consumer quantity (D48)                 | a consumer, more units than the category's cap (unreachable since D8: one item per quote) | `quantity_over_consumer_cap { category, quantity, maxQuantity }` |
+| Category (D49)                          | a consumer, a category flagged `consumer_manual_review` (farm machines)                   | `category_needs_review { category }`                             |
+| Income (D50)                            | a monthly net income above 10 000 000                                                     | `income_implausible { incomeCents, ceilingCents }`               |
+| Revenue (D51)                           | a company whose revenue (asked from 5 000 000) is below the financed sum                  | `revenue_below_financed { revenueCents, financedCents }`         |
+| Owners (D52)                            | "(NN %)" shares summing over 100 %, or a name twice                                       | `owners_implausible { reason: over_100 \| duplicate }`           |
+| PEP denied (D58, in `recordMismatches`) | a PEP on record answers "no"                                                              | `answer_differs_from_record { question: q_pep }` beside `pep`    |
 
-Worked on the pack: Aino (an income of 50 000 €) with **20 × `ebike-003`** gets `quantity_over_consumer_cap { e_bike, 20, 2 }`; with 2 she is approved; Kettukoodi with 20 is approved (no cap for companies). Aino with **`farm-003`** gets `category_needs_review`. Aino with an income of **1 000 000 000** gets `income_implausible { 1 000 000 000, 10 000 000 }`; with an income of 1 cent and 20 bikes she is still `rejected` (`unaffordable`). Kettukoodi with **15 × `laptop-004`** (5 235 000 financed) and revenue **1** gets `revenue_below_financed { 1, 5 235 000 }`; revenue 5 235 000 passes. Owners `A (60 %)`, `B (41 %)` → `over_100`; `Jussi Haapala (60 %)`, `jussi haapala (40 %)` → `duplicate`; Haapala's own 60 % + 40 % and free text without shares pass. Card 6 (a company, 4 bikes) and card 7 (a company, a farm machine) are unchanged.
+Worked on the pack: the consumer cap is unit-tested in `src/domain/question-flow/plausibility.test.ts` only, since a quote is one item (D8). Aino with **`farm-003`** gets `category_needs_review`. Aino with an income of **1 000 000 000** gets `income_implausible { 1 000 000 000, 10 000 000 }`; with an income of 1 cent she is still `rejected` (`unaffordable`). Kettukoodi with **`farm-002` and 9 500 000 down** (5 000 000 financed) and revenue **1** gets `revenue_below_financed { 1, 5 000 000 }`; revenue 5 000 000 passes. Owners `A (60 %)`, `B (41 %)` → `over_100`; `Jussi Haapala (60 %)`, `jussi haapala (40 %)` → `duplicate`; Haapala's own 60 % + 40 % and free text without shares pass. Card 6 (a company, one bike) and card 7 (a company, a farm machine) are unchanged.
 
 ### One application per quote, and who reads it (D55–D57)
 
@@ -213,7 +213,7 @@ mayReadApplication(actor, application): boolean; // the applicant or admin (D57)
 | Number                                                                                                                                                    | Test                                                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Card 7's ten questions, PEP details after yes                                                                                                             | `engine.test.ts` "card 7: …"                                                                                                                   |
-| Card 6 at 2 196 000, signatory pruning                                                                                                                    | `engine.test.ts` "card 6: …", "pruneAnswers … card 6"                                                                                          |
+| Card 6 at 549 000 (no PEP), signatory pruning                                                                                                             | `engine.test.ts` "card 6: …", "pruneAnswers … card 6"                                                                                          |
 | Card 1's consumer questions                                                                                                                               | `engine.test.ts` "card 1: …"                                                                                                                   |
 | Mikko 2027-03-10; rents 12 888 / 10 005 / 8 322                                                                                                           | `eligibility.test.ts` "evaluate: card 5"                                                                                                       |
 | Norvi `awaiting_signatory`, Haapala `manual_review`                                                                                                       | `eligibility.test.ts` "card 6", "card 7"; `applications.test.ts` on a real DB                                                                  |
@@ -236,7 +236,7 @@ mayReadApplication(actor, application): boolean; // the applicant or admin (D57)
 | D55, D56: any customer on any quote; approved, manual review and awaiting signatory hold the quote, a rejection frees it; 409 `QUOTE_IN_USE`              | `src/server/applications.hardening.test.ts` "one pending or approved application per quote"; `route.test.ts`                                   |
 | D57: the admin reads; another customer, anonymous and no actor get the unknown id's 404                                                                   | `src/app/api/applications/route.test.ts` "GET /api/applications/[id]"                                                                          |
 | D59: born 2008-12-01, a start on 2026-11-30 refused, on 2026-12-01 signed; 29 February; a company                                                         | `src/domain/contracts/sign.test.ts` "re-checks the age"                                                                                        |
-| Random customer × asset × term × quantity × down payment: a known refusal or a decision whose codes have keys in all four languages (seed 20261105)       | `src/domain/scenarios/question-flow.property.test.ts`                                                                                          |
+| Random customer × asset × term × down payment: a known refusal or a decision whose codes have keys in all four languages (seed 20261105)                  | `src/domain/scenarios/question-flow.property.test.ts`                                                                                          |
 | Declining then signing, signing twice, anonymous, the quote's last valid day, the reason chain pep → differs → signatory → reviewed → signed              | `src/server/applications.hardening.test.ts`                                                                                                    |
 | The routes: unknown keys, wrong types, a 100 000-character answer, 65 answers, every wrong actor; always `fail()` with a code                             | `src/app/api/applications/route.test.ts`                                                                                                       |
 

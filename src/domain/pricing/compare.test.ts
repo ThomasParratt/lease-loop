@@ -20,7 +20,7 @@ beforeAll(async () => {
   };
 });
 
-const input = { assetId: 'ebike-003', quantity: 1, downPaymentCents: 0, isoDate: '2026-11-05' };
+const input = { assetId: 'ebike-003', downPaymentCents: 0, isoDate: '2026-11-05' };
 
 describe('compareTerms', () => {
   it('prices card 1 at every term of the table, shortest first', () => {

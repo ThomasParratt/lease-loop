@@ -15,7 +15,6 @@ const STEPS: CodedLine[] = [
     code: 'quote_created',
     params: {
       assetId: 'ebike-003',
-      quantity: 1,
       termMonths: 36,
       downPaymentCents: 0,
       monthlyNetCents: 10_730,
@@ -136,7 +135,7 @@ describe('cardInputs', () => {
   it('says who, what and which days for card 8', () => {
     const line = cardInputs(DEMO_CARDS[7]!, names, getT('en'), 'en');
     expect(line).toBe(
-      'Aino Virtanen · ebike-003 × 1 · 36 months · €0.00 down · quoted on 5 November 2026 · signed on 5 November 2026 · run card 1 first · 7 rents paid · exit preview: Buy it, reported Good, 1800 km · clock to 5 June 2027'
+      'Aino Virtanen · ebike-003 · 36 months · €0.00 down · quoted on 5 November 2026 · signed on 5 November 2026 · run card 1 first · 7 rents paid · exit preview: Buy it, reported Good, 1800 km · clock to 5 June 2027'
     );
   });
 

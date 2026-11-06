@@ -96,7 +96,6 @@ function repricedMonthlyNet(
   }
   const repriced = priceQuote(data, {
     assetId: breakdown.assetId,
-    quantity: breakdown.quantity,
     termMonths: breakdown.termMonths,
     downPaymentCents: breakdown.downPaymentCents,
     isoDate: today,

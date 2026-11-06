@@ -74,7 +74,6 @@ const CARD_INPUTS: readonly DemoCardInput[] = [
     trip: {
       customerId: 'cust-norvi',
       assetId: 'ebike-004',
-      quantity: 4,
       termMonths: 36,
       quoteOn: '2026-11-05',
     },
@@ -171,7 +170,7 @@ class StepRefused extends Error {
 
 /**
  * The application an earlier run of `trip` left (or one made by hand on the same deal): same
- * customer, item, quantity, term, down payment and quote day. A signed one wins over an
+ * customer, item, term, down payment and quote day. A signed one wins over an
  * unsigned one, so a stray second application never hides the contract.
  */
 async function earlierRun(db: PrismaClient, trip: Trip): Promise<Earlier | null> {
@@ -182,7 +181,6 @@ async function earlierRun(db: PrismaClient, trip: Trip): Promise<Earlier | null>
     const same =
       quote?.quoteDate === trip.quoteOn &&
       deal?.assetId === trip.assetId &&
-      deal.quantity === trip.quantity &&
       deal.termMonths === trip.termMonths &&
       deal.downPaymentCents === trip.downPaymentCents;
     if (!same) continue;
@@ -230,7 +228,6 @@ async function quoteAndApply(db: PrismaClient, trip: Trip, steps: DemoStep[]) {
     db,
     {
       assetId: trip.assetId,
-      quantity: trip.quantity,
       termMonths: trip.termMonths,
       downPaymentCents: trip.downPaymentCents,
       today: trip.quoteOn,
@@ -244,7 +241,6 @@ async function quoteAndApply(db: PrismaClient, trip: Trip, steps: DemoStep[]) {
     code: 'quote_created',
     params: {
       assetId: trip.assetId,
-      quantity: trip.quantity,
       termMonths: trip.termMonths,
       downPaymentCents: trip.downPaymentCents,
       monthlyNetCents: breakdown.monthlyNetCents,
