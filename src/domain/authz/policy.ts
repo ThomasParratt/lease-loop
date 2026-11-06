@@ -1,7 +1,8 @@
 // Who may do what (D73). One pure rule for every write and every private read, checked before
 // the action, never inside it: the route and the service ask `can` first and act only on
 // `{ ok: true }`. There is no login (D17): the actor is `anonymous`, `admin` or a customer id.
-// The public reads (catalogue, prices, quotes, passport, audit log) are not actions here.
+// The public reads (catalogue, prices, quotes, passport, audit log) are not actions here; the
+// second-life page is back office (D85: it shows the whole waiting list), so it is one.
 import { canSign, type Mandate } from '@/domain/signatories/mandates';
 
 export const ADMIN = 'admin';
@@ -19,6 +20,7 @@ export const AUTHZ_ACTIONS = [
   'manage_signatories',
   'read_signatories',
   'assess_asset',
+  'read_second_life',
   'set_asset_status',
   'run_demo_card',
 ] as const;
@@ -64,6 +66,7 @@ const refuse = (code: AuthzRefusalCode, action: AuthzAction): AuthzDecision => (
 const ADMIN_ONLY: readonly AuthzAction[] = [
   'decide_application',
   'assess_asset',
+  'read_second_life',
   'set_asset_status',
 ];
 

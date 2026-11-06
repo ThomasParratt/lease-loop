@@ -743,7 +743,7 @@
   "secondLife.decision.rent": "The winner pays {rent} a month net for {months} months.",
   "secondLife.button": "Assess and relist",
   "secondLife.pending": "Assessing…",
-  "secondLife.adminOnly": "Act as admin to assess and relist this item.",
+  "secondLife.backOfficeOnly": "Only an admin can see the second-life assessment: it shows the whole waiting list, with other customers’ budgets and needs.",
   "secondLife.refusal.asset_not_returned": "The item is no longer waiting for an assessment.",
   "secondLife.refusal.asset_not_found": "There is no such item.",
   "secondLife.refusal.no_list_price": "The item has no list price to value it from.",

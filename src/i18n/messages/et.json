@@ -743,7 +743,7 @@
   "secondLife.decision.rent": "Võitja maksab {rent} kuus neto {months} kuu jooksul.",
   "secondLife.button": "Hinda ja pane uuesti pakkumisse",
   "secondLife.pending": "Hindan…",
-  "secondLife.adminOnly": "Tegutse administraatorina, et ese hinnata ja uuesti pakkumisse panna.",
+  "secondLife.backOfficeOnly": "Teise elu hinnangut näeb ainult administraator: selles on kogu ootenimekiri koos teiste klientide eelarvete ja vajadustega.",
   "secondLife.refusal.asset_not_returned": "Ese ei oota enam hindamist.",
   "secondLife.refusal.asset_not_found": "Sellist eset pole.",
   "secondLife.refusal.no_list_price": "Esemel pole hinnakirja hinda, millest väärtust arvutada.",

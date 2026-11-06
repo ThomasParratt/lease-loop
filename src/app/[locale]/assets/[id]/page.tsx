@@ -32,6 +32,7 @@ import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type Translate } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
+import { ADMIN_ACTOR, readActor } from '@/server/actor';
 import { listAssetsWithLives } from '@/server/asset-lives';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -63,7 +64,11 @@ export default async function PricePage({
 
   const t = getT(locale);
   const today = await todayForRequest(); // read once here, passed down
-  const [assets, listData] = await Promise.all([listAssetsWithLives(db), loadPricingData()]);
+  const [assets, listData, actor] = await Promise.all([
+    listAssetsWithLives(db),
+    loadPricingData(),
+    readActor(db),
+  ]);
   const asset = assets.find((a) => a.id === id);
   if (!asset) notFound();
   // D12: a relisted item is priced on its assessment's second-life amount, here as in the quote.
@@ -198,7 +203,8 @@ export default async function PricePage({
         text={t('passport.cardText')}
         className="mt-6"
       />
-      {asset.status === 'returned' || secondLife ? (
+      {/* D85: the second life is back office, linked for the admin only. */}
+      {actor === ADMIN_ACTOR && (asset.status === 'returned' || secondLife) ? (
         <Link
           href={`/${locale}/assets/${encodeURIComponent(asset.id)}/second-life`}
           className="mt-4 inline-block rounded font-bold text-brand-text underline decoration-2 underline-offset-4"

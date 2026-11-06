@@ -743,7 +743,7 @@
   "secondLife.decision.rent": "Vinnaren betalar {rent} per månad netto i {months} månader.",
   "secondLife.button": "Bedöm och lägg ut igen",
   "secondLife.pending": "Bedömer…",
-  "secondLife.adminOnly": "Agera som administratör för att bedöma och lägga ut varan igen.",
+  "secondLife.backOfficeOnly": "Bara en administratör kan se bedömningen av andra livet: den visar hela väntelistan, med andra kunders budgetar och behov.",
   "secondLife.refusal.asset_not_returned": "Varan väntar inte längre på bedömning.",
   "secondLife.refusal.asset_not_found": "Varan finns inte.",
   "secondLife.refusal.no_list_price": "Varan har inget listpris att värdera från.",

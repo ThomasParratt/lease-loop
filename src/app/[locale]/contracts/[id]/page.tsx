@@ -10,7 +10,7 @@ import { InvoiceTable } from '@/components/invoice-table';
 import { Card, Notice, PageHeader } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { readActor } from '@/server/actor';
+import { ADMIN_ACTOR, readActor } from '@/server/actor';
 import { getAsset } from '@/server/assets';
 import { authorize } from '@/server/authorize';
 import { getContractDetails } from '@/server/contracts';
@@ -33,7 +33,8 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const t = getT(locale);
   const today = await todayForRequest();
 
-  const auth = await authorize(db, await readActor(db), 'read_contract', { contract: id });
+  const actor = await readActor(db);
+  const auth = await authorize(db, actor, 'read_contract', { contract: id });
   const details = auth.ok ? await getContractDetails(db, id, today) : null;
   if (!details) {
     const code = auth.ok ? 'not_found' : auth.reason.code;
@@ -59,7 +60,14 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
         intro={t('contract.number', { number: details.contract.number })}
       />
       <ContractSummary details={details} asset={asset} locale={locale} t={t} />
-      <ContractExit contract={details.contract} asset={asset} today={today} locale={locale} t={t} />
+      <ContractExit
+        contract={details.contract}
+        asset={asset}
+        today={today}
+        locale={locale}
+        t={t}
+        isAdmin={actor === ADMIN_ACTOR}
+      />
       <Card title={t('invoice.title')}>
         <InvoiceTable contractId={details.contract.id} today={today} locale={locale} t={t} />
       </Card>
