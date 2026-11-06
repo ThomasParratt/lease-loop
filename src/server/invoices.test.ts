@@ -1,5 +1,6 @@
 // The invoices rows on a real migrated SQLite database: write a schedule, list it, pay one
 // (audited, INVOICE_PAID emitted in the same transaction), and a failing handler rolls back.
+import { forbidden } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadVatRates } from '@/data/load';
 import { buildSchedule } from '@/domain/invoicing';
@@ -172,14 +173,27 @@ describe('payInvoice', () => {
   it('answers already_paid the second time and not_found for an unknown id', async () => {
     const [first] = await listInvoices(db, contractId);
     await payInvoice(db, { id: first!.id, paidOn: '2026-11-06', actor: 'cust-aino' });
-    expect(await payInvoice(db, { id: first!.id, paidOn: '2026-11-07', actor: 'x' })).toEqual({
+    expect(await payInvoice(db, { id: first!.id, paidOn: '2026-11-07', actor: 'admin' })).toEqual({
       ok: false,
       reason: 'already_paid',
     });
-    expect(await payInvoice(db, { id: 'nope', paidOn: '2026-11-07', actor: 'x' })).toEqual({
+    expect(await payInvoice(db, { id: 'nope', paidOn: '2026-11-07', actor: 'admin' })).toEqual({
       ok: false,
       reason: 'not_found',
     });
+  });
+
+  it('D73: anonymous and another customer are refused before anything is read or written', async () => {
+    const [first] = await listInvoices(db, contractId);
+    const before = await db.auditLog.count();
+    expect(
+      await payInvoice(db, { id: first!.id, paidOn: '2026-11-06', actor: 'anonymous' })
+    ).toEqual(forbidden('not_signed_in', 'pay_invoice'));
+    expect(
+      await payInvoice(db, { id: first!.id, paidOn: '2026-11-06', actor: 'cust-mikko' })
+    ).toEqual(forbidden('not_owner', 'pay_invoice'));
+    expect(await db.auditLog.count()).toBe(before);
+    expect((await listInvoices(db, contractId))[0]?.status).toBe('issued');
   });
 
   it('rolls the payment and its audit row back when an INVOICE_PAID handler throws', async () => {

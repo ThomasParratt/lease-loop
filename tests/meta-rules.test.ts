@@ -210,6 +210,30 @@ describe('meta rules', () => {
     expect(findings, formatFindings(findings)).toEqual([]);
   });
 
+  // D73, D74: authority and being signed in are checked before the action. Every route asks
+  // authorize() first, except the public ones named here with the reason they are public.
+  it('every API route not on the public allowlist calls authorize', () => {
+    const PUBLIC_ROUTES: Record<string, string> = {
+      'src/app/api/actor/route.ts': 'the "continue as" picker itself (D17)',
+      'src/app/api/assets/route.ts': 'the catalogue',
+      'src/app/api/assets/[id]/passport/route.ts': 'the passport is public',
+      'src/app/api/audit-log/route.ts': 'the audit page is public',
+      'src/app/api/audit-log/verify/route.ts': 'the audit chain check is public',
+      'src/app/api/demo/clock/route.ts': 'the demo clock (D71), no record of anyone',
+      'src/app/api/quotes/route.ts': 'a price snapshot, owned by no customer until applied',
+      'src/app/api/quotes/[id]/route.ts': 'a price snapshot',
+      'src/app/api/quotes/preview/route.ts': 'the live price',
+      'src/app/api/sign/[token]/route.ts': 'the token is the signatory’s authority (D46)',
+    };
+    const routes = listFiles('src/app/api', /(^|\/)route\.ts$/);
+    const missing = routes.filter(
+      (file) => !(file in PUBLIC_ROUTES) && !/\bauthorize\(/.test(read(file))
+    );
+    expect(missing, 'routes that never call authorize(').toEqual([]);
+    const stale = Object.keys(PUBLIC_ROUTES).filter((file) => !routes.includes(file));
+    expect(stale, 'allowlisted routes that no longer exist').toEqual([]);
+  });
+
   // RULES.md §7 "Every change leaves an audit trail": writes use the tx from withAudit().
   it('every write to the database goes through withAudit', () => {
     const candidates = [...listFiles('src/server', /\.ts$/), ...listFiles('src/app', /\.tsx?$/)];

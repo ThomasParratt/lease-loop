@@ -1,6 +1,7 @@
 // Card 9 on a real migrated database: `ebike-007` came back fair with 18 400 km. Assessed on
 // 6 Nov 2026 it is relisted as returned (no refurbishment beyond the mandatory steps) for
 // wait-02, at 155 476 financed, and a quote at wait-02's term gives the matched rent.
+import { refusal } from '../../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
 import { resetDb } from '../../../tests/helpers/reset-db';
@@ -112,7 +113,7 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
   it('only admin assesses, and only a returned asset', async () => {
     expect(await assessAsset(db, { assetId: 'ebike-007', actor: 'cust-aino', today })).toEqual({
       ok: false,
-      reason: { code: 'admin_only', params: {} },
+      reason: refusal('admin_only', 'assess_asset'),
     });
     expect(await assessAsset(db, { assetId: 'ebike-003', actor: 'admin', today })).toEqual({
       ok: false,
@@ -141,6 +142,33 @@ describe('card 9: ebike-007 assessed, matched and relisted', () => {
     expect(wait02?.outcome.code).toBe('already_matched');
     expect(result.view.match.winner?.demandId).toBe('wait-13');
     expect((await getAsset(db, 'ebike-007'))?.condition).toBe('good');
+  });
+
+  it('the race (wave 3 finding 4): an entry won between the read and the write answers demand_taken and writes nothing', async () => {
+    const first = await assessAsset(db, { assetId: 'ebike-008', actor: 'admin', today });
+    if (!first.ok) throw new Error(first.reason.code);
+    await db.returnAssessment.update({
+      where: { id: first.view.id },
+      data: { matched_demand_id: 'wait-02' },
+    });
+    // The second assessment read the taken entries before the first one wrote: a stale read.
+    const stale = new Proxy(db, {
+      get(target, property) {
+        if (property === 'returnAssessment') {
+          return { ...target.returnAssessment, findMany: async () => [] };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const audit = await db.auditLog.count();
+    const result = await assessAsset(stale, { assetId: 'ebike-007', actor: 'admin', today });
+    expect(result).toEqual({
+      ok: false,
+      reason: { code: 'demand_taken', params: { demandId: 'wait-02' } },
+    });
+    expect(await db.auditLog.count()).toBe(audit);
+    expect((await getAsset(db, 'ebike-007'))?.status).toBe('returned');
   });
 
   it('a stored assessment that does not parse reads as none, never a crash', async () => {

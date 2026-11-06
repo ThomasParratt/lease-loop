@@ -251,7 +251,7 @@
     },
     "/api/applications": {
       "post": {
-        "summary": "Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9); the admin only with onBehalfOf (D47); 409 QUOTE_IN_USE while another application holds the quote (D56)",
+        "summary": "Submit the answers for a quote: prunes, validates, evaluates the eligibility rules (D9); the admin only with onBehalfOf (D47); 409 QUOTE_IN_USE while another application holds the quote (D56); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["applications"],
         "parameters": [],
         "requestBody": {
@@ -476,7 +476,7 @@
     },
     "/api/applications/{id}": {
       "get": {
-        "summary": "An application with its decision and reasons as codes with params (the applicant or admin; 404 for anyone else)",
+        "summary": "An application with its decision and reasons as codes with params (the applicant or admin; 404 for another customer, D57); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["applications"],
         "parameters": [
           {
@@ -659,7 +659,7 @@
     },
     "/api/applications/{id}/decision": {
       "post": {
-        "summary": "An admin decides a manual review (D10); an awaiting_signatory case answers 403 NOT_SIGNATORY: it is signed through the link (D46)",
+        "summary": "An admin decides a manual review (D10); an awaiting_signatory case is refused (signatory_required): it is signed through the link (D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["applications"],
         "parameters": [
           {
@@ -1033,7 +1033,7 @@
     },
     "/api/assets/{id}/assessments": {
       "post": {
-        "summary": "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin)",
+        "summary": "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["second-life"],
         "parameters": [
           {
@@ -1621,7 +1621,7 @@
     },
     "/api/assets/{id}/status": {
       "patch": {
-        "summary": "Admin only: change an asset's status along D22's transitions, audited",
+        "summary": "Admin only: change an asset's status along D22's transitions, audited; 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["assets"],
         "parameters": [
           {
@@ -2055,7 +2055,7 @@
     },
     "/api/contracts": {
       "post": {
-        "summary": "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin)",
+        "summary": "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["contracts"],
         "parameters": [],
         "requestBody": {
@@ -2326,7 +2326,7 @@
     },
     "/api/contracts/{id}": {
       "get": {
-        "summary": "A contract with its frozen price and why it holds (the contract's customer or admin)",
+        "summary": "A contract with its frozen price and why it holds (the contract's customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["contracts"],
         "parameters": [
           {
@@ -2583,7 +2583,7 @@
     },
     "/api/contracts/{id}/exit": {
       "post": {
-        "summary": "Buy out, return or pass on on the request's day: sets the status, emits the event, bills the exit (the customer or admin)",
+        "summary": "Buy out, return or pass on on the request's day: sets the status, emits the event, bills the exit (the customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["exits"],
         "parameters": [
           {
@@ -3039,7 +3039,7 @@
     },
     "/api/contracts/{id}/exit-preview": {
       "get": {
-        "summary": "What buying, returning or passing on would cost on the request's day, line by line (D14), without writing",
+        "summary": "What buying, returning or passing on would cost on the request's day, line by line (D14), without writing; 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["exits"],
         "parameters": [
           {
@@ -3341,7 +3341,7 @@
     },
     "/api/customers/{id}/signatories": {
       "get": {
-        "summary": "The company's signatory list with each entry's state today (the company or admin, D46)",
+        "summary": "The company's signatory list with each entry's state today (the company or admin, D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["signatories"],
         "parameters": [
           {
@@ -3501,7 +3501,7 @@
         }
       },
       "post": {
-        "summary": "Add a signatory, valid from validFrom up to validTo (the company's own signatory or admin, D46)",
+        "summary": "Add a signatory, valid from validFrom up to validTo (the company's own signatory or admin, D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["signatories"],
         "parameters": [
           {
@@ -3702,7 +3702,7 @@
     },
     "/api/customers/{id}/signatories/{signatoryId}/revoke": {
       "post": {
-        "summary": "End a signatory's right today; the last active one cannot be revoked (D46)",
+        "summary": "End a signatory's right today; the last active one cannot be revoked (D46); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["signatories"],
         "parameters": [
           {
@@ -3871,7 +3871,7 @@
     },
     "/api/demo/cards/{id}/run": {
       "post": {
-        "summary": "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records)",
+        "summary": "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records); 404 while DEMO_TOOLS is off (D74)",
         "tags": ["demo"],
         "parameters": [
           {
@@ -4151,7 +4151,7 @@
     },
     "/api/invoices": {
       "get": {
-        "summary": "A contract's invoices in sequence order (the contract's customer or admin)",
+        "summary": "A contract's invoices in sequence order (the contract's customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["invoices"],
         "parameters": [
           {
@@ -4354,7 +4354,7 @@
     },
     "/api/invoices/{id}/pay": {
       "post": {
-        "summary": "Pay an invoice on the request's day: audited, emits INVOICE_PAID (the contract's customer or admin)",
+        "summary": "Pay an invoice on the request's day: audited, emits INVOICE_PAID (the contract's customer or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
         "tags": ["invoices"],
         "parameters": [
           {

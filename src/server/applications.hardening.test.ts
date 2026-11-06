@@ -2,6 +2,7 @@
 // the edges of D39 and D40 that the domain tests cannot see, and the reason chain of a case
 // that is held, reviewed and then signed. Nothing here knows a card; the numbers are the
 // pricing slice's frozen quote rows for the pack's assets.
+import { forbidden } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
@@ -109,10 +110,11 @@ const nothingWritten = async () => {
 
 describe('who applies (D40)', () => {
   it('the admin applying as "admin" without onBehalfOf is not the applicant, and writes nothing (D47)', async () => {
+    // D73: there is no customer "admin", so the refusal comes before any rule of D47.
     expect(await apply(await card1(), 'admin', answersOf('cust-aino'), { actor: 'admin' })).toEqual(
       {
         ok: false,
-        reason: 'not_applicant',
+        reason: 'customer_not_found',
       }
     );
     await nothingWritten();
@@ -125,7 +127,7 @@ describe('who applies (D40)', () => {
         await apply(quoteId, customerId, answersOf('cust-aino'), { actor: 'cust-aino' })
       ).toEqual({
         ok: false,
-        reason: 'not_applicant',
+        reason: 'customer_not_found',
       });
     }
     await nothingWritten();
@@ -226,10 +228,10 @@ describe('the signatory (D39, D46)', () => {
       ok: false,
       reason: 'already_used',
     });
-    expect(await sign(created.application.id, SIGNATORY, 'cust-norvi')).toEqual({
-      ok: false,
-      reason: 'not_pending',
-    });
+    // D73: the coordinator is refused before the state is read.
+    expect(await sign(created.application.id, SIGNATORY, 'cust-norvi')).toEqual(
+      forbidden('admin_only', 'decide_application')
+    );
     expect((await getApplication(db, created.application.id))?.decision).toBe('rejected');
   });
 
@@ -263,20 +265,18 @@ describe('the signatory (D39, D46)', () => {
     const created = await apply(await insertQuote(), 'cust-norvi');
     if (!created.ok) throw new Error('setup');
     for (const actor of ['cust-norvi', 'admin']) {
-      expect(await sign(created.application.id, SIGNATORY, actor), actor).toEqual({
-        ok: false,
-        reason: 'not_signatory',
-      });
+      expect(await sign(created.application.id, SIGNATORY, actor), actor).toEqual(
+        forbidden('signatory_required', 'decide_application')
+      );
     }
   });
 
   it('anonymous cannot sign, even with the right e-mail', async () => {
     const created = await apply(await insertQuote(), 'cust-norvi');
     if (!created.ok) throw new Error('setup');
-    expect(await sign(created.application.id, SIGNATORY, 'anonymous')).toEqual({
-      ok: false,
-      reason: 'not_signatory',
-    });
+    expect(await sign(created.application.id, SIGNATORY, 'anonymous')).toEqual(
+      forbidden('not_signed_in', 'decide_application')
+    );
   });
 
   it('the trap: another q_email does not let the coordinator name their record e-mail as signatory', async () => {
@@ -304,10 +304,9 @@ describe('the signatory (D39, D46)', () => {
     });
     if (!created.ok) throw new Error('setup');
     // the coordinator cannot "sign" the review away either
-    expect(await sign(created.application.id, 'fleet@norvi.example.com', 'cust-norvi')).toEqual({
-      ok: false,
-      reason: 'admin_only',
-    });
+    expect(await sign(created.application.id, 'fleet@norvi.example.com', 'cust-norvi')).toEqual(
+      forbidden('admin_only', 'decide_application')
+    );
   });
 });
 

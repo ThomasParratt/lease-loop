@@ -8,8 +8,9 @@
 // rolls the whole exit back.
 import type { AssetCondition, UsageUnit } from '@/data/schemas';
 import { planExit, type ExitMode, type ExitRefusal, type PlannedExit } from '@/domain/exits';
-import { ADMIN_ACTOR } from './actor';
+import type { AuthzRefusal } from '@/domain/authz/policy';
 import { withAudit } from './audit';
+import { authorize } from './authorize';
 import { endContract, type ContractView } from './contracts';
 import { getCustomer } from './customers';
 import { emit } from './events';
@@ -27,7 +28,7 @@ import type { PrismaClient } from './prisma-client';
 export type ExitServiceRefusal =
   | ExitRefusal
   | { code: 'contract_not_found'; params: { contractId: string } }
-  | { code: 'not_allowed'; params: { contractId: string } }
+  | AuthzRefusal
   | { code: 'next_customer_not_found'; params: { customerId: string } };
 
 /** The plan as the API and the page see it (exit-schemas.ts `exitPreviewResponseSchema`). */
@@ -45,7 +46,8 @@ export type ExitPreview = {
 };
 
 export type PreviewExitResult =
-  { ok: true; preview: ExitPreview } | { ok: false; reason: ExitServiceRefusal };
+  | { ok: true; preview: ExitPreview }
+  | { ok: false; reason: Exclude<ExitServiceRefusal, AuthzRefusal> };
 
 export type ExitContractResult =
   | { ok: true; contract: ContractView; plan: ExitPreview }
@@ -115,7 +117,7 @@ export type ExitContractInput = {
 /** Thrown inside the transaction when another exit changed the contract first. */
 class LostExitRace extends Error {}
 
-/** Leaves the contract on `today`: only its customer or `admin`. One audited transaction. */
+/** Leaves the contract on `today`: authorized first (D73), its customer or `admin`. One audited transaction. */
 export async function exitContract(
   db: PrismaClient,
   input: ExitContractInput,
@@ -123,12 +125,15 @@ export async function exitContract(
   data?: ExitData
 ): Promise<ExitContractResult> {
   const { contractId, actor } = input;
+  const notFound = {
+    ok: false,
+    reason: { code: 'contract_not_found', params: { contractId } },
+  } as const;
+  const auth = await authorize(db, actor, 'exit_contract', { contract: contractId });
+  if (!auth.ok)
+    return auth.reason.code === 'not_found' ? notFound : { ok: false, reason: auth.reason };
   const context = await readExitContext(db, contractId);
-  if (!context)
-    return { ok: false, reason: { code: 'contract_not_found', params: { contractId } } };
-  if (actor !== context.contract.customerId && actor !== ADMIN_ACTOR) {
-    return { ok: false, reason: { code: 'not_allowed', params: { contractId } } };
-  }
+  if (!context) return notFound;
   if (input.nextCustomerId && !(await getCustomer(db, input.nextCustomerId))) {
     return {
       ok: false,

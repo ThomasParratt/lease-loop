@@ -27,9 +27,11 @@ import {
   type Answer,
   type FlowContext,
 } from '@/domain/question-flow/engine';
+import type { AuthzRefusal } from '@/domain/authz/policy';
 import { ADMIN_ACTOR } from './actor';
 import { listAssets } from './assets';
 import { withAudit, type TransactionClient } from './audit';
+import { authorize } from './authorize';
 import { getCustomer } from './customers';
 import type { PrismaClient } from './prisma-client';
 import { parseRow, parseStoredJson } from './row-rules';
@@ -140,12 +142,16 @@ export type CreateApplicationResult =
       applicationId?: string;
       /** Why the answer of `questionId` was refused, for the page to write. */
       problem?: AnswerProblem;
-    };
+    }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal };
 
-/** D40, D47: the acting customer in their own name, or the admin naming whom it acts for. */
-function mayApply(input: CreateApplicationInput): boolean {
+/**
+ * D47, after `authorize` (D73) let the actor apply for the customer: the admin names whom it
+ * acts for, a customer names nobody.
+ */
+function namesApplicant(input: CreateApplicationInput): boolean {
   if (input.actor === ADMIN_ACTOR) return input.onBehalfOf === input.customerId;
-  return input.actor === input.customerId && input.onBehalfOf === undefined;
+  return input.onBehalfOf === undefined;
 }
 
 /**
@@ -177,7 +183,13 @@ export async function createApplication(
   db: PrismaClient,
   input: CreateApplicationInput
 ): Promise<CreateApplicationResult> {
-  if (!mayApply(input)) return { ok: false, reason: 'not_applicant' };
+  const auth = await authorize(db, input.actor, 'apply', { customer: input.customerId });
+  if (!auth.ok) {
+    return auth.reason.code === 'not_found'
+      ? { ok: false, reason: 'customer_not_found' }
+      : { ok: false, reason: 'forbidden', refusal: auth.reason };
+  }
+  if (!namesApplicant(input)) return { ok: false, reason: 'not_applicant' };
   const found = await flowSetupFor(db, input.quoteId, input.customerId);
   if (!found.ok) return found;
   const { context, quoteValidUntil, customerIsPep } = found.setup;
@@ -287,6 +299,20 @@ export async function getApplication(
   return row ? toApplicationView(row) : null;
 }
 
+/** Whose application it is and whether it waits for the signatory, for `authorize` (D73). */
+export async function applicationOwner(
+  db: PrismaClient | TransactionClient,
+  id: string
+): Promise<{ customerId: string; awaitingSignatory: boolean } | null> {
+  const row = await db.application.findUnique({
+    where: { id },
+    select: { customer_id: true, decision: true },
+  });
+  return row
+    ? { customerId: row.customer_id, awaitingSignatory: row.decision === 'awaiting_signatory' }
+    : null;
+}
+
 /**
  * The applications of one customer (`{ customerId }`) or, without it, every application
  * (admin), newest first. For the My leases page.
@@ -327,26 +353,31 @@ class LostDecisionRace extends Error {}
 
 export type DecideApplicationResult =
   | { ok: true; application: ApplicationView }
-  | { ok: false; reason: 'not_found' | 'not_pending' | 'admin_only' | 'not_signatory' };
+  | { ok: false; reason: 'not_found' | 'not_pending' }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal };
 
 /**
  * D10. A manual review is decided by an admin; a manual review that also needs a signatory
  * becomes `awaiting_signatory` when approved, and the signing link is made in the same
- * transaction. An `awaiting_signatory` case is signed or declined only through that link
- * (`decideByToken`, D39, D46): here it answers `not_signatory` for everyone, the company's
- * account and the admin included. Any other state is final. Two decisions at
+ * transaction. Authorized first (D73): only the admin decides, and an `awaiting_signatory`
+ * case is signed or declined only through that link (`decideByToken`, D39, D46): here it is
+ * `signatory_required` for everyone, the company's account and the admin included. Any other
+ * state is final. Two decisions at
  * the same instant: the first wins, the second answers `not_pending` and writes nothing.
  */
 export async function decideApplication(
   db: PrismaClient,
   input: DecideApplicationInput
 ): Promise<DecideApplicationResult> {
+  const auth = await authorize(db, input.actor, 'decide_application', { application: input.id });
+  if (!auth.ok) {
+    return auth.reason.code === 'not_found'
+      ? { ok: false, reason: 'not_found' }
+      : { ok: false, reason: 'forbidden', refusal: auth.reason };
+  }
   const current = await getApplication(db, input.id);
   if (!current) return { ok: false, reason: 'not_found' };
-  const path = whoDecides(current.decision);
-  if (path === 'final') return { ok: false, reason: 'not_pending' };
-  if (path === 'signing_link') return { ok: false, reason: 'not_signatory' };
-  if (input.actor !== ADMIN_ACTOR) return { ok: false, reason: 'admin_only' };
+  if (whoDecides(current.decision) !== 'admin') return { ok: false, reason: 'not_pending' };
 
   const reason: StoredReason = {
     code: 'reviewed',

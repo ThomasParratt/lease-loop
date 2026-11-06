@@ -27,10 +27,12 @@ import {
   signatureRequestAnswerSchema,
   signatureRequestRowSchema,
 } from '@/domain/rows/signatory';
+import { can, type AuthzRefusal } from '@/domain/authz/policy';
 import { signingActionSchema, type SigningAction } from './signatory-schemas';
 import { ADMIN_ACTOR } from './actor';
 import { recordSignatoryDecision, type ApplicationView } from './applications';
 import { withAudit, type TransactionClient } from './audit';
+import { authorize } from './authorize';
 import { getCustomer } from './customers';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
@@ -127,10 +129,10 @@ export async function seedSignatories(
 }
 
 /**
- * Who may change a company's list: the admin (the bank's back office, from the register), or
- * the company's own account when its e-mail is an active signatory on the list, who grants
- * the right. An account that may not sign itself (Norvi's coordinator) may not grant it:
- * that would be the same hole as signing.
+ * Who may change a company's list (D73, `manage_signatories`), checked before anything else:
+ * the admin (the bank's back office, from the register), or the company's own account when
+ * its e-mail is an active signatory on the list, who grants the right. An account that may not
+ * sign itself (Norvi's coordinator) may not grant it: that would be the same hole as signing.
  */
 async function granterFor(
   db: PrismaClient,
@@ -139,16 +141,36 @@ async function granterFor(
   today: string
 ): Promise<
   | { ok: true; customer: Customer; grantedBy: string }
-  | { ok: false; reason: 'not_found' | 'not_allowed' }
+  | { ok: false; reason: 'not_found' }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal }
 > {
+  const auth = await authorize(db, actor, 'manage_signatories', { customer: customerId });
+  if (!auth.ok) {
+    return auth.reason.code === 'not_found'
+      ? { ok: false, reason: 'not_found' }
+      : { ok: false, reason: 'forbidden', refusal: auth.reason };
+  }
   const customer = await getCustomer(db, customerId);
   if (!customer || customer.type !== 'company') return { ok: false, reason: 'not_found' };
   if (actor === ADMIN_ACTOR) return { ok: true, customer, grantedBy: REGISTER_CHECK_SIMULATED };
-  if (actor !== customerId) return { ok: false, reason: 'not_allowed' };
-  const own = activeSignatories((await rowsOf(db, customerId)).map(mandateOf), today).find(
+  const mandates = (await rowsOf(db, customerId)).map(mandateOf);
+  const decision = can(actor, 'manage_signatories', {
+    customerId,
+    mandates,
+    signerEmail: customer.email,
+    onDate: today,
+  });
+  if (!decision.ok) return { ok: false, reason: 'forbidden', refusal: decision.reason };
+  const own = activeSignatories(mandates, today).find(
     (m) => m.email === normaliseEmail(customer.email)
   );
-  return own ? { ok: true, customer, grantedBy: own.id } : { ok: false, reason: 'not_allowed' };
+  return own
+    ? { ok: true, customer, grantedBy: own.id }
+    : {
+        ok: false,
+        reason: 'forbidden',
+        refusal: { code: 'signatory_required', params: { action: 'manage_signatories' } },
+      };
 }
 
 export type AddSignatoryInput = {
@@ -163,7 +185,8 @@ export type AddSignatoryInput = {
 
 export type AddSignatoryResult =
   | { ok: true; signatory: SignatoryView }
-  | { ok: false; reason: 'not_found' | 'not_allowed' | 'already_listed' | 'invalid_dates' };
+  | { ok: false; reason: 'not_found' | 'already_listed' | 'invalid_dates' }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal };
 
 export async function addSignatory(
   db: PrismaClient,
@@ -209,7 +232,8 @@ export async function addSignatory(
 
 export type RevokeSignatoryResult =
   | { ok: true; signatory: SignatoryView }
-  | { ok: false; reason: 'not_found' | 'not_allowed' | 'already_ended' | 'last_signatory' };
+  | { ok: false; reason: 'not_found' | 'already_ended' | 'last_signatory' }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal };
 
 /** Ends a signatory's right on `today` (D46); the last active one cannot be revoked. */
 export async function revokeSignatory(
@@ -240,6 +264,20 @@ export async function revokeSignatory(
 }
 
 /**
+ * The list entry a signing link for `email` goes to (wave 3 finding 3): a revoked and re-added
+ * e-mail has two entries, and the link goes to the one that has not ended on `today` (active,
+ * waiting for its link or not yet valid), the ended one only when there is no other.
+ */
+export function entryForLink<R extends SignatoryRow>(
+  rows: readonly R[],
+  email: string,
+  today: string
+): R | undefined {
+  const same = rows.filter((row) => row.email === email);
+  return same.find((row) => stateOn(row, today) !== 'ended') ?? same[0];
+}
+
+/**
  * Inside the transaction that puts a case into `awaiting_signatory`: the signing link for the
  * named e-mail. An e-mail not on the list becomes an entry waiting for its link (granted by
  * the simulated register check, no `valid_from`): a stranger's address signs nothing until
@@ -250,7 +288,7 @@ export async function createSignatureRequest(
   input: { applicationId: string; customerId: string; email: string; today: string }
 ): Promise<{ requestId: string; signatoryId: string; registered: boolean }> {
   const email = signatoryEmailSchema.parse(input.email);
-  const found = (await rowsOf(tx, input.customerId)).find((row) => row.email === email);
+  const found = entryForLink(await rowsOf(tx, input.customerId), email, input.today);
   const signatory =
     found ??
     (await tx.companySignatory.create({

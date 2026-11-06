@@ -95,6 +95,14 @@ describe('rule 3: a monthly income above the ceiling', () => {
     expect(codes(consumer({ monthlyNetIncomeCents }))).toEqual(expected);
   });
 
+  it('holds a consumer only: a company or a sole trader above it is not held (finding 13)', () => {
+    const income = { monthlyNetIncomeCents: 1_000_000_000 };
+    expect(codes(company(income))).not.toContain('income_implausible');
+    expect(codes({ ...consumer(income), customerType: 'sole_trader' })).not.toContain(
+      'income_implausible'
+    );
+  });
+
   it('names the income and the ceiling', () => {
     expect(plausibilityHolds(LIMITS, consumer({ monthlyNetIncomeCents: 10_000_001 }))).toEqual([
       { code: 'income_implausible', params: { incomeCents: 10_000_001, ceilingCents: 10_000_000 } },

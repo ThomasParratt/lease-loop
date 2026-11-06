@@ -76,7 +76,6 @@ export const exitPreviewResponseSchema = z.object({
 export const exitRefusalSchema = z.object({
   code: z.enum([
     'contract_not_found',
-    'not_allowed',
     'contract_not_active',
     'not_started',
     'pass_on_needs_next_customer',

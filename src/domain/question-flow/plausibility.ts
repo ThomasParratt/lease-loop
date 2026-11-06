@@ -75,7 +75,9 @@ export function plausibilityHolds(
       held.push({ code: 'category_needs_review', params: { category } });
     }
   }
-  if (limits && input.monthlyNetIncomeCents !== undefined) {
+  // D50: the ceiling is a consumer's (data/consumer-limits.json's note); companies and sole
+  // traders are not capped here (wave 3 finding 13).
+  if (limits && input.customerType === 'consumer' && input.monthlyNetIncomeCents !== undefined) {
     const ceilingCents = limits.income_ceiling_cents;
     if (input.monthlyNetIncomeCents > ceilingCents) {
       held.push({

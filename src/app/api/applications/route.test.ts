@@ -188,20 +188,20 @@ describe('POST /api/applications', () => {
   });
 
   it.each([
-    ['another customer', 'cust-mikko'],
-    ['the admin', 'admin'],
-    ['anonymous (no cookie)', undefined],
-    ['a cookie naming nobody we know', 'cust-nobody'],
+    ['another customer', 'cust-mikko', 403, 'FORBIDDEN'],
+    ['the admin without onBehalfOf', 'admin', 403, 'NOT_APPLICANT'],
+    ['anonymous (no cookie)', undefined, 401, 'FORBIDDEN'],
+    ['a cookie naming nobody we know', 'cust-nobody', 401, 'FORBIDDEN'],
   ])(
-    'applying in Aino’s name as %s is 403 NOT_APPLICANT and writes nothing',
-    async (_who, actor) => {
+    'applying in Aino’s name as %s is %i %s and writes nothing (D73, D74)',
+    async (_who, actor, status, code) => {
       actAs(actor);
       const result = await post({
         quoteId: await insertQuote(),
         customerId: 'cust-aino',
         answers: answersOf('cust-aino'),
       });
-      expectRefusal(result, 403, 'NOT_APPLICANT');
+      expectRefusal(result, status, code);
       expect(await holder.db.application.count()).toBe(0);
       expect(await holder.db.auditLog.count()).toBe(0);
     }
@@ -297,12 +297,16 @@ describe('GET /api/applications/[id]', () => {
     expectRefusal(await get('nope'), 404, 'APPLICATION_NOT_FOUND');
   });
 
-  it('the admin reads it; another customer, anonymous or no actor get the same 404 as an unknown id', async () => {
+  it('the admin reads it; another customer gets the same 404 as an unknown id (D57)', async () => {
     const created = await applyAs('cust-aino');
     const id = created.body.data?.id as string;
     actAs('admin');
     expect((await get(id)).status).toBe(200);
-    for (const actor of ['cust-mikko', 'anonymous', 'someone-unknown', undefined]) {
+    for (const actor of ['anonymous', 'someone-unknown', undefined]) {
+      actAs(actor);
+      expectRefusal(await get(id), 401, 'FORBIDDEN');
+    }
+    for (const actor of ['cust-mikko']) {
       actAs(actor);
       const refused = await get(id);
       expectRefusal(refused, 404, 'APPLICATION_NOT_FOUND');
@@ -336,16 +340,16 @@ describe('POST /api/applications/[id]/decision', () => {
   });
 
   it.each([
-    ['the applicant', 'cust-haapala'],
-    ['anonymous', undefined],
-    ['another customer', 'cust-aino'],
-  ])('a manual review is 403 ADMIN_ONLY for %s', async (_who, actor) => {
+    ['the applicant', 'cust-haapala', 403],
+    ['anonymous', undefined, 401],
+    ['another customer', 'cust-aino', 403],
+  ])('a manual review is FORBIDDEN for %s (D73)', async (_who, actor, status) => {
     const id = await pending('cust-haapala');
     actAs(actor);
     expectRefusal(
       await postDecision(id, { decision: 'approved', reviewedBy: 'me' }),
-      403,
-      'ADMIN_ONLY'
+      status,
+      'FORBIDDEN'
     );
     expect(await holder.db.auditLog.count({ where: { action: 'application.decided' } })).toBe(0);
   });
@@ -365,7 +369,7 @@ describe('POST /api/applications/[id]/decision', () => {
     );
   });
 
-  it('awaiting the signatory: nobody signs on the decision page, 403 NOT_SIGNATORY; the link signs (D46)', async () => {
+  it('awaiting the signatory: nobody signs on the decision page, FORBIDDEN; the link signs (D46, D73)', async () => {
     const id = await pending('cust-norvi', {
       ...answersOf('cust-norvi'),
       q_customer_type: 'company',
@@ -379,11 +383,11 @@ describe('POST /api/applications/[id]/decision', () => {
     ];
     for (const [actor, reviewedBy] of attempts) {
       actAs(actor);
-      expectRefusal(
-        await postDecision(id, { decision: 'approved', reviewedBy }),
-        403,
-        'NOT_SIGNATORY'
-      );
+      const refused = await postDecision(id, { decision: 'approved', reviewedBy });
+      expectRefusal(refused, actor === undefined ? 401 : 403, 'FORBIDDEN');
+      if (actor !== undefined) {
+        expect(refused.body.error?.details).toMatchObject({ code: 'signatory_required' });
+      }
     }
     const { token } = await holder.db.signatureRequest.findFirstOrThrow({
       where: { application_id: id },

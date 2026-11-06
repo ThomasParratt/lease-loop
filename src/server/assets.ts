@@ -14,8 +14,9 @@ import {
   checkAssetStatusChange,
   type AssetStatusChangeRefusal,
 } from '@/domain/catalogue/transitions';
-import { ADMIN_ACTOR } from './actor';
+import type { AuthzRefusal } from '@/domain/authz/policy';
 import { withAudit, type TransactionClient } from './audit';
+import { authorize } from './authorize';
 
 /** Database row → data-pack shape. Validates, so a bad value edited in by hand is caught. */
 export function toAsset(row: AssetRow): Asset {
@@ -72,7 +73,8 @@ export async function getAsset(
 
 export type ChangeAssetStatusResult =
   | { ok: true; asset: Asset }
-  | { ok: false; reason: 'not_found' | 'admin_only' }
+  | { ok: false; reason: 'not_found' }
+  | { ok: false; reason: 'forbidden'; refusal: AuthzRefusal }
   | { ok: false; reason: AssetStatusChangeRefusal };
 
 /** Thrown inside the transaction when another request changed the status first. */
@@ -91,7 +93,11 @@ export async function changeAssetStatus(
   input: { id: string; status: AssetStatus; actor: string }
 ): Promise<ChangeAssetStatusResult> {
   const status = assetStatusSchema.parse(input.status);
-  if (input.actor !== ADMIN_ACTOR) return { ok: false, reason: 'admin_only' };
+  // D73: authorized before anything is read.
+  const auth = await authorize(db, input.actor, 'set_asset_status', { none: true });
+  if (!auth.ok && auth.reason.code !== 'not_found') {
+    return { ok: false, reason: 'forbidden', refusal: auth.reason };
+  }
   const existing = await db.asset.findUnique({ where: { id: input.id } });
   if (!existing) return { ok: false, reason: 'not_found' };
   const check = checkAssetStatusChange(existing.status, status);

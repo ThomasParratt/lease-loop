@@ -112,6 +112,7 @@ One page per slice under `docs/features/` ([template](docs/features/README.md));
 - [My leases](docs/features/my-leases.md), grown into the [user portal](docs/features/user-portal.md)
 - [Second life: assessment, matchmaking and re-pricing](docs/features/second-life.md)
 - [Demo cards: one button per scenario card](docs/features/demo-cards.md)
+- [Authorization: who may do what, checked before the action](docs/features/authorization.md)
 
 ## Team notes
 

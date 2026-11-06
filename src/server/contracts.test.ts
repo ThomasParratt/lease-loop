@@ -1,5 +1,6 @@
 // Signing on a real migrated SQLite database: the contract, the invoices, the passport entry,
 // the leased asset and the audit row commit together, and every refusal writes nothing.
+import { refusal } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PricingData } from '@/domain/pricing';
 import { seedPack } from '../../tests/helpers/invoice-fixture';
@@ -242,12 +243,15 @@ describe('signContract refusals write nothing', () => {
     expect(await writesSoFar()).toEqual(before);
   });
 
-  it('not_allowed_to_sign for another customer or anonymous', async () => {
+  it('D73: not_owner for another customer, not_signed_in for anonymous', async () => {
     const applicationId = await application();
-    for (const actor of ['cust-mikko', 'anonymous']) {
+    for (const [actor, code] of [
+      ['cust-mikko', 'not_owner'],
+      ['anonymous', 'not_signed_in'],
+    ] as const) {
       expect(await signContract(db, { applicationId, actor }, '2026-11-05', data)).toEqual({
         ok: false,
-        reason: { code: 'not_allowed_to_sign', params: { applicationId } },
+        reason: refusal(code, 'sign_contract'),
       });
     }
     expect(await writesSoFar()).toEqual({ contracts: 0, invoices: 0, passport: 0, audit: 0 });
@@ -262,7 +266,18 @@ describe('signContract refusals write nothing', () => {
     });
   });
 
-  it.each(['rejected', 'manual_review', 'awaiting_signatory'])(
+  it('D73: a case awaiting the signatory is signatory_required, for the applicant and the admin', async () => {
+    const applicationId = await application(CARD_1, 'awaiting_signatory');
+    for (const actor of ['cust-aino', 'admin']) {
+      expect(await signContract(db, { applicationId, actor }, '2026-11-05', data)).toEqual({
+        ok: false,
+        reason: refusal('signatory_required', 'sign_contract'),
+      });
+    }
+    expect(await writesSoFar()).toEqual({ contracts: 0, invoices: 0, passport: 0, audit: 0 });
+  });
+
+  it.each(['rejected', 'manual_review'])(
     'application_not_approved when the decision is %s',
     async (decision) => {
       const applicationId = await application(CARD_1, decision);

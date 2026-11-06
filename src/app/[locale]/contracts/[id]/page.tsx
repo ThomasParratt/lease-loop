@@ -1,6 +1,6 @@
 // A signed contract: the summary with the frozen price and, when today's price list is another
 // version, why the price holds (card 2), then the invoices with the VAT-change line (card 3).
-// Only the contract's customer or admin sees it (D17).
+// Only the contract's customer or admin sees it, authorized first (D17, D73).
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -10,8 +10,9 @@ import { InvoiceTable } from '@/components/invoice-table';
 import { Card, Notice, PageHeader } from '@/components/ui';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { ADMIN_ACTOR, readActor } from '@/server/actor';
+import { readActor } from '@/server/actor';
 import { getAsset } from '@/server/assets';
+import { authorize } from '@/server/authorize';
 import { getContractDetails } from '@/server/contracts';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -32,13 +33,20 @@ export default async function ContractPage({ params }: PageProps<'/[locale]/cont
   const t = getT(locale);
   const today = await todayForRequest();
 
-  const [details, actor] = await Promise.all([getContractDetails(db, id, today), readActor(db)]);
-  const allowed = details && (actor === ADMIN_ACTOR || actor === details.contract.customerId);
-  if (!details || !allowed) {
+  const auth = await authorize(db, await readActor(db), 'read_contract', { contract: id });
+  const details = auth.ok ? await getContractDetails(db, id, today) : null;
+  if (!details) {
+    const code = auth.ok ? 'not_found' : auth.reason.code;
+    const message =
+      code === 'not_found'
+        ? t('contract.notFound')
+        : code === 'not_signed_in'
+          ? t('authz.refusal.not_signed_in')
+          : t('contract.notAllowed');
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         <PageHeader title={t('contract.title')} />
-        <Notice tone="warning">{t(details ? 'contract.notAllowed' : 'contract.notFound')}</Notice>
+        <Notice tone="warning">{message}</Notice>
       </div>
     );
   }

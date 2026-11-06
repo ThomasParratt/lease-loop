@@ -1,4 +1,5 @@
 // Runs against a real, migrated SQLite database (see tests/global-setup.ts).
+import { forbidden } from '../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
@@ -100,7 +101,7 @@ describe('changeAssetStatus', () => {
       status: 'reserved',
       actor: 'cust-aino',
     });
-    expect(result).toEqual({ ok: false, reason: 'admin_only' });
+    expect(result).toEqual(forbidden('admin_only', 'set_asset_status'));
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-001' } })).status).toBe(
       'available'
     );

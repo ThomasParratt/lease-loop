@@ -1,8 +1,10 @@
 // The decision on an application: a clear yes, no or "a person will check", and every reason
 // written from its code in the visitor's language (team rule 6). An admin decides a manual
 // review here (D10); an awaiting_signatory case shows the demo outbox: the signing link that
-// was sent to the signatory, who signs there, never here (D46). The applicant signs an
-// approved one into a contract (issue 39), or follows the link to the contract.
+// was sent to the signatory, to the admin only (D46, wave 3 finding 1). The applicant signs an
+// approved one into a contract (issue 39), or follows the link to the contract. Authorized
+// first (D73): anonymous is asked to pick who they are; anyone but the applicant and the
+// admin sees the same "not found" as for an unknown id (D57).
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -17,6 +19,7 @@ import { getT, messages, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { ADMIN_ACTOR, readActor } from '@/server/actor';
 import { getApplication, type StoredReason } from '@/server/applications';
+import { authorize } from '@/server/authorize';
 import { contractIdOfApplication } from '@/server/contracts';
 import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
@@ -86,16 +89,20 @@ export default async function ApplicationPage({
   await connection();
   const t = getT(locale);
 
-  const application = await getApplication(db, id);
+  const actor = await readActor(db);
+  const auth = await authorize(db, actor, 'read_application', { application: id });
+  const application = auth.ok ? await getApplication(db, id) : null;
   if (!application) {
+    const signIn = !auth.ok && auth.reason.code === 'not_signed_in';
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
         <PageHeader title={t('decision.title')} />
-        <Notice tone="warning">{t('decision.notFound')}</Notice>
+        <Notice tone="warning">
+          {t(signIn ? 'authz.refusal.not_signed_in' : 'decision.notFound')}
+        </Notice>
       </div>
     );
   }
-  const actor = await readActor(db);
   const questionText = Object.fromEntries(
     (await loadQuestions()).questions.map((q) => [q.id, q.text[locale]])
   );
@@ -110,8 +117,12 @@ export default async function ApplicationPage({
   // Read once here and passed down (team rule 4); the server signs on its own today anyway.
   const today = await todayForRequest();
   const contractId = decision === 'approved' ? await contractIdOfApplication(db, id) : null;
+  // The demo outbox stands in for the e-mail to the signatory: the admin's view only, never
+  // the coordinator's, who must not hold the token (D46, wave 3 finding 1).
   const link =
-    decision === 'awaiting_signatory' ? await latestSigningLink(db, application.id, today) : null;
+    decision === 'awaiting_signatory' && actor === ADMIN_ACTOR
+      ? await latestSigningLink(db, application.id, today)
+      : null;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">

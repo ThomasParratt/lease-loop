@@ -215,7 +215,9 @@ model ReturnAssessment {
   new_condition              String // after refurbishment, or the same as `condition`
   market_value_cents         Int
   second_life_financed_cents Int
-  matched_demand_id          String? // an id from data/second-life-demand.json
+  // An id from data/second-life-demand.json; unique, so two assessments at the same instant
+  // cannot both win one entry (D62, wave 3 finding 4). SQLite allows many NULLs.
+  matched_demand_id          String?  @unique
   match_reasons_json         String // [{ code, params }]
   assessment_json            String   @default("{}") // the D12 options and the D13 match, for the page
   created_at                 DateTime @default(now())

@@ -1,5 +1,6 @@
 // Cards 2 to 7 end to end on a real migrated database, through the services the routes call.
 // Every date is passed in as the request's day would be; the demo clock is the caller's.
+import { forbidden, refusal } from '../../../tests/helpers/authz';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { quoteAndApply, sign, signedContract } from '../../../tests/helpers/journey';
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
@@ -136,7 +137,7 @@ describe('cards 5, 6 and 7: an application that is not approved cannot be signed
     expect(application.reasons.map((r) => r.code)).toEqual(['signatory_needed']);
     expect(await sign(db, application.id, 'cust-norvi', '2026-11-05')).toEqual({
       ok: false,
-      reason: { code: 'application_not_approved', params: { decision: 'awaiting_signatory' } },
+      reason: refusal('signatory_required', 'sign_contract'),
     });
   });
 
@@ -168,7 +169,7 @@ describe('cards 5, 6 and 7: an application that is not approved cannot be signed
         today: '2026-11-05',
         actor: 'cust-haapala',
       })
-    ).toEqual({ ok: false, reason: 'admin_only' });
+    ).toEqual(forbidden('admin_only', 'decide_application'));
     const decided = await decideApplication(db, {
       id: application.id,
       decision: 'approved',
