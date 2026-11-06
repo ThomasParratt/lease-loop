@@ -16,7 +16,7 @@ describe('firstLeaseCurve', () => {
       assetId: 'ebike-007',
       modelYear: 2023,
       previousLives: 1,
-      contracts: [{ startDate: '2026-11-06', unitListPriceCents: 203_161 }],
+      contracts: [{ startDate: '2026-11-06', unitListPriceCents: 172_829 }],
       priceLists,
       today: '2027-11-06',
     });
