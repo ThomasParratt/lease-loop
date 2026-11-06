@@ -1,0 +1,155 @@
+// Card 9 on a real migrated database: `ebike-007` came back fair with 18 400 km. Assessed on
+// 6 Nov 2026 it is relisted as returned (no refurbishment beyond the mandatory steps) for
+// wait-02, at 155 476 financed, and a quote at wait-02's term gives the matched rent.
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { seedPack } from '../../../tests/helpers/invoice-fixture';
+import { resetDb } from '../../../tests/helpers/reset-db';
+import { createTestDb } from '../../../tests/helpers/test-db';
+import { withProductionHandlers } from '../../../tests/helpers/with-handlers';
+import { listAssetEvents } from '../asset-events';
+import { getAsset } from '../assets';
+import { verifyAuditChain } from '../audit';
+import type { PrismaClient } from '../prisma-client';
+import { createQuote } from '../quotes';
+import {
+  assessAsset,
+  latestAssessment,
+  previewAssessment,
+  toAssessmentResponse,
+} from '../second-life';
+import { assessmentResponseSchema } from '../second-life-schemas';
+
+let db: PrismaClient;
+let cleanup: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db, cleanup } = await createTestDb());
+});
+afterAll(async () => {
+  await cleanup();
+});
+beforeEach(async () => {
+  await resetDb(db);
+  await seedPack(db);
+});
+withProductionHandlers();
+
+const today = '2026-11-06';
+
+describe('card 9: ebike-007 assessed, matched and relisted', () => {
+  it('the preview writes nothing and decides: as returned, for wait-02', async () => {
+    const preview = await previewAssessment(db, 'ebike-007', today);
+    if (!preview.ok) throw new Error(preview.reason.code);
+    expect(preview.proposal.contractId).toBeNull();
+    expect(preview.proposal.match.decision).toEqual({
+      code: 'relist_for_winner',
+      params: { condition: 'fair', upgrade: false, demandId: 'wait-02' },
+    });
+    expect(await latestAssessment(db, 'ebike-007')).toBeNull();
+    expect((await getAsset(db, 'ebike-007'))?.status).toBe('returned');
+  });
+
+  it('assessing writes the row, the passport and the asset available at 155 476', async () => {
+    const result = await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    if (!result.ok) throw new Error(result.reason.code);
+    const row = await db.returnAssessment.findFirstOrThrow({ where: { asset_id: 'ebike-007' } });
+    expect(row).toMatchObject({
+      contract_id: null,
+      condition: 'fair',
+      usage_value: 18_400,
+      refurbish: false,
+      new_condition: 'fair',
+      market_value_cents: 115_976,
+      second_life_financed_cents: 155_476,
+      matched_demand_id: 'wait-02',
+    });
+    expect(JSON.parse(row.refurbishment_json)).toEqual([
+      { step: 'battery_replacement', cost_cents: 35_000 },
+      { step: 'safety_inspection', cost_cents: 4_500 },
+    ]);
+    expect(await getAsset(db, 'ebike-007')).toMatchObject({
+      status: 'available',
+      condition: 'fair',
+      usage: { unit: 'km', value: 0 },
+    });
+    expect((await listAssetEvents(db, 'ebike-007')).map((e) => e.kind)).toEqual([
+      'assessed',
+      'refurbished',
+      'repriced',
+    ]);
+    expect((await latestAssessment(db, 'ebike-007'))?.match.winner?.demandId).toBe('wait-02');
+    // The route's answer holds to its contract.
+    const answer = assessmentResponseSchema.parse(toAssessmentResponse(result.view));
+    expect(answer).toMatchObject({
+      newCondition: 'fair',
+      refurbish: false,
+      matchedDemandId: 'wait-02',
+    });
+    expect(await verifyAuditChain(db)).toMatchObject({ ok: true });
+  });
+
+  it("a quote at the winner's term gives the matched rent: 8 710 net for 12 months", async () => {
+    await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    const quote = await createQuote(db, {
+      assetId: 'ebike-007',
+      termMonths: 12,
+      downPaymentCents: 0,
+      quantity: 1,
+      today,
+      actor: 'cust-aino',
+    });
+    if (!quote.ok) throw new Error(quote.reason.code);
+    expect(quote.quote.breakdown).toMatchObject({
+      unitListPriceCents: 155_476,
+      financedCents: 155_476,
+      band: 'A',
+      monthlyNetCents: 8_710,
+      // The live list's version: the amount is the assessment's, the list is v2 on 6 Nov.
+      priceListVersion: 2,
+    });
+  });
+
+  it('only admin assesses, and only a returned asset', async () => {
+    expect(await assessAsset(db, { assetId: 'ebike-007', actor: 'cust-aino', today })).toEqual({
+      ok: false,
+      reason: { code: 'admin_only', params: {} },
+    });
+    expect(await assessAsset(db, { assetId: 'ebike-003', actor: 'admin', today })).toEqual({
+      ok: false,
+      reason: { code: 'asset_not_returned', params: { assetId: 'ebike-003', status: 'available' } },
+    });
+    await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    const again = await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    expect(again).toMatchObject({ ok: false, reason: { code: 'asset_not_returned' } });
+    expect(await assessAsset(db, { assetId: 'nope', actor: 'admin', today })).toMatchObject({
+      ok: false,
+      reason: { code: 'asset_not_found' },
+    });
+  });
+
+  it('an entry already matched to another item is passed over (D62): wait-13 gets it, good', async () => {
+    const first = await assessAsset(db, { assetId: 'ebike-008', actor: 'admin', today });
+    if (!first.ok) throw new Error(first.reason.code);
+    // Stand-in for an earlier match of wait-02 to another item.
+    await db.returnAssessment.update({
+      where: { id: first.view.id },
+      data: { matched_demand_id: 'wait-02' },
+    });
+    const result = await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    if (!result.ok) throw new Error(result.reason.code);
+    const wait02 = result.view.match.verdicts.find((v) => v.demandId === 'wait-02');
+    expect(wait02?.outcome.code).toBe('already_matched');
+    expect(result.view.match.winner?.demandId).toBe('wait-13');
+    expect((await getAsset(db, 'ebike-007'))?.condition).toBe('good');
+  });
+
+  it('a stored assessment that does not parse reads as none, never a crash', async () => {
+    const result = await assessAsset(db, { assetId: 'ebike-007', actor: 'admin', today });
+    if (!result.ok) throw new Error(result.reason.code);
+    await db.returnAssessment.update({
+      where: { id: result.view.id },
+      data: { assessment_json: '{}' },
+    });
+    expect(await latestAssessment(db, 'ebike-007')).toBeNull();
+  });
+});

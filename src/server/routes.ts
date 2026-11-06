@@ -49,6 +49,7 @@ import {
   quoteIdParamsSchema,
   storedQuoteResponseSchema,
 } from './quote-schemas';
+import { assessmentParamsSchema, assessmentResponseSchema } from './second-life-schemas';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -434,6 +435,16 @@ export const ROUTES: readonly RouteDefinition[] = [
     params: exitParamsSchema,
     body: exitBodySchema,
     response: exitResponseSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/assets/[id]/assessments',
+    summary:
+      "Assess a returned asset on the request's day and relist it: the plan, the second-life price (D12), the waiting-list match (D13), the asset available (admin)",
+    tag: 'second-life',
+    params: assessmentParamsSchema,
+    response: assessmentResponseSchema,
+    status: 201,
   },
 ];
 

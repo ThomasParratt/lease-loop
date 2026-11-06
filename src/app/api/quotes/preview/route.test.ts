@@ -1,13 +1,32 @@
 // GET /api/quotes/preview answers a term over the category's cap (D43) as a refusal inside the
 // `ok()` envelope, like every other pricing refusal, with the comparison of the allowed terms.
 // The data pack is read from disk; the demo clock cookie is empty, so today is the real day.
-import { describe, expect, it, vi } from 'vitest';
+// The route reads the second-life price (D12) from the database, so the app's `db` module is
+// pointed at a real, migrated SQLite database, as in ../route.test.ts; nothing else is replaced.
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { createTestDb } from '../../../../../tests/helpers/test-db';
+import type { PrismaClient } from '@/server/prisma-client';
+
+const holder = vi.hoisted(() => ({ db: undefined as unknown as PrismaClient }));
+vi.mock('@/server/db', () => ({
+  get db() {
+    return holder.db;
+  },
+}));
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({ get: () => undefined }),
 }));
 
 const { GET } = await import('./route');
+
+let cleanup: () => Promise<void>;
+beforeAll(async () => {
+  ({ db: holder.db, cleanup } = await createTestDb());
+});
+afterAll(async () => {
+  await cleanup();
+});
 
 async function preview(query: Record<string, string>) {
   const url = new URL('http://localhost/api/quotes/preview');

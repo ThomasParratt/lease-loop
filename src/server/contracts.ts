@@ -25,6 +25,7 @@ import { emit } from './events';
 import './event-handlers';
 import type { PrismaClient } from './prisma-client';
 import { parseRow } from './row-rules';
+import { pricingForAsset } from './second-life-price';
 import { getQuote, loadPricingData, storedQuoteStatusOn, type StoredQuote } from './quotes';
 
 export type ContractView = Omit<PlannedContract, 'status'> & {
@@ -147,7 +148,15 @@ export async function signContract(
   if (!stored) throw new Error(`Application ${applicationId} names a missing quote`);
   const asset = await getAsset(db, stored.breakdown.assetId);
   if (!asset) throw new Error(`Quote ${stored.id} names a missing asset`);
-  const pricing = data ?? (await loadPricingData());
+  // D12: a relisted item's quote was priced on its second-life amount; the price lock compares
+  // with the same amount (src/server/second-life-price.ts).
+  const pricing = await pricingForAsset(db, asset.id, data ?? (await loadPricingData()));
+  // D16: an item with an ended earlier lease starts its next life on a chained contract.
+  const previous = await db.contract.findFirst({
+    where: { asset_id: asset.id, status: { not: 'active' } },
+    orderBy: [{ signed_on: 'desc' }, { number: 'desc' }],
+    select: { id: true },
+  });
   const quoteStatus = storedQuoteStatusOn(stored, today, pricing.priceLists);
   const customer = await getCustomer(db, application.customerId);
 
@@ -190,7 +199,10 @@ export async function signContract(
         await leaseAvailableAsset(tx, contract.assetId);
         // The row's own rules (D27): the frozen price, the term's last day, the status.
         const created = await tx.contract.create({
-          data: parseRow('contract', contractRowSchema, toContractRowData(contract)),
+          data: parseRow('contract', contractRowSchema, {
+            ...toContractRowData(contract),
+            previous_contract_id: previous?.id ?? null,
+          }),
         });
         await emit(tx, event);
         return created;
@@ -333,4 +345,19 @@ export async function endContract(
   });
   if (count !== 1) return null;
   return toContractView(await tx.contract.findUniqueOrThrow({ where: { id: input.id } }));
+}
+
+/**
+ * The contracts of one asset, oldest signing first: the second life reads the first one (the
+ * price and day of the first lease, D60) and the latest (the lease it came back from).
+ */
+export async function listAssetContracts(
+  db: PrismaClient | TransactionClient,
+  assetId: string
+): Promise<ContractView[]> {
+  const rows = await db.contract.findMany({
+    where: { asset_id: assetId },
+    orderBy: [{ signed_on: 'asc' }, { number: 'asc' }],
+  });
+  return rows.map(toContractView);
 }

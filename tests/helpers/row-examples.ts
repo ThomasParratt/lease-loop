@@ -86,4 +86,5 @@ export const returnAssessmentRow = () => ({
   second_life_financed_cents: 124900,
   matched_demand_id: 'wait-02',
   match_reasons_json: JSON.stringify([{ code: 'earliest_needed_by', params: {} }]),
+  assessment_json: JSON.stringify({ options: [] }),
 });

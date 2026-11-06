@@ -206,7 +206,7 @@ model AssetEvent {
 model ReturnAssessment {
   id                         String   @id @default(cuid())
   asset_id                   String
-  contract_id                String
+  contract_id                String? // the lease it came back from; null for an item the pack seeds as returned
   assessed_on                String
   condition                  String // as returned
   usage_value                Int
@@ -217,10 +217,11 @@ model ReturnAssessment {
   second_life_financed_cents Int
   matched_demand_id          String? // an id from data/second-life-demand.json
   match_reasons_json         String // [{ code, params }]
+  assessment_json            String   @default("{}") // the D12 options and the D13 match, for the page
   created_at                 DateTime @default(now())
 
-  asset    Asset    @relation(fields: [asset_id], references: [id])
-  contract Contract @relation(fields: [contract_id], references: [id])
+  asset    Asset     @relation(fields: [asset_id], references: [id])
+  contract Contract? @relation(fields: [contract_id], references: [id])
 
   @@index([asset_id])
   @@index([contract_id])
