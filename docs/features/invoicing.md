@@ -115,7 +115,7 @@ handleContractSigned(tx, event, vatRates?): Promise<number>   // event.signedOn 
 - `src/components/invoice-table.tsx`; `invoice.*` keys in the four message files.
 - `tests/helpers/invoice-fixture.ts`: a card 1 contract row (with its quote and application) for the server tests.
 
-## Tests that pin it
+## Tests that pin the numbers
 
 - `dates.test.ts`: 31 Jan + 1 → 28 Feb 2026, + 25 → 29 Feb 2028, + 2 → 31 Mar; leap years 2028, 2000 yes and 2100 no; `addDays` across the leap day; `termEndDate` for cards 1 and 4.
 - `schedule.test.ts`: card 1's first three invoices in full and its totals; card 3's December and January; card 4's two Februaries and its last period; the 1 Jan 2027 and 31 Dec 2026 boundary; invoice 0 on the signing day; the missing-rate answer; `firstVatChange` on card 3.

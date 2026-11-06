@@ -117,6 +117,7 @@ One page per slice under `docs/features/` ([template](docs/features/README.md));
 
 How we work (rules, branches, reviews) and how the app is put together (database, actor, API, events, pages, each slice): [docs/team-notes.md](docs/team-notes.md).
 Open questions for the mentors: [docs/mentor-questions.md](docs/mentor-questions.md); decisions: [docs/decisions.md](docs/decisions.md).
+The pitch run: [docs/demo.md](docs/demo.md); the submission PR draft: [docs/submission.md](docs/submission.md); the wave reviews: `docs/reviews/`.
 
 ---
 

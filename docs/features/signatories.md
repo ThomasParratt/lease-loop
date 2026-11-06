@@ -72,7 +72,7 @@ Routes: `GET`/`POST /api/customers/[id]/signatories`, `POST /api/customers/[id]/
 
 ## Open questions
 
-- **No e-mail is sent.** The link is shown in the decision page's demo outbox, to whoever opens the page; whoever holds it acts as the signatory. Production replaces this with the e-mailed invitation and Suomi.fi strong identification on opening, and the list with the trade register and Suomi.fi e-Authorizations (a register check when an e-mail is named).
+- **No e-mail is sent.** The link is shown in the decision page's demo outbox, to whoever opens the page; whoever holds it acts as the signatory. The decision page has no access check yet (finding 1 of [the wave 3 review](../reviews/wave-3.md)). Production replaces this with the e-mailed invitation and Suomi.fi strong identification on opening, and the list with the trade register and Suomi.fi e-Authorizations (a register check when an e-mail is named).
 - **Amount limits per signatory** (two signatories jointly above a sum, as many companies' rules say) are not modelled.
 - The seed day is the real day: on a demo clock before it, the seeded signatories are not yet valid.
-- A second application naming the same e-mail reuses the entry; an entry that was revoked stays revoked, and its new link answers `signatory_not_active`.
+- A second application naming the same e-mail reuses the entry; an entry that was revoked stays revoked, and its new link answers `signatory_not_active`. When the same e-mail has since been added again, the link still takes the ended entry: a defect, finding 3 of [the wave 3 review](../reviews/wave-3.md).

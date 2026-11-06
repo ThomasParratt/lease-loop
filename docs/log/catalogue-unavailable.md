@@ -15,3 +15,5 @@ Nothing.
 ## Left undone
 
 Nothing from these three items.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#42); nothing was left.

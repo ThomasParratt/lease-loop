@@ -16,3 +16,5 @@ Nothing.
 ## Left undone
 
 - The slider keeps its step (1 % of the price), so after a typed amount off that grid, dragging snaps back onto the grid. The box is the way to an exact amount.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#29); the slider step stays as it is.

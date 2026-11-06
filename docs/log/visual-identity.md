@@ -13,3 +13,5 @@ Panu's session, 2026-11-05 (Helsinki time).
 | 23:05 | `main` merged in (audit chain, exits, decision race): the four message files combined key by key, the audit page keeps both the back-office note and the chain badge; the phone-width overflow on the landing page fixed (`grid-cols-1`); D21 reworded; this log and `docs/features/look.md`. |
 
 Left undone: fonts from `next/font/local` (the build needs Google Fonts today); gating the audit page itself.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#19); the 375 px check of every page is the hardening's.

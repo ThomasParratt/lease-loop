@@ -14,3 +14,5 @@ Nothing.
 ## Left undone
 
 - Money saved: not computed anywhere yet (smart problem 7 asks for it per item and for the fleet). Filed as an issue; once the rule exists, a fleet total belongs here beside the CO2.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#43); money saved is still not computed (smart problem 7, open in `docs/features/circular-impact.md`).

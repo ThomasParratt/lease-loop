@@ -110,7 +110,7 @@ readFleetImpact(db, asOf): Promise<{ fleet: FleetImpact; assets: { asset, kg }[]
 
 ## Open questions
 
-- **`previous_lives` after a return.** The passport reads it as the lives before the log. The exits slice (wave 2) leaves `previous_lives` as it is on a return, so a logged life is not counted twice; the second-life slice (wave 3) must keep it that way when it re-lists the item.
+- **`previous_lives` after a return.** The passport reads it as the lives before the log. The exits slice (wave 2) leaves `previous_lives` as it is on a return, so a logged life is not counted twice; the second-life slice (PR #53) keeps it that way: the relist writes the status, condition and usage only, so card 10's third life is the logged one.
 - **Design lives and the 24-month past-life estimate** are team assumptions, not data-pack numbers; ask the mentors whether they want them in the data pack.
 - **Money saved**: needs a money factor the data pack does not have (e.g. the new price against the refurbishment cost from `refurbishment-costs.json`).
-- No writer yet for `assessed`, `refurbished`, `repriced` (the second-life slice, wave 3). Signing (`CONTRACT_SIGNED`) and the exits (`CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`) emit today, so `leased`, `bought`, `returned` and `passed_on` are written.
+- Every event has its writer: signing (`CONTRACT_SIGNED`) and the exits (`CONTRACT_BOUGHT_OUT`, `UNIT_RETURNED`, `UNIT_PASSED_ON`) write `leased`, `bought`, `returned` and `passed_on`; the assessment (`assessAsset`, PR #53) writes `assessed`, `refurbished` and `repriced`. Card 10's third-life lease runs on a database in `src/server/scenarios/card-10.test.ts` (37 101, 1 359 a month, 58 kg after 24 months).

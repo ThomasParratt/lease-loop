@@ -21,3 +21,5 @@ Real clock, Helsinki. Coding agent: Opus, in a worktree slot, branch `test/quest
 - The open product rules are `it.todo` with their candidate outcomes in the name; the decision list is in the report to Johannes, not in `docs/decisions.md` (D-numbers on the PR are being renumbered by others).
 - `GET /api/applications/[id]` still answers anyone with every answer (todo in `route.test.ts`).
 - The signatory's identity is still an e-mail typed on the company's account (Thomas's open question).
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#36); its `it.todo` rules were decided as D48 to D59 and built in #51.

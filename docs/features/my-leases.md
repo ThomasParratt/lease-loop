@@ -8,7 +8,7 @@ A "My leases" link in the top navigation, shown once someone is chosen in "Conti
 
 - **Who sees what.** Nobody chosen: no link, and the page asks to choose in "Continue as". A customer: their own contracts and applications only (`customer_id` = the actor). Admin: everything. Every row links to a page the same actor is allowed to open (the contract page's D26 check), so no link ends in "not allowed".
 - **Contracts** newest signing first, then by number; each shows the item, the status, the number, the term (start to last day) and the locked monthly rent without VAT.
-- **Applications** newest first, without those that became a contract (the contract stands for them). An approved one says "Ready to sign"; the others show their decision ("Not approved", "A person will check", "Waiting for the signatory").
+- **Applications** newest first, without those that became a contract (the contract stands for them). An approved one shows "Approved" with a "Ready to sign" link; the others show their decision ("Not approved", "A person will check", "Waiting for the signatory").
 - Worked through card 1: Aino signs `ebike-003` on 2026-11-05; her list shows "Nordvolt Trail 500 · Active · 5 November 2026 – 4 November 2029 · €107.30 a month without VAT", linking to the contract.
 
 ## Decisions
@@ -30,9 +30,10 @@ None new: the page reads through each table owner's function (team rule 3) and w
 
 - `src/server/contracts.test.ts`: "listContracts gives one customer their own contracts, newest first, and admin all".
 - `src/server/applications.test.ts`: "listApplications gives one customer their own applications, newest first, and admin all".
+- The €107.30 in the worked example is card 1's rent, pinned by pricing (`src/domain/scenarios/card-01-happy-path.test.ts`); the page only prints it.
 - Checked live: as Aino (her contracts and unsigned applications), as Admin (every row with its customer), as nobody (no link, the pointer to "Continue as"), and at 375 px.
 
 ## Open questions
 
-- An approved application whose quote has expired or whose item was leased to someone else still says "Ready to sign"; the Sign button then shows the refusal (`quote_expired`, `asset_not_available`).
+- An approved application whose quote has expired or whose item was leased to someone else still shows the "Ready to sign" link; the Sign button then shows the refusal (`quote_expired`, `asset_not_available`).
 - The rest of #28 (invoices across contracts, a customer overview) is not built.

@@ -16,3 +16,5 @@ Real clock, Helsinki. Coding agent: Opus, in the main checkout, branch `fix/ques
 
 - The signatory's identity is still only an e-mail typed on the company's account; a real check needs an e-mailed one-time link.
 - The other findings of the survey (quantity by customer type, sanity of income, revenue and registry answers) were left out on purpose: the user chose the first three.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#25); the e-mailed one-time link came with #49, the other survey findings became D48 to D59 (#51).

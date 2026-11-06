@@ -28,3 +28,5 @@ Nothing. Python is not installed in this shell, so the file edits went through N
 - The contract page scrolls sideways at 375 px (848 px wide, the invoice table); not this slice's page, a follow-up for its owner.
 - The README "15-minute tour" is the organiser's list of files; no line added there. The README "Status" table and `docs/features/STATUS.md` are the hardening agent's and the coordinator's.
 - The landing pages have no anchors to the exit block or the invoice table (other slices' components).
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#52); cards 9 and 10 still stop at the returned asset (finding 2 of `docs/reviews/wave-3.md`, the wave 3 hardening), and the contract page's 375 px overflow is its owner's.

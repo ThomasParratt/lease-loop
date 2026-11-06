@@ -23,3 +23,5 @@ Nothing. The machine was saturated, so only targeted tests ran between commits a
 - Finding 4: an approved application has no "Sign the contract" button (signing is only `POST /api/contracts`); it gets its own PR.
 - From `sm` up the why-we-ask note still widens a little when opened.
 - Not checked in a browser after the `h2` change: keyboard and focus on the note, dark mode, sv and et pages.
+
+Closed by the wave 3 upkeep, 2026-11-06 05:39: the task is merged (#37); the Sign button came with #47.
