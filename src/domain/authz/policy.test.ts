@@ -7,7 +7,14 @@ import { ADMIN, ANONYMOUS, AUTHZ_ACTIONS, can, isAuthzRefusal, type AuthzAction 
 const OWN = 'cust-norvi';
 const OTHER = 'cust-aino';
 const subjectFor = (action: AuthzAction) =>
-  ['assess_asset', 'read_second_life', 'set_asset_status', 'run_demo_card'].includes(action)
+  [
+    'assess_asset',
+    'read_second_life',
+    'set_asset_status',
+    'run_demo_card',
+    'act_as_customer',
+    'set_demo_clock',
+  ].includes(action)
     ? { customerId: null }
     : { customerId: OWN };
 
@@ -73,7 +80,25 @@ const TABLE: Record<
     other: 'admin_only',
     admin: 'ok',
   },
-  run_demo_card: { anonymous: 'ok', owner: 'ok', other: 'ok', admin: 'ok' },
+  // D93, D94: the demo tools sit behind the admin's sign-in; a customer never moves the clock.
+  run_demo_card: {
+    anonymous: 'not_signed_in',
+    owner: 'admin_only',
+    other: 'admin_only',
+    admin: 'ok',
+  },
+  act_as_customer: {
+    anonymous: 'not_signed_in',
+    owner: 'admin_only',
+    other: 'admin_only',
+    admin: 'ok',
+  },
+  set_demo_clock: {
+    anonymous: 'not_signed_in',
+    owner: 'admin_only',
+    other: 'admin_only',
+    admin: 'ok',
+  },
 };
 
 describe('can: every actor kind × every action', () => {

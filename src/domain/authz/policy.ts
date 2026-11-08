@@ -1,6 +1,8 @@
 // Who may do what (D73). One pure rule for every write and every private read, checked before
 // the action, never inside it: the route and the service ask `can` first and act only on
-// `{ ok: true }`. There is no login (D17): the actor is `anonymous`, `admin` or a customer id.
+// `{ ok: true }`. The actor comes from the session (D91): `anonymous`, `admin` or a customer id;
+// while the admin acts as a customer it is that customer (D93), except for the demo tools,
+// which are asked with the session's own account.
 // The public reads (catalogue, prices, quotes, passport, audit log) are not actions here; the
 // second-life page is back office (D85: it shows the whole waiting list), so it is one.
 import { canSign, type Mandate } from '@/domain/signatories/mandates';
@@ -24,6 +26,8 @@ export const AUTHZ_ACTIONS = [
   'read_second_life',
   'set_asset_status',
   'run_demo_card',
+  'act_as_customer',
+  'set_demo_clock',
 ] as const;
 export type AuthzAction = (typeof AUTHZ_ACTIONS)[number];
 
@@ -71,6 +75,9 @@ const ADMIN_ONLY: readonly AuthzAction[] = [
   'assess_asset',
   'read_second_life',
   'set_asset_status',
+  'run_demo_card',
+  'act_as_customer',
+  'set_demo_clock',
 ];
 
 /** Whether the signer named in the subject holds an active mandate on its day (D46). */
@@ -86,21 +93,19 @@ function signerHoldsMandate(subject: AuthzSubject): boolean {
 
 /**
  * The rule, in order:
- * 1. `run_demo_card` is the demo tool: open to everyone while the demo tools are on (D74), as
- *    the runner acts as each card's own customer through the services, which check again.
- * 2. A case waiting for the company's signatory is signed or decided only by an active mandate
+ * 1. A case waiting for the company's signatory is signed or decided only by an active mandate
  *    through the signing link: never by the coordinator, never by the admin
  *    (`signatory_required`).
- * 3. Anonymous: `not_signed_in`.
- * 4. Changing a company's signatory list takes an account that is itself an active signatory
+ * 2. Anonymous: `not_signed_in`.
+ * 3. Changing a company's signatory list takes an account that is itself an active signatory
  *    when the subject carries the list (the admin checks the register instead).
- * 5. The customer signs their own lease: the admin reviews applications and may apply on a
+ * 4. The customer signs their own lease: the admin reviews applications and may apply on a
  *    customer's behalf (D47), but never signs for them (`customer_signs`, D88).
- * 6. The admin does everything else; a customer never takes an admin action (`admin_only`).
- * 7. A customer acts on its own records only (`not_owner`).
+ * 5. The admin does everything else; a customer never takes an admin action (`admin_only`),
+ *    the demo tools included (D93, D94).
+ * 6. A customer acts on its own records only (`not_owner`).
  */
 export function can(actor: string, action: AuthzAction, subject: AuthzSubject): AuthzDecision {
-  if (action === 'run_demo_card') return ALLOW;
   const signing = action === 'sign_contract' || action === 'decide_application';
   if (signing && subject.awaitingSignatory) {
     return signerHoldsMandate(subject) ? ALLOW : refuse('signatory_required', action);
