@@ -69,6 +69,7 @@ model Customer {
   applications Application[]
   contracts    Contract[]
   signatories  CompanySignatory[]
+  account      Account?
 }
 
 // A priced offer for an asset on a date, frozen so a later price list does not change it.
@@ -304,4 +305,40 @@ model SignatureRequest {
 
   @@index([application_id])
   @@index([signatory_id])
+}
+
+// Who can sign in (D91, D92): one account per customer, on its record's e-mail, and the admin,
+// whose account has no customer. The role and the customer type come from here and the
+// customer row, never from the sign-in form. Only an scrypt hash of the password is stored.
+model Account {
+  id              String   @id @default(cuid())
+  email           String   @unique // trimmed and lower case (normaliseEmail)
+  password_hash   String // scrypt$N$r$p$salt$hash, src/server/passwords.ts
+  role            String // customer | admin
+  customer_id     String?  @unique
+  // The lock after wrong passwords (src/domain/auth/lockout.ts).
+  failed_attempts Int      @default(0)
+  locked_until    String? // ISO instant
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  customer Customer? @relation(fields: [customer_id], references: [id])
+  sessions Session[]
+}
+
+// A signed-in browser (D91). The cookie holds a random token; the row only its SHA-256, so a
+// copied database opens no session. The admin's session also holds the demo tools' state
+// (D93, D94): the customer it acts as and the day it runs on; only admin routes set them.
+model Session {
+  id         String   @id @default(cuid())
+  token_hash String   @unique
+  account_id String
+  expires_at String // ISO instant, from sign-in (src/domain/auth/sessions.ts)
+  acting_as  String? // a customer id, admin only
+  as_of      String? // the demo clock's day, YYYY-MM-DD
+  created_at DateTime @default(now())
+
+  account Account @relation(fields: [account_id], references: [id], onDelete: Cascade)
+
+  @@index([account_id])
 }
