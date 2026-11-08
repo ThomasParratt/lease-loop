@@ -1,52 +1,48 @@
 'use client';
 
-// "Continue as": picks the actor (D17: there is no login). Posts the choice to /api/actor,
-// which sets the cookie, then refreshes so the server components read the new actor.
-// The page passes in the customers, the current actor and the translated labels.
+// "Act as": the admin's tool to act as a customer (D93). It is shown only to the admin and
+// changes only the admin's own session (POST /api/actor); "Myself (admin)" and the "Back to
+// admin" button end it (DELETE /api/actor). Then the server pages re-render for the new actor.
+// The page passes in the customers, who the admin acts as now and the translated labels.
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, type FormEvent } from 'react';
 import { Button, cx, inputClasses } from '@/components/ui';
 
 export type ActorPickerLabels = {
   label: string;
-  anonymous: string;
   admin: string;
   submit: string;
-  clear: string;
   error: string;
 };
 
-export function ActorPicker({
-  customers,
-  current,
-  labels,
-  onDark = false,
-}: {
-  customers: readonly { id: string; name: string }[];
-  current: string;
-  labels: ActorPickerLabels;
-  /** True on the teal staff strip: light label and an outlined light button. */
-  onDark?: boolean;
-}) {
+function useActorSwitch() {
   const router = useRouter();
-  const [selected, setSelected] = useState(current === 'anonymous' ? '' : current);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
-
-  function send(init: RequestInit) {
+  const send = (init: RequestInit) =>
     startTransition(async () => {
       const response = await fetch('/api/actor', init).catch(() => null);
       setFailed(!response?.ok);
       if (response?.ok) router.refresh();
     });
-  }
+  return { failed, pending, send };
+}
+
+export function ActorPicker({
+  customers,
+  actingAs,
+  labels,
+}: {
+  customers: readonly { id: string; name: string }[];
+  /** The customer the admin acts as now, or null. */
+  actingAs: string | null;
+  labels: ActorPickerLabels;
+}) {
+  const [selected, setSelected] = useState(actingAs ?? 'admin');
+  const { failed, pending, send } = useActorSwitch();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selected === '') {
-      send({ method: 'DELETE' });
-      return;
-    }
     send({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,15 +53,9 @@ export function ActorPicker({
   return (
     <form
       onSubmit={onSubmit}
-      className={cx(
-        'flex items-center gap-2 text-sm',
-        onDark ? 'min-w-0 flex-1 justify-end' : 'flex-wrap'
-      )}
+      className="flex min-w-0 flex-1 items-center justify-end gap-2 text-sm"
     >
-      <label
-        htmlFor="actor-picker"
-        className={cx('font-semibold', onDark ? 'max-sm:sr-only' : 'text-ink-muted')}
-      >
+      <label htmlFor="actor-picker" className="font-semibold max-sm:sr-only">
         {labels.label}
       </label>
       <select
@@ -75,7 +65,6 @@ export function ActorPicker({
         onChange={(event) => setSelected(event.target.value)}
         className={cx(inputClasses, 'min-h-9 w-auto max-w-56 min-w-0 py-1 text-sm')}
       >
-        <option value="">{labels.anonymous}</option>
         <option value="admin">{labels.admin}</option>
         {customers.map((customer) => (
           <option key={customer.id} value={customer.id}>
@@ -83,14 +72,37 @@ export function ActorPicker({
           </option>
         ))}
       </select>
-      <Button type="submit" variant={onDark ? 'onDark' : 'secondary'} size="sm" pending={pending}>
-        {selected === '' && current !== 'anonymous' ? labels.clear : labels.submit}
+      <Button type="submit" variant="onDark" size="sm" pending={pending}>
+        {labels.submit}
       </Button>
       {failed ? (
-        <span role="alert" className={onDark ? 'font-semibold' : 'text-danger-ink'}>
+        <span role="alert" className="font-semibold">
           {labels.error}
         </span>
       ) : null}
     </form>
+  );
+}
+
+/** "Back to admin" on the acting-as banner: ends acting as the customer. */
+export function StopActingButton({ label, error }: { label: string; error: string }) {
+  const { failed, pending, send } = useActorSwitch();
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        pending={pending}
+        onClick={() => send({ method: 'DELETE' })}
+      >
+        {label}
+      </Button>
+      {failed ? (
+        <span role="alert" className="font-semibold">
+          {error}
+        </span>
+      ) : null}
+    </span>
   );
 }

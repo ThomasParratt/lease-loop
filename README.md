@@ -25,6 +25,8 @@ npm run dev          # http://localhost:3000
 
 You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
 
+Sign in at `/en/login` (D91). `npm run db:setup` gives every test customer an account on its e-mail in `data/customers.json` and the admin one on `ADMIN_EMAIL`; the passwords are random, in your `.env` (`CUSTOMER_PASSWORD`, `ADMIN_PASSWORD`), never in the repo. The admin's teal strip has the demo page and "Act as" a customer (D93).
+
 | Command                 | What it does                                                   |
 | ----------------------- | -------------------------------------------------------------- |
 | `npm run setup`         | Set up a checkout or worktree: dependencies, database, hooks   |
@@ -116,6 +118,7 @@ One page per slice under `docs/features/` ([template](docs/features/README.md));
 - [Second life: assessment, matchmaking and re-pricing](docs/features/second-life.md)
 - [Demo cards: one button per scenario card](docs/features/demo-cards.md)
 - [Authorization: who may do what, checked before the action](docs/features/authorization.md)
+- [Sign-in and sessions, and the admin's demo tools behind them](docs/features/auth.md)
 
 ## Team notes
 

@@ -16,7 +16,7 @@ SQLite through Prisma 7, schema in `prisma/schema.prisma`, `snake_case` columns.
 
 ### Who is acting
 
-There is no login (D17). The "continue as" picker (`src/components/actor-picker.tsx`, in the header) posts `{ actor }` (a customer id or `admin`) to `POST /api/actor`, which sets the `lease-loop-actor` cookie; `DELETE /api/actor` clears it. Pages and routes call `readActor(db)` from `src/server/actor.ts` once per request and pass the actor to `withAudit`; an unknown or missing cookie reads as `anonymous`.
+Customers and the admin sign in (D91, [auth.md](features/auth.md)): `POST /api/session` checks the e-mail and the password and sets the session cookie, `DELETE /api/session` signs out. Pages and routes call `readActor(db)` from `src/server/actor.ts` once per request and pass the actor to `withAudit`; no live session reads as `anonymous`. The admin's "Act as" picker (`src/components/actor-picker.tsx`, in the teal strip) posts `{ actor }` to `POST /api/actor`, which sets the customer the admin acts as on the admin's own session (D93); the audit rows then name the admin with `actingAs`. The demo tools ask with `readSession(db)`, the session's own account.
 
 ### API
 
@@ -32,7 +32,7 @@ When one change touches several slices' rows at one instant, the owner emits one
 
 ### Demo clock
 
-The demo page moves the app to any day, so a scenario card dated September 2026 or February 2028 runs on its own date. `POST /api/demo/clock` with `{ "asOf": "2026-09-15" }` sets the `lease-loop-as-of` cookie and `{ "asOf": null }` clears it. Pages and routes call `todayForRequest()` from `src/server/demo-clock.ts` once and pass the day down; it is `todayIso()` unless the cookie holds a real calendar day (an invalid one is ignored). The catalogue's "prices on" follows it. It is the only date the server takes from the browser.
+The demo page moves the app to any day, so a scenario card dated September 2026 or February 2028 runs on its own date. `POST /api/demo/clock` with `{ "asOf": "2026-09-15" }` sets the day on the admin's own session and `{ "asOf": null }` clears it; only the admin may (D94). Pages and routes call `todayForRequest(db)` from `src/server/demo-clock.ts` once and pass the day down; it is `todayIso()` unless the session holds a real calendar day (an invalid one is ignored). The catalogue's "prices on" follows it. No date is taken from the browser.
 
 ### Pricing and quotes
 

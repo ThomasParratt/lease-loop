@@ -11,7 +11,10 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /** The entry as it is recorded. Unchanged (the same object) unless the admin acted as someone. */
-export function attributeAuditEntry<E extends Entry>(entry: E, sessionAccount: string | null): E {
+export function attributeAuditEntry<E extends Entry>(
+  entry: E,
+  sessionAccount: string | null
+): E & { details?: unknown } {
   if (sessionAccount !== ADMIN_ACCOUNT || entry.actor === ADMIN_ACCOUNT) return entry;
   const actingAs = entry.actor;
   const details =

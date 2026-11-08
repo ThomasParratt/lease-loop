@@ -67,6 +67,12 @@ One row per feature of the plan (`docs/kickoff-brief.md` sections 4 and 9), kept
 | Audit details in a side-by-side dock, the audit log reached from the demo page                                                                            | done  | #77: `details.test.ts`                                                                                                                                                             | [audit-chain.md](audit-chain.md), [look.md](look.md)                                             |
 | No "Recommended" catalogue sort, the CO₂ method as bullets, a footer catalogue button (D84)                                                               | done  | #78: `catalogue.test.ts`                                                                                                                                                           | [catalogue.md](catalogue.md)                                                                     |
 
+## After the hackathon
+
+| Feature                                                                                                              | State       | Verified by                                                                                         | Page               |
+| -------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------- | ------------------ |
+| Sign-in with database sessions, the account lock, the picker, demo clock and card runs behind the admin (D91 to D94) | in progress | `login.test.ts`, `session/route.test.ts`, `actor/route.test.ts`, the demo route tests (`feat/auth`) | [auth.md](auth.md) |
+
 ## Smart problems (CHALLENGE.md order)
 
 | #   | Problem                     | State                                                                                                                                                                                                                                                                |

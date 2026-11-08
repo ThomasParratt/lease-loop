@@ -1,7 +1,10 @@
 // The demo page, the one entry point to the demo tools (issue #35): the clock override that
 // lets the judges run a dated scenario card on its own day, one Run button per scenario card
-// (docs/features/demo-cards.md) and the audit log with its chain badge.
+// (docs/features/demo-cards.md) and the audit log with its chain badge. Admin only (D94): the
+// session's own account is checked before anything is read; anyone else gets a pointer to sign
+// in as the admin. While the demo tools are off (D74) the page is not found.
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AuditChainBadge } from '@/components/audit-chain-badge';
@@ -20,10 +23,12 @@ import { loadCustomers } from '@/data/load';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { ADMIN_ACTOR, readSession } from '@/server/actor';
 import { verifyAuditChain } from '@/server/audit';
 import { db } from '@/server/db';
 import { DEMO_CARDS } from '@/server/demo-cards';
 import { readDemoClock } from '@/server/demo-clock';
+import { demoToolsOn } from '@/server/demo-tools';
 import { CardList } from './card-list';
 import { ClockForm } from './clock-form';
 
@@ -42,7 +47,23 @@ export default async function DemoPage({ params }: PageProps<'/[locale]/demo'>) 
   if (!isLocale(locale)) notFound();
   await connection();
 
+  if (!demoToolsOn()) notFound();
+
   const t = getT(locale);
+  const session = await readSession(db);
+  if (session?.account !== ADMIN_ACTOR) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+        <PageHeader title={t('demo.title')} />
+        <Notice tone="info">
+          {t('demo.adminOnly')}{' '}
+          <Link href={`/${locale}/login?next=${encodeURIComponent(`/${locale}/demo`)}`}>
+            {t('nav.signIn')}
+          </Link>
+        </Notice>
+      </div>
+    );
+  }
   const [clock, verdict, customers] = await Promise.all([
     readDemoClock(db),
     verifyAuditChain(db),

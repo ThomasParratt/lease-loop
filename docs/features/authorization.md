@@ -2,19 +2,18 @@
 
 ## What it does
 
-One pure rule decides who may take each action on whose record, and every route that is not public asks it first, before it reads the body or touches the record; the services ask again at their top, so a direct call without the route is refused too. A refusal is one family of codes: 401 for a visitor who has not picked who they are, 403 `FORBIDDEN` with the reason for everyone else, and nothing is written.
+One pure rule decides who may take each action on whose record, and every route that is not public asks it first, before it reads the body or touches the record; the services ask again at their top, so a direct call without the route is refused too. A refusal is one family of codes: 401 for a visitor who has not signed in, 403 `FORBIDDEN` with the reason for everyone else, and nothing is written.
 
 ## The rule
 
 `can(actor, action, subject)`, in this order:
 
-1. `run_demo_card` is open to every visitor while the demo tools are on (D74); the runner acts as each card's own customer through the services, which check again.
-2. A case awaiting the company's signatory (`awaiting_signatory`) is signed or decided only through the signing link by an e-mail with an active mandate on the day (`canSign`, D46); the coordinator and the admin are `signatory_required`.
-3. `anonymous` is `not_signed_in`.
-4. The admin may do everything else.
-5. `decide_application`, `assess_asset`, `read_second_life` and `set_asset_status` are the admin's: a customer is `admin_only`.
-6. A customer acts on its own records only: anyone else is `not_owner`.
-7. A company's account changes its own signatory list only while its e-mail is an active signatory (`signatory_required` otherwise; the admin checks the register instead).
+1. A case awaiting the company's signatory (`awaiting_signatory`) is signed or decided only through the signing link by an e-mail with an active mandate on the day (`canSign`, D46); the coordinator and the admin are `signatory_required`.
+2. `anonymous` is `not_signed_in`.
+3. The admin may do everything else.
+4. `decide_application`, `assess_asset`, `read_second_life`, `set_asset_status` and the demo tools (`run_demo_card`, `act_as_customer`, `set_demo_clock`, D93, D94) are the admin's: a customer is `admin_only`.
+5. A customer acts on its own records only: anyone else is `not_owner`.
+6. A company's account changes its own signatory list only while its e-mail is an active signatory (`signatory_required` otherwise; the admin checks the register instead).
 
 The actor × action table, as `src/domain/authz/policy.test.ts` pins it (owner = the record's customer, other = any other customer):
 
@@ -48,7 +47,7 @@ Public, with no `authorize`: the catalogue, the price preview and the stored quo
 - D73: one pure policy, checked before the action in the route and again at the service's top.
 - D74: the HTTP mapping (401 / 403 `FORBIDDEN`) and the `DEMO_TOOLS` switch on the card runner.
 - D85: the second-life page is back office: `read_second_life` is the admin's, because the page shows the whole waiting list (other customers' budgets and needs); its links show for the admin only.
-- Builds on D17 (no login, the "continue as" cookie), D46 (the signing link, the mandate list), D47 (the admin applies on behalf), D57 (another customer's application reads as not found).
+- Builds on D17 (the actor; its cookie replaced by the session of D91), D46 (the signing link, the mandate list), D47 (the admin applies on behalf), D57 (another customer's application reads as not found).
 
 ## Pure functions
 
@@ -79,4 +78,4 @@ The server side, not pure: `authorize(db, actor, action, ref)` with `ref` one of
 
 - Follow-up for the coordinator after `feat/user-portal` merges: add `authorize` (`read_leases`, `read_contract`) to `src/app/[locale]/leases/*` and `src/app/[locale]/customers/[id]/page.tsx`, owned by the portal session this morning.
 - `decideByToken` keeps its own `signingCheck` (it also brings a waiting entry into force on its first opening, which `canSign` does not); the policy's mandate path mirrors it rather than replacing it.
-- With no login (D17) anyone can still pick "Admin" in the picker; the rule is ready for a real sign-in that sets the actor.
+- The actor now comes from a real sign-in (D91, [auth.md](auth.md)); the demo tools are asked with the session's own account, so acting as a customer cannot reach them.
