@@ -9,7 +9,7 @@ import { createQuoteBodySchema } from '@/server/quote-schemas';
 
 export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, createQuoteBodySchema);
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
   const actor = await readActor(db);
   const data = await loadPricingData();
 

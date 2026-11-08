@@ -16,7 +16,7 @@ export const GET = handleRoute(
     const auth = await authorize(db, await readActor(db), 'read_contract', { contract: id });
     if (!auth.ok) return refusalResponse(auth.reason, notFound);
 
-    const details = await getContractDetails(db, id, await todayForRequest());
+    const details = await getContractDetails(db, id, await todayForRequest(db));
     return details ? ok(details) : notFound();
   }
 );

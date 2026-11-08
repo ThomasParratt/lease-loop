@@ -15,6 +15,7 @@ import {
   customerSchema,
   usageUnitSchema,
 } from '@/data/schemas';
+import { accountRoleSchema } from '@/domain/auth/sessions';
 import { applicationRowSchema } from '@/domain/rows/application';
 import { contractRowSchema } from '@/domain/rows/contract';
 import { invoiceRowSchema } from '@/domain/rows/invoice';
@@ -84,6 +85,7 @@ const ENUM_OF: Record<string, z.ZodEnum> = {
   'Invoice.kind': invoiceKindSchema,
   'Invoice.status': invoiceStatusSchema,
   'AssetEvent.kind': assetEventKindSchema,
+  'Account.role': accountRoleSchema,
 };
 
 /** `active | bought | returned (D22)` → ['active', 'bought', 'returned'], or null. */

@@ -1,95 +1,94 @@
-// The actor (D17): no login, a cookie names who is acting. Pure parts first, then the reader
-// against a real, migrated SQLite database.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { loadCustomers } from '@/data/load';
+// D91, D93: the actor is the session's: anonymous with none, the account that signed in, or
+// the customer the admin acts as. A cookie that opens no session is anonymous.
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { seedPack } from '../../tests/helpers/invoice-fixture';
+import { resetDb } from '../../tests/helpers/reset-db';
+import { cookiesFor } from '../../tests/helpers/sessions';
 import { createTestDb } from '../../tests/helpers/test-db';
-import {
-  ACTOR_COOKIE,
-  actorCookieHeader,
-  actorFromCookieValue,
-  clearActorCookieHeader,
-  resolveActor,
-} from './actor';
-import { actorBodySchema } from './routes';
-import { seedCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
+import { noteSessionAccount, runWithRequestContext, sessionAccount } from './request-context';
 
-const known = ['cust-aino', 'cust-kettukoodi'];
+const holder = vi.hoisted(() => ({ cookies: new Map<string, string>() }));
+vi.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: (name: string) => {
+      const value = holder.cookies.get(name);
+      return value === undefined ? undefined : { name, value };
+    },
+  }),
+}));
 
-describe('actorFromCookieValue', () => {
-  it('returns a known customer id as it is', () => {
-    expect(actorFromCookieValue('cust-aino', known)).toBe('cust-aino');
+const { effectiveActor, readActor, readSession, sessionState } = await import('./actor');
+
+let db: PrismaClient;
+let cleanup: () => Promise<void>;
+beforeAll(async () => {
+  ({ db, cleanup } = await createTestDb());
+});
+afterAll(async () => {
+  await cleanup();
+});
+beforeEach(async () => {
+  await resetDb(db);
+  await seedPack(db);
+});
+
+describe('readActor', () => {
+  it('is anonymous with no cookie and with a cookie that opens no session', async () => {
+    holder.cookies = new Map();
+    expect(await readActor(db)).toBe('anonymous');
+    holder.cookies = await cookiesFor(db, 'cust-nobody');
+    expect(await readActor(db)).toBe('anonymous');
   });
 
-  it('returns admin for admin', () => {
-    expect(actorFromCookieValue('admin', known)).toBe('admin');
+  it('is the customer or the admin who signed in', async () => {
+    holder.cookies = await cookiesFor(db, 'cust-lena');
+    expect(await readActor(db)).toBe('cust-lena');
+    holder.cookies = await cookiesFor(db, 'admin');
+    expect(await readActor(db)).toBe('admin');
   });
 
-  it('falls back to anonymous for an unknown id', () => {
-    expect(actorFromCookieValue('cust-nobody', known)).toBe('anonymous');
+  it('is the customer the admin acts as (D93)', async () => {
+    holder.cookies = await cookiesFor(db, 'admin', { actingAs: 'cust-aino' });
+    expect(await readActor(db)).toBe('cust-aino');
+    expect((await readSession(db))?.account).toBe('admin');
   });
 
-  it('falls back to anonymous for an empty, blank or missing cookie', () => {
-    expect(actorFromCookieValue('', known)).toBe('anonymous');
-    expect(actorFromCookieValue('   ', known)).toBe('anonymous');
-    expect(actorFromCookieValue(undefined, known)).toBe('anonymous');
-  });
-
-  it('does not trim, change case or accept anonymous as a chosen actor', () => {
-    expect(actorFromCookieValue(' cust-aino', known)).toBe('anonymous');
-    expect(actorFromCookieValue('Admin', known)).toBe('anonymous');
-    expect(actorFromCookieValue('anonymous', known)).toBe('anonymous');
-  });
-
-  it('knows no customer when the list is empty', () => {
-    expect(actorFromCookieValue('cust-aino', [])).toBe('anonymous');
-    expect(actorFromCookieValue('admin', [])).toBe('admin');
+  it("notes the session's own account for the request, for withAudit (D93)", async () => {
+    holder.cookies = await cookiesFor(db, 'admin', { actingAs: 'cust-aino' });
+    await runWithRequestContext(async () => {
+      noteSessionAccount(null);
+      await readActor(db);
+      expect(sessionAccount()).toBe('admin');
+    });
   });
 });
 
-describe('the cookie headers', () => {
-  it('sets the actor cookie for the whole site, http only, for 30 days', () => {
-    expect(actorCookieHeader('cust-aino')).toBe(
-      `${ACTOR_COOKIE}=cust-aino; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`
-    );
-  });
+describe('effectiveActor and sessionState', () => {
+  const admin = {
+    id: 's1',
+    account: 'admin',
+    role: 'admin' as const,
+    actingAs: 'cust-aino',
+    asOf: '2027-01-01',
+    expiresAt: '2026-11-08T18:00:00.000Z',
+  };
 
-  it('encodes a value that is not cookie-safe', () => {
-    expect(actorCookieHeader('a b;c')).toContain(`${ACTOR_COOKIE}=a%20b%3Bc;`);
-  });
-
-  it('clears the cookie by expiring it', () => {
-    expect(clearActorCookieHeader()).toBe(
-      `${ACTOR_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`
-    );
-  });
-});
-
-describe('actorBodySchema', () => {
-  it('accepts { actor } and nothing else', () => {
-    expect(actorBodySchema.parse({ actor: 'admin' })).toEqual({ actor: 'admin' });
-    expect(actorBodySchema.safeParse({ actor: '' }).success).toBe(false);
-    expect(actorBodySchema.safeParse({ actor: 'admin', extra: 1 }).success).toBe(false);
-    expect(actorBodySchema.safeParse({}).success).toBe(false);
-  });
-});
-
-describe('resolveActor', () => {
-  let db: PrismaClient;
-  let cleanup: () => Promise<void>;
-
-  beforeAll(async () => {
-    ({ db, cleanup } = await createTestDb());
-    await seedCustomers(db, await loadCustomers());
-  });
-  afterAll(async () => {
-    await cleanup();
-  });
-
-  it('checks the cookie value against the customers in the database', async () => {
-    expect(await resolveActor(db, 'cust-lena')).toBe('cust-lena');
-    expect(await resolveActor(db, 'admin')).toBe('admin');
-    expect(await resolveActor(db, 'cust-deleted')).toBe('anonymous');
-    expect(await resolveActor(db, undefined)).toBe('anonymous');
+  it('shows the browser who acts and who signed in, never the token', () => {
+    expect(effectiveActor(null)).toBe('anonymous');
+    expect(sessionState(admin)).toEqual({
+      actor: 'cust-aino',
+      account: 'admin',
+      actingAs: 'cust-aino',
+      asOf: '2027-01-01',
+      expiresAt: '2026-11-08T18:00:00.000Z',
+    });
+    expect(sessionState(null)).toEqual({
+      actor: 'anonymous',
+      account: null,
+      actingAs: null,
+      asOf: null,
+      expiresAt: null,
+    });
   });
 });

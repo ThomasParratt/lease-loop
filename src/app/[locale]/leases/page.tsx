@@ -55,7 +55,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
   }
 
   if (!isAdmin) {
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
     return (
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         <PageHeader title={title} intro={t('leases.intro')} />

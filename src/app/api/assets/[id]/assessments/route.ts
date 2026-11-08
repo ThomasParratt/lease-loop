@@ -41,7 +41,7 @@ export const POST = handleRoute(
     if (!auth.ok && auth.reason.code !== 'not_found') return forbiddenResponse(auth.reason);
 
     const inspected = await readInspection(request);
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
     const result = await assessAsset(db, { assetId: id, actor, today, inspected });
     if (!result.ok) {
       if (isAuthzRefusal(result.reason)) return forbiddenResponse(result.reason);

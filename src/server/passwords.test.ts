@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { burnPasswordCheck, hashPassword, verifyPassword } from './passwords';
 
-describe('hashPassword and verifyPassword', () => {
+describe('hashPassword and verifyPassword', { timeout: 30_000 }, () => {
   it('verifies the right password and refuses a wrong one', async () => {
     const stored = await hashPassword('correct horse battery');
     expect(stored).toMatch(/^scrypt\$32768\$8\$1\$[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+$/);

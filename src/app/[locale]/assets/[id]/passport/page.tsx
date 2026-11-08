@@ -88,7 +88,7 @@ export default async function PassportPage({
   await connection();
 
   const t = getT(locale);
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
   const [result, factors, costs, actor] = await Promise.all([
     readPassport(db, id, today),
     loadCo2Factors(),

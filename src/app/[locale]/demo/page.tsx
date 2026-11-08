@@ -44,7 +44,7 @@ export default async function DemoPage({ params }: PageProps<'/[locale]/demo'>) 
 
   const t = getT(locale);
   const [clock, verdict, customers] = await Promise.all([
-    readDemoClock(),
+    readDemoClock(db),
     verifyAuditChain(db),
     loadCustomers(),
   ]);

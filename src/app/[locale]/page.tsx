@@ -8,6 +8,7 @@ import { HowItWorks } from '@/components/how-it-works';
 import { ImpactStrip } from '@/components/impact-strip';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { db } from '@/server/db';
 import { todayForRequest } from '@/server/demo-clock';
 
 export default async function HomePage({ params }: PageProps<'/[locale]'>) {
@@ -16,7 +17,7 @@ export default async function HomePage({ params }: PageProps<'/[locale]'>) {
   await connection(); // the CO2 counter depends on today and the database
 
   const t = getT(locale);
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
 
   return (
     <>

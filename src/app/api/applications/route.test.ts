@@ -3,14 +3,13 @@
 // is replaced. Every refusal is a `fail()` envelope with a code; never a 500, never a stack.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetDb } from '../../../../tests/helpers/reset-db';
+import { cookiesFor } from '../../../../tests/helpers/sessions';
 import { createTestDb } from '../../../../tests/helpers/test-db';
 import { loadAssets, loadCustomers } from '@/data/load';
 import type { Customer } from '@/data/schemas';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
-import { ACTOR_COOKIE } from '@/server/actor';
 import { seedAssets } from '@/server/assets';
 import { seedCustomers } from '@/server/customers';
-import { DEMO_CLOCK_COOKIE } from '@/server/demo-clock';
 import type { PrismaClient } from '@/server/prisma-client';
 import { applicationSchema } from '@/server/routes';
 
@@ -52,12 +51,12 @@ beforeEach(async () => {
   await resetDb(holder.db);
   await seedAssets(holder.db, await loadAssets());
   await seedCustomers(holder.db, customers);
-  holder.cookies = new Map([[DEMO_CLOCK_COOKIE, TODAY]]);
+  holder.cookies = new Map();
 });
 
-const actAs = (actor: string | undefined) => {
-  if (actor === undefined) holder.cookies.delete(ACTOR_COOKIE);
-  else holder.cookies.set(ACTOR_COOKIE, actor);
+/** Signs the request in as `actor` with the demo clock on `asOf` (D91, D94); undefined: no cookie. */
+const actAs = async (actor: string | undefined, asOf = TODAY) => {
+  holder.cookies = await cookiesFor(holder.db, actor, { asOf });
 };
 const answersOf = (id: string) => answersFromCustomer(customers.find((c) => c.id === id)!);
 
@@ -124,7 +123,7 @@ function expectRefusal(result: { status: number; body: Envelope }, status: numbe
 }
 
 async function applyAs(customerId: string, answers = answersOf(customerId)) {
-  actAs(customerId);
+  await actAs(customerId);
   return post({ quoteId: await insertQuote(), customerId, answers });
 }
 
@@ -156,7 +155,7 @@ describe('POST /api/applications', () => {
       { answers: Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`q_x${i}`, 'x'])) },
     ],
   ])('%s is refused with 400 VALIDATION_ERROR before anything is read', async (_name, patch) => {
-    actAs('cust-aino');
+    await actAs('cust-aino');
     const body = {
       quoteId: 'any',
       customerId: 'cust-aino',
@@ -170,14 +169,14 @@ describe('POST /api/applications', () => {
   });
 
   it('a body that is not JSON, or not an object, is 400', async () => {
-    actAs('cust-aino');
+    await actAs('cust-aino');
     expectRefusal(await post('{not json'), 400, 'INVALID_JSON');
     expectRefusal(await post('"a string"'), 400, 'VALIDATION_ERROR');
     expectRefusal(await post(null), 400, 'VALIDATION_ERROR');
   });
 
   it('spaces around the ids are not part of them: the trimmed customer id is the actor', async () => {
-    actAs('cust-aino');
+    await actAs('cust-aino');
     const quoteId = await insertQuote();
     const { status } = await post({
       quoteId: ` ${quoteId} `,
@@ -195,7 +194,7 @@ describe('POST /api/applications', () => {
   ])(
     'applying in Aino’s name as %s is %i %s and writes nothing (D73, D74)',
     async (_who, actor, status, code) => {
-      actAs(actor);
+      await actAs(actor);
       const result = await post({
         quoteId: await insertQuote(),
         customerId: 'cust-aino',
@@ -239,13 +238,13 @@ describe('POST /api/applications', () => {
   });
 
   it('unknown quote 404, unknown customer 404, and the demo clock past the validity 409', async () => {
-    actAs('cust-aino');
+    await actAs('cust-aino');
     expectRefusal(
       await post({ quoteId: 'nope', customerId: 'cust-aino', answers: {} }),
       404,
       'QUOTE_NOT_FOUND'
     );
-    actAs('admin');
+    await actAs('admin');
     expectRefusal(
       await post({
         quoteId: await insertQuote(),
@@ -256,8 +255,7 @@ describe('POST /api/applications', () => {
       404,
       'CUSTOMER_NOT_FOUND'
     );
-    actAs('cust-aino');
-    holder.cookies.set(DEMO_CLOCK_COOKIE, '2026-11-20');
+    await actAs('cust-aino', '2026-11-20');
     expectRefusal(
       await post({
         quoteId: await insertQuote(),
@@ -272,11 +270,11 @@ describe('POST /api/applications', () => {
 
 describe('one pending or approved application per quote', () => {
   it('a second application on a quote held by an approved one is 409 QUOTE_IN_USE with its id', async () => {
-    actAs('cust-aino');
+    await actAs('cust-aino');
     const quoteId = await insertQuote();
     const first = await post({ quoteId, customerId: 'cust-aino', answers: answersOf('cust-aino') });
     expect(first.status).toBe(201);
-    actAs('cust-olavi');
+    await actAs('cust-olavi');
     const second = await post({
       quoteId,
       customerId: 'cust-olavi',
@@ -300,17 +298,17 @@ describe('GET /api/applications/[id]', () => {
   it('the admin reads it; another customer gets the same 404 as an unknown id (D57)', async () => {
     const created = await applyAs('cust-aino');
     const id = created.body.data?.id as string;
-    actAs('admin');
+    await actAs('admin');
     expect((await get(id)).status).toBe(200);
     for (const actor of ['anonymous', 'someone-unknown', undefined]) {
-      actAs(actor);
+      await actAs(actor);
       expectRefusal(await get(id), 401, 'FORBIDDEN');
     }
     for (const actor of ['cust-mikko']) {
-      actAs(actor);
+      await actAs(actor);
       const refused = await get(id);
       expectRefusal(refused, 404, 'APPLICATION_NOT_FOUND');
-      actAs(actor);
+      await actAs(actor);
       const missing = await get('nope');
       expect(refused.body.error).toEqual(missing.body.error);
     }
@@ -339,7 +337,7 @@ describe('POST /api/applications/[id]/decision', () => {
     ['a reviewer that is not a string', { reviewedBy: 7 }],
   ])('%s is 400 VALIDATION_ERROR', async (_name, patch) => {
     const id = await pending('cust-haapala');
-    actAs('admin');
+    await actAs('admin');
     expectRefusal(
       await postDecision(id, { decision: 'approved', reviewedBy: 'admin', ...patch }),
       400,
@@ -353,7 +351,7 @@ describe('POST /api/applications/[id]/decision', () => {
     ['another customer', 'cust-aino', 403],
   ])('a manual review is FORBIDDEN for %s (D73)', async (_who, actor, status) => {
     const id = await pending('cust-haapala');
-    actAs(actor);
+    await actAs(actor);
     expectRefusal(
       await postDecision(id, { decision: 'approved', reviewedBy: 'me' }),
       status,
@@ -364,7 +362,7 @@ describe('POST /api/applications/[id]/decision', () => {
 
   it('the reviewer is the cookie actor, never the body (review finding 13)', async () => {
     const id = await pending('cust-haapala');
-    actAs('admin');
+    await actAs('admin');
     const response = await postDecision(id, { decision: 'approved', reviewedBy: 'somebody else' });
     expect(response.status).toBe(200);
     const row = await holder.db.application.findUniqueOrThrow({ where: { id } });
@@ -373,7 +371,7 @@ describe('POST /api/applications/[id]/decision', () => {
 
   it('an approved application is 409 APPLICATION_NOT_PENDING; an unknown id is 404', async () => {
     const id = await pending('cust-aino', answersOf('cust-aino'));
-    actAs('admin');
+    await actAs('admin');
     expectRefusal(
       await postDecision(id, { decision: 'rejected', reviewedBy: 'admin' }),
       409,
@@ -399,7 +397,7 @@ describe('POST /api/applications/[id]/decision', () => {
       [undefined, 'signatory@norvi.example.com'],
     ];
     for (const [actor, reviewedBy] of attempts) {
-      actAs(actor);
+      await actAs(actor);
       const refused = await postDecision(id, { decision: 'approved', reviewedBy });
       expectRefusal(refused, actor === undefined ? 401 : 403, 'FORBIDDEN');
       if (actor !== undefined) {

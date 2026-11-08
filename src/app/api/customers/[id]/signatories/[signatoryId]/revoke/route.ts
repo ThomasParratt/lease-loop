@@ -24,7 +24,7 @@ export const POST = handleRoute(
       );
     }
 
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
     const result = await revokeSignatory(db, { customerId: id, signatoryId, actor, today });
     return result.ok ? ok(result.signatory) : signatoryFailure(result);
   }

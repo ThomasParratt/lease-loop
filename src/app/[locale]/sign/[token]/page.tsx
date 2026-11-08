@@ -31,7 +31,7 @@ export default async function SignPage({ params }: PageProps<'/[locale]/sign/[to
   if (!isLocale(locale)) notFound();
   await connection();
   const t = getT(locale);
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
   const page = (body: React.ReactNode) => (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader title={t('sign.title')} intro={t('sign.intro')} />

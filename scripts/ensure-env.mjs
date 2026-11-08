@@ -1,13 +1,12 @@
 // Creates .env from .env.example when .env is missing, then makes sure it holds the audit
-// log's signing key (D81): a fresh Ed25519 key, generated here and written only to .env, which
-// git ignores. Never overwrites an existing .env value.
+// log's signing key (D81) and the seed's sign-in passwords (D92): a fresh Ed25519 key and
+// random passwords, generated here and written only to .env, which git ignores. Never
+// overwrites an existing .env value; never prints a password.
 // Usage: node scripts/ensure-env.mjs
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-
-const KEY_LINE = /^AUDIT_SIGNING_KEY=(.*)$/m;
 
 /**
  * @param {string} root folder that holds .env.example
@@ -27,6 +26,33 @@ export function newSigningKey() {
     .toString('base64');
 }
 
+/** A random 24-character password for the seeded accounts (D92), 144 bits. */
+export function newPassword() {
+  return randomBytes(18).toString('base64url');
+}
+
+/**
+ * Fills an empty `NAME=""` line of `root/.env`, or appends one, with `make()`. A value already
+ * there is kept.
+ * @param {string} root folder that holds .env
+ * @param {string} name
+ * @param {() => string} make
+ * @returns {'added' | 'exists'}
+ */
+export function ensureEnvValue(root, name, make) {
+  const target = join(root, '.env');
+  const text = readFileSync(target, 'utf8');
+  const pattern = new RegExp(`^${name}=(.*)$`, 'm');
+  const match = pattern.exec(text);
+  if (match && match[1].replace(/["'\s]/g, '') !== '') return 'exists';
+  const line = `${name}="${make()}"`;
+  const next = match
+    ? text.replace(pattern, () => line)
+    : `${text}${text === '' || text.endsWith('\n') ? '' : '\n'}${line}\n`;
+  writeFileSync(target, next);
+  return 'added';
+}
+
 /**
  * Fills an empty `AUDIT_SIGNING_KEY=""` line of `root/.env`, or appends one, with a new key.
  * A key already there is kept: a new key would make every signed row read as forged.
@@ -35,22 +61,24 @@ export function newSigningKey() {
  * @returns {'added' | 'exists'}
  */
 export function ensureSigningKey(root, makeKey = newSigningKey) {
-  const target = join(root, '.env');
-  const text = readFileSync(target, 'utf8');
-  const match = KEY_LINE.exec(text);
-  if (match && match[1].replace(/["'\s]/g, '') !== '') return 'exists';
-  const line = `AUDIT_SIGNING_KEY="${makeKey()}"`;
-  const next = match
-    ? text.replace(KEY_LINE, line)
-    : `${text}${text === '' || text.endsWith('\n') ? '' : '\n'}${line}\n`;
-  writeFileSync(target, next);
-  return 'added';
+  return ensureEnvValue(root, 'AUDIT_SIGNING_KEY', makeKey);
 }
+
+/** The .env passwords the seed signs accounts in with (D92). */
+export const PASSWORD_NAMES = ['ADMIN_PASSWORD', 'CUSTOMER_PASSWORD'];
+/** The admin's sign-in e-mail when .env names none (`.example` is a reserved domain). */
+export const DEFAULT_ADMIN_EMAIL = 'admin@lease-loop.example';
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const result = ensureEnvFile(process.cwd());
   console.log(result === 'created' ? '📝 Created .env from .env.example' : '✔ .env already exists');
   if (ensureSigningKey(process.cwd()) === 'added') {
     console.log('🔑 Added a new AUDIT_SIGNING_KEY to .env (never commit it)');
+  }
+  ensureEnvValue(process.cwd(), 'ADMIN_EMAIL', () => DEFAULT_ADMIN_EMAIL);
+  for (const name of PASSWORD_NAMES) {
+    if (ensureEnvValue(process.cwd(), name, newPassword) === 'added') {
+      console.log(`🔑 Added a random ${name} to .env: the seed signs accounts in with it (D92)`);
+    }
   }
 }

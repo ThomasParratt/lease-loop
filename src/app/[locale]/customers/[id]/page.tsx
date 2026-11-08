@@ -38,7 +38,7 @@ export default async function CustomerPage({ params }: PageProps<'/[locale]/cust
       ? await authorize(db, actor, 'read_leases', { customer: id })
       : null;
   const [customer, today] = auth?.ok
-    ? await Promise.all([getCustomer(db, id), todayForRequest()])
+    ? await Promise.all([getCustomer(db, id), todayForRequest(db)])
     : [null, ''];
   const refusal =
     actor === ANONYMOUS_ACTOR

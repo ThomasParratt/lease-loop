@@ -62,7 +62,7 @@ export type CreateQuoteInput = {
   assetId: string;
   termMonths: number;
   downPaymentCents: number;
-  /** The request's day, from `todayForRequest()`; never from the browser. */
+  /** The request's day, from `todayForRequest(db)`; never from the browser. */
   today: string;
   actor: string;
 };

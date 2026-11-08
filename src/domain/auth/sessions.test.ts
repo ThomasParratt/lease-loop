@@ -1,6 +1,6 @@
 // D91: a session lasts 24 hours for a customer and 8 for the admin, from sign-in, never extended.
 import { describe, expect, it } from 'vitest';
-import { SESSION_HOURS, isSessionLive, sessionExpiry } from './sessions';
+import { SESSION_HOURS, accountRoleSchema, isSessionLive, sessionExpiry } from './sessions';
 
 const SIGN_IN = '2026-11-08T10:00:00.000Z';
 
@@ -31,5 +31,12 @@ describe('isSessionLive', () => {
   it('is over when either instant cannot be read (fail closed)', () => {
     expect(isSessionLive({ expiresAt: 'soon' }, SIGN_IN)).toBe(false);
     expect(isSessionLive(session, 'now')).toBe(false);
+  });
+});
+
+describe('accountRoleSchema', () => {
+  it('has a customer and an admin role, and nothing else', () => {
+    expect(accountRoleSchema.options).toEqual(['customer', 'admin']);
+    expect(accountRoleSchema.safeParse('superuser').success).toBe(false);
   });
 });

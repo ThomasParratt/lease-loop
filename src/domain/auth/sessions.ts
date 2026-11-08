@@ -2,7 +2,11 @@
 // for the admin, whose session can do more. No idle timeout: it would need a write (an audit
 // row) on every request. Instants are ISO strings passed in; this module never reads a clock.
 
-export type AccountRole = 'customer' | 'admin';
+import { z } from 'zod';
+
+/** An account's role (`Account.role`): the admin's account has no customer. */
+export const accountRoleSchema = z.enum(['customer', 'admin']);
+export type AccountRole = z.infer<typeof accountRoleSchema>;
 
 export const SESSION_HOURS: Readonly<Record<AccountRole, number>> = { customer: 24, admin: 8 };
 

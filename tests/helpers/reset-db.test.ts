@@ -7,6 +7,7 @@ import { withAudit } from '@/server/audit';
 import { createContractFixture } from './contract-fixture';
 import { insertContract, seedPack } from './invoice-fixture';
 import { RESET_ORDER, resetDb } from './reset-db';
+import { sessionTokenFor } from './sessions';
 import { createTestDb } from './test-db';
 import type { PrismaClient } from '@/server/prisma-client';
 
@@ -21,6 +22,8 @@ afterAll(async () => {
 });
 
 const countAll = async () => ({
+  session: await db.session.count(),
+  account: await db.account.count(),
   signatureRequest: await db.signatureRequest.count(),
   companySignatory: await db.companySignatory.count(),
   returnAssessment: await db.returnAssessment.count(),
@@ -60,8 +63,10 @@ describe('resetDb', () => {
           details: {},
         })
     );
+    await sessionTokenFor(db, 'cust-aino');
     const before = await countAll();
     expect(before.contract).toBe(2);
+    expect(before.session).toBe(1);
     expect(before.auditLog).toBeGreaterThan(0);
 
     await resetDb(db);

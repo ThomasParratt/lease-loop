@@ -123,7 +123,7 @@ export default async function ApplicationPage({
   };
   const { decision } = application;
   // Read once here and passed down (team rule 4); the server signs on its own today anyway.
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
   const contractId = decision === 'approved' ? await contractIdOfApplication(db, id) : null;
   // D87: the applicant (or the admin for them) may step back while it is not a lease yet.
   const mayWithdraw =

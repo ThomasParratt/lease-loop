@@ -21,6 +21,7 @@ import {
 } from '@/domain/statuses';
 import { auditChainVerdictSchema } from './audit-schemas';
 import { demoCardParamsSchema, demoCardRunSchema } from './demo-cards-schemas';
+import { actorBodySchema, logInBodySchema, sessionStateSchema } from './session-schemas';
 import {
   addSignatoryBodySchema,
   customerIdParamsSchema,
@@ -85,15 +86,9 @@ export const changeAssetStatusBodySchema = z.strictObject({
   status: assetStatusSchema,
 });
 
-// ---------- actor ----------
+// ---------- session and actor: src/server/session-schemas.ts ----------
 
-/** Body of `POST /api/actor`. Whether the actor exists is checked against the database. */
-export const actorBodySchema = z.strictObject({
-  actor: z.string().min(1).max(100),
-});
-
-/** A customer id, `admin` or `anonymous`. */
-export const actorResponseSchema = z.object({ actor: z.string().min(1) });
+export { actorBodySchema } from './session-schemas';
 
 // ---------- demo clock ----------
 
@@ -231,17 +226,41 @@ export const ROUTES: readonly RouteDefinition[] = [
   {
     method: 'POST',
     path: '/api/actor',
-    summary: 'Act as a customer or admin: sets the actor cookie (no login, D17)',
+    summary:
+      "Admin only: act as a customer, or `admin` to stop, on the admin's own session (D93); 401 not signed in, 403 FORBIDDEN, 404 UNKNOWN_ACTOR or while the demo tools are off",
     tag: 'actor',
     body: actorBodySchema,
-    response: actorResponseSchema,
+    response: sessionStateSchema,
   },
   {
     method: 'DELETE',
     path: '/api/actor',
-    summary: 'Stop acting: clears the actor cookie, so the visitor is anonymous',
+    summary: 'Admin only: stop acting as a customer (D93)',
     tag: 'actor',
-    response: actorResponseSchema,
+    response: sessionStateSchema,
+  },
+  {
+    method: 'GET',
+    path: '/api/session',
+    summary: 'Who is signed in, who the request acts as and the demo clock (D91)',
+    tag: 'session',
+    response: sessionStateSchema,
+  },
+  {
+    method: 'POST',
+    path: '/api/session',
+    summary:
+      'Sign in with e-mail and password: sets the session cookie (D91); 401 INVALID_CREDENTIALS for any failure, 429 RATE_LIMITED',
+    tag: 'session',
+    body: logInBodySchema,
+    response: sessionStateSchema,
+  },
+  {
+    method: 'DELETE',
+    path: '/api/session',
+    summary: 'Sign out: ends the session and clears the cookie (D91)',
+    tag: 'session',
+    response: sessionStateSchema,
   },
   {
     method: 'GET',
@@ -274,7 +293,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/demo/clock',
     summary:
-      'Set the demo clock to a day, or clear it with null (the one date the browser may send)',
+      "Admin only: set the demo clock on the admin's session to a day, or clear it with null (D94)",
     tag: 'demo',
     body: demoClockBodySchema,
     response: demoClockResponseSchema,
@@ -283,7 +302,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/demo/cards/[id]/run',
     summary:
-      "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records); 404 while DEMO_TOOLS is off (D74)",
+      "Admin only: run scenario card 1 to 10 through the real services on the card's days, set the session's demo clock and the customer it acts as, answer the steps and the landing page (409 card_already_run links the earlier records); 404 while DEMO_TOOLS is off (D74, D94)",
     tag: 'demo',
     params: demoCardParamsSchema,
     response: demoCardRunSchema,

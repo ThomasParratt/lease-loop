@@ -9,29 +9,27 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { payRents, signedContract } from '../../../tests/helpers/journey';
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
 import { resetDb } from '../../../tests/helpers/reset-db';
+import { cookiesFor } from '../../../tests/helpers/sessions';
 import { createTestDb } from '../../../tests/helpers/test-db';
 import { withProductionHandlers } from '../../../tests/helpers/with-handlers';
 import type { PrismaClient } from '../prisma-client';
 
 const holder = vi.hoisted(() => ({
   db: undefined as unknown as PrismaClient,
-  actor: 'admin',
-  today: '2026-11-05',
+  cookies: new Map<string, string>(),
 }));
 vi.mock('@/server/db', () => ({
   get db() {
     return holder.db;
   },
 }));
-// The request's cookies: the "continue as" actor and the demo clock (D17, D74).
+// The request's cookies: the admin's session, with the demo clock on the day (D91, D94).
 vi.mock('next/headers', () => ({
   cookies: async () => ({
-    get: (name: string) =>
-      name === 'lease-loop-actor'
-        ? { value: holder.actor }
-        : name === 'lease-loop-as-of'
-          ? { value: holder.today }
-          : undefined,
+    get: (name: string) => {
+      const value = holder.cookies.get(name);
+      return value === undefined ? undefined : { name, value };
+    },
   }),
 }));
 
@@ -53,7 +51,6 @@ afterAll(async () => {
   await cleanup();
 });
 beforeEach(async () => {
-  holder.actor = 'admin';
   await resetDb(holder.db);
   await seedPack(holder.db);
 });
@@ -92,9 +89,9 @@ async function giveBack(
   if (!result.ok) throw new Error(`exit refused: ${result.reason.code}`);
 }
 
-/** POST /api/assets/:id/assessments as the button sends it: no body, the admin's cookie. */
+/** POST /api/assets/:id/assessments as the button sends it: no body, the admin's session. */
 async function assessViaRoute(assetId: string, today: string) {
-  holder.today = today;
+  holder.cookies = await cookiesFor(holder.db, 'admin', { asOf: today });
   const request = new Request(`http://localhost/api/assets/${assetId}/assessments`, {
     method: 'POST',
   });

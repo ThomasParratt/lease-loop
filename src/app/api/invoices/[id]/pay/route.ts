@@ -19,7 +19,7 @@ export const POST = handleRoute(
     const auth = await authorize(db, actor, 'pay_invoice', { invoice: id });
     if (!auth.ok) return refusalResponse(auth.reason, notFound);
 
-    const result = await payInvoice(db, { id, paidOn: await todayForRequest(), actor });
+    const result = await payInvoice(db, { id, paidOn: await todayForRequest(db), actor });
     if (result.ok) return ok(result.invoice);
     if (result.reason === 'forbidden') return forbiddenResponse(result.refusal);
     if (result.reason === 'not_found') return notFound();
