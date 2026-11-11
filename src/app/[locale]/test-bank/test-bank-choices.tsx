@@ -44,11 +44,8 @@ export function TestBankChoices({
     <div className="space-y-4">
       <ul className="divide-y divide-line rounded-lg border border-line">
         {people.map((person) => (
-          <li
-            key={person.customerId}
-            className="flex flex-wrap items-center justify-between gap-3 p-4"
-          >
-            <div>
+          <li key={person.customerId} className="flex items-center justify-between gap-3 p-4">
+            <div className="min-w-0 break-words">
               <p className="font-semibold">{person.name}</p>
               <p className="text-sm text-ink-muted">
                 {person.born} · {person.code}
@@ -57,6 +54,7 @@ export function TestBankChoices({
             <Button
               type="button"
               size="sm"
+              className="shrink-0"
               disabled={pending}
               onClick={() => send({ customerId: person.customerId })}
             >
