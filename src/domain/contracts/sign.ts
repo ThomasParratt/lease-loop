@@ -38,7 +38,7 @@ export type PlanContractInput = {
   quoteStatus: QuoteStatus;
   /** What the same quote would cost today on today's list, or null when none prices it. */
   currentMonthlyNetCents: number | null;
-  /** The request's day (`todayForRequest()`), never the browser's. */
+  /** The request's day (`todayForRequest(db)`), never the browser's. */
   signedOn: string;
   startDate: string;
   /** The customer's birth date from the record; undefined for a company (no age check). */

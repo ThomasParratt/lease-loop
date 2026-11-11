@@ -1,16 +1,15 @@
 // D73, D74: every write route asks `authorize` before the action. Each route is posted as
 // anonymous (401 FORBIDDEN), as the wrong customer (403 FORBIDDEN) and as the admin (not
 // refused), against a real, migrated SQLite database; a refusal writes nothing, counted on the
-// audit rows before and after. Only `db` and `next/headers` cookies are replaced.
+// audit rows before and after. Only `db` and `next/headers` cookies are replaced; a session signs each request in (D91).
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
 import { quoteAndApply, signedContract } from '../../../tests/helpers/journey';
 import { resetDb } from '../../../tests/helpers/reset-db';
+import { cookiesFor } from '../../../tests/helpers/sessions';
 import { createTestDb } from '../../../tests/helpers/test-db';
 import { loadCustomers } from '@/data/load';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
-import { ACTOR_COOKIE } from '@/server/actor';
-import { DEMO_CLOCK_COOKIE } from '@/server/demo-clock';
 import { listInvoices } from '@/server/invoices';
 import type { PrismaClient } from '@/server/prisma-client';
 import { listSignatories, seedSignatories } from '@/server/signatories';
@@ -18,6 +17,7 @@ import { listSignatories, seedSignatories } from '@/server/signatories';
 const holder = vi.hoisted(() => ({
   db: undefined as unknown as PrismaClient,
   cookies: new Map<string, string>(),
+  actor: undefined as string | undefined,
 }));
 vi.mock('@/server/db', () => ({
   get db() {
@@ -80,7 +80,8 @@ beforeEach(async () => {
     invoiceId: invoice!.id,
     signatoryId: signatory!.id,
   };
-  holder.cookies = new Map([[DEMO_CLOCK_COOKIE, TODAY]]);
+  holder.cookies = new Map();
+  holder.actor = undefined;
 });
 
 const post = (body?: unknown) =>
@@ -115,7 +116,7 @@ const ROUTES: WriteRoute[] = [
           quoteId: records.quoteId,
           customerId: 'cust-aino',
           answers: await ainoAnswers(),
-          ...(holder.cookies.get(ACTOR_COOKIE) === 'admin' ? { onBehalfOf: 'cust-aino' } : {}),
+          ...(holder.actor === 'admin' ? { onBehalfOf: 'cust-aino' } : {}),
         }),
         undefined
       ),
@@ -190,14 +191,15 @@ const ROUTES: WriteRoute[] = [
   },
 ];
 
-const actAs = (actor: string | undefined) => {
-  if (actor === undefined) holder.cookies.delete(ACTOR_COOKIE);
-  else holder.cookies.set(ACTOR_COOKIE, actor);
+/** Signs the request in as `actor` on the test day (D91, D94); undefined sends no cookie. */
+const actAs = async (actor: string | undefined) => {
+  holder.actor = actor;
+  holder.cookies = await cookiesFor(holder.db, actor, { asOf: TODAY });
 };
 
 async function refusedWithoutWrites(route: WriteRoute, actor: string | undefined) {
   const before = await holder.db.auditLog.count();
-  actAs(actor);
+  await actAs(actor);
   const response = await route.call();
   const body = await response.json();
   expect(await holder.db.auditLog.count(), 'a refusal writes nothing').toBe(before);
@@ -231,7 +233,7 @@ describe.each(ROUTES)('$name (D73, D74)', (route) => {
     });
   } else {
     it('the admin is not refused', async () => {
-      actAs('admin');
+      await actAs('admin');
       const response = await route.call();
       expect([401, 403]).not.toContain(response.status);
     });
@@ -239,7 +241,7 @@ describe.each(ROUTES)('$name (D73, D74)', (route) => {
 
   if (route.owner !== null) {
     it('the owner is not refused', async () => {
-      actAs(route.owner!);
+      await actAs(route.owner!);
       const response = await route.call();
       expect([401, 403]).not.toContain(response.status);
     });

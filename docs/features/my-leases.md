@@ -4,11 +4,11 @@
 
 ## What it does
 
-A "My leases" link in the top navigation, shown once someone is chosen in "Continue as", lists that customer's contracts (each opening its contract page, where the invoices are and the lease is ended) and their applications that are not signed yet (an approved one leads to its Sign button). Admin sees "All leases": every contract and application with the customer's name, so a demo reaches any contract in two clicks.
+A "My leases" link in the top navigation, shown once someone is signed in (D91; it was chosen in "Continue as"), lists that customer's contracts (each opening its contract page, where the invoices are and the lease is ended) and their applications that are not signed yet (an approved one leads to its Sign button). Admin sees "All leases": every contract and application with the customer's name, so a demo reaches any contract in two clicks.
 
 ## The rule
 
-- **Who sees what.** Nobody chosen: no link, and the page asks to choose in "Continue as". A customer: their own contracts and applications only (`customer_id` = the actor). Admin: everything. Every row links to a page the same actor is allowed to open (the contract page's D26 check), so no link ends in "not allowed".
+- **Who sees what.** Nobody signed in: no link, and the page asks to sign in. A customer: their own contracts and applications only (`customer_id` = the actor). Admin: everything. Every row links to a page the same actor is allowed to open (the contract page's D26 check), so no link ends in "not allowed".
 - **Contracts** newest signing first, then by number; each shows the item, the status, the number, the term (start to last day) and the locked monthly rent without VAT.
 - **Applications** newest first, without those that became a contract (the contract stands for them). An approved one shows "Approved" with a "Ready to sign" link; the others show their decision ("Not approved", "A person will check", "Waiting for the signatory").
 - Worked through card 1: Aino signs `ebike-003` on 2026-11-05; her list shows "Nordvolt Trail 500 · Active · 5 November 2026 – 4 November 2029 · €107.30 a month without VAT", linking to the contract.

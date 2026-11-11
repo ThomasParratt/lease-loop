@@ -214,12 +214,11 @@ describe('meta rules', () => {
   // authorize() first, except the public ones named here with the reason they are public.
   it('every API route not on the public allowlist calls authorize', () => {
     const PUBLIC_ROUTES: Record<string, string> = {
-      'src/app/api/actor/route.ts': 'the "continue as" picker itself (D17)',
       'src/app/api/assets/route.ts': 'the catalogue',
       'src/app/api/assets/[id]/passport/route.ts': 'the passport is public',
       'src/app/api/audit-log/route.ts': 'the audit page is public',
       'src/app/api/audit-log/verify/route.ts': 'the audit chain check is public',
-      'src/app/api/demo/clock/route.ts': 'the demo clock (D71), no record of anyone',
+      'src/app/api/session/route.ts': 'signing in and out (D91)',
       'src/app/api/quotes/route.ts': 'a price snapshot, owned by no customer until applied',
       'src/app/api/quotes/[id]/route.ts': 'a price snapshot',
       'src/app/api/quotes/preview/route.ts': 'the live price',

@@ -1,6 +1,6 @@
 // Zod schemas of the exit routes (contract first): buy out, return or pass on a contract, at
 // the end of its term or early (D14, D16). The rows that use them are in routes.ts. The day is
-// always the request's (`todayForRequest()`, demo clock included), never one from the browser.
+// always the request's (`todayForRequest(db)`, demo clock included), never one from the browser.
 import { z } from 'zod';
 import { assetConditionSchema, centsSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
 import { returnReasonSchema } from '@/domain/events';

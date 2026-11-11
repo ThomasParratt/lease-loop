@@ -379,7 +379,7 @@ export default async function SecondLifePage({
   await connection(); // the assessment depends on today and the database
 
   const t = getT(locale);
-  const today = await todayForRequest(); // read once here, passed down
+  const today = await todayForRequest(db); // read once here, passed down
   const actor = await readActor(db);
   // D85: back office. Authorized before anything is read; anyone but the admin gets the refusal.
   const read = await readSecondLifePage(db, actor, id, today);

@@ -1,54 +1,55 @@
-// Who is acting (docs/decisions.md D17). There is no login: the "continue as" picker sets a
-// cookie with a customer id or `admin`, and every withAudit entry names that actor. A cookie
-// that names nobody we know reads as `anonymous`.
+// Who is acting (D91, D93). The actor is read from the session cookie: `anonymous` with no live
+// session, else the account that signed in (`admin` or a customer id), except that the admin
+// acting as a customer is that customer. Pages and routes call `readActor()` once and pass it
+// down. The demo tools ask with the session's own account (`readSession`), never the actor.
 import { cookies } from 'next/headers';
-import { listCustomers } from './customers';
 import type { PrismaClient } from './prisma-client';
+import { noteSessionAccount } from './request-context';
+import { findLiveSession, SESSION_COOKIE, type SessionView } from './sessions';
 
-export const ACTOR_COOKIE = 'lease-loop-actor';
 export const ADMIN_ACTOR = 'admin';
 export const ANONYMOUS_ACTOR = 'anonymous';
 
 /** A customer id, `admin` or `anonymous`. */
 export type Actor = string;
 
-const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+/** The actor a session acts as: the customer the admin acts as, else its own account. */
+export function effectiveActor(session: SessionView | null): Actor {
+  if (session === null) return ANONYMOUS_ACTOR;
+  if (session.account === ADMIN_ACTOR && session.actingAs !== null) return session.actingAs;
+  return session.account;
+}
+
+/** The session cookie's token in this request, if any. */
+export async function readSessionToken(): Promise<string | undefined> {
+  return (await cookies()).get(SESSION_COOKIE)?.value;
+}
 
 /**
- * The actor a cookie value names: the value itself when it is `admin` or one of `knownIds`,
- * otherwise `anonymous`. Exact match only: no trimming, no case folding.
+ * The live session of the current request, or null. Also notes its account for withAudit
+ * (D93). `now` is the server's instant; a session's expiry is never the browser's to say.
  */
-export function actorFromCookieValue(
-  value: string | undefined,
-  knownIds: readonly string[]
-): Actor {
-  if (value === ADMIN_ACTOR) return ADMIN_ACTOR;
-  if (value !== undefined && value !== ANONYMOUS_ACTOR && knownIds.includes(value)) return value;
-  return ANONYMOUS_ACTOR;
-}
-
-/** `Set-Cookie` value that remembers the actor for 30 days. */
-export function actorCookieHeader(actor: Actor): string {
-  return `${ACTOR_COOKIE}=${encodeURIComponent(actor)}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}; HttpOnly; SameSite=Lax`;
-}
-
-/** `Set-Cookie` value that forgets the actor. */
-export function clearActorCookieHeader(): string {
-  return `${ACTOR_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`;
-}
-
-/** Checks a cookie value against the customers in the database. */
-export async function resolveActor(db: PrismaClient, value: string | undefined): Promise<Actor> {
-  // Through the customers slice's read (team rule 3, review finding 13).
-  const customers = await listCustomers(db);
-  return actorFromCookieValue(
-    value,
-    customers.map((customer) => customer.id)
-  );
+export async function readSession(
+  db: PrismaClient,
+  now: string = new Date().toISOString()
+): Promise<SessionView | null> {
+  const session = await findLiveSession(db, await readSessionToken(), now);
+  noteSessionAccount(session?.account ?? null);
+  return session;
 }
 
 /** The actor of the current request. Call it in a page or a route, once, and pass it down. */
 export async function readActor(db: PrismaClient): Promise<Actor> {
-  const store = await cookies();
-  return resolveActor(db, store.get(ACTOR_COOKIE)?.value);
+  return effectiveActor(await readSession(db));
+}
+
+/** What the browser may know of a session (`sessionStateSchema`): never its token. */
+export function sessionState(session: SessionView | null) {
+  return {
+    actor: effectiveActor(session),
+    account: session?.account ?? null,
+    actingAs: session?.actingAs ?? null,
+    asOf: session?.asOf ?? null,
+    expiresAt: session?.expiresAt ?? null,
+  };
 }

@@ -38,7 +38,7 @@ export const GET = handleRoute(
     const result = await previewExit(
       db,
       { contractId: id, mode: query.mode, reported, context },
-      await todayForRequest()
+      await todayForRequest(db)
     );
     if (!result.ok) return fail(422, 'EXIT_REFUSED', 'This exit is not possible', result.reason);
     return ok(result.preview);

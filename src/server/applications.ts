@@ -129,7 +129,7 @@ export type CreateApplicationInput = {
   quoteId: string;
   customerId: string;
   answers: Record<string, Answer>;
-  /** The request's day (`todayForRequest()`): the decision date and the contract start. */
+  /** The request's day (`todayForRequest(db)`): the decision date and the contract start. */
   today: string;
   actor: string;
   /** The admin applies on a customer's behalf (D47): must equal `customerId`. */

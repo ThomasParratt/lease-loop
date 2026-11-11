@@ -19,7 +19,7 @@ export const POST = handleRoute(async (request) => {
   const body = await readJsonBody(request, createApplicationBodySchema);
   const auth = await authorize(db, actor, 'apply', { customer: body.customerId });
   if (!auth.ok) return refusalResponse(auth.reason, customerNotFound);
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
 
   const result = await createApplication(db, { ...body, today, actor });
   if (result.ok) return ok(result.application, { status: 201 });

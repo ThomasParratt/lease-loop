@@ -14,7 +14,7 @@ export const GET = handleRoute(async (request) => {
     termMonths: searchParams.get('termMonths') ?? undefined,
     downPaymentCents: searchParams.get('downPaymentCents') ?? undefined,
   });
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
   // D12: a relisted item slides on its second-life price.
   const data = await pricingForAsset(db, query.assetId, await loadPricingData());
   return ok(previewQuote(data, { ...query, today }));

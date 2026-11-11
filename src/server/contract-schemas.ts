@@ -6,7 +6,7 @@ import { centsSchema, isoDateSchema } from '@/data/schemas';
 import { contractStatusSchema } from '@/domain/statuses';
 
 /**
- * Body of `POST /api/contracts`. The signing day is the request's (`todayForRequest()`), never
+ * Body of `POST /api/contracts`. The signing day is the request's (`todayForRequest(db)`), never
  * the browser's; `startDate` is a business date the customer picks, checked against it (D7).
  * Left out, the lease starts on the signing day.
  */

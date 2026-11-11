@@ -34,7 +34,7 @@ export const POST = handleRoute(async (request) => {
     );
   }
 
-  const result = await signContract(db, { ...body, actor }, await todayForRequest());
+  const result = await signContract(db, { ...body, actor }, await todayForRequest(db));
   if (!result.ok) {
     if (isAuthzRefusal(result.reason)) return forbiddenResponse(result.reason);
     return refused(STATUS_OF[result.reason.code] ?? 422, result.reason);

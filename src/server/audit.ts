@@ -18,14 +18,16 @@ import {
   verifySealedChain,
   type AuditSealVerdict,
 } from '@/domain/audit';
+import { attributeAuditEntry } from '@/domain/auth/attribution';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { auditEntrySchema } from '@/domain/rows/audit-entry';
 import { appendAuditAnchor, readAuditAnchors } from './audit-anchors';
 import { auditSigner, SIGNING_KEY_ENV } from './audit-signing';
+import { sessionAccount } from './request-context';
 import { parseRow } from './row-rules';
 
 export type AuditEntry = {
-  /** Who did it (a user id or name; there is no login in the starter). */
+  /** Who did it: the session's actor. The admin acting as a customer is recorded as `admin` (D93). */
   actor: string;
   /** What happened, as `<entity>.<verb>`, e.g. `asset.status_changed`. */
   action: string;
@@ -50,11 +52,13 @@ const AUDIT_HEAD_ID = 1;
  */
 export async function withAudit<T>(
   db: PrismaClient,
-  entry: AuditEntry,
+  given: AuditEntry,
   work: (tx: TransactionClient) => Promise<T>,
   /** The row's instant (ISO); the server clock, read once here, when not given. */
   now: string = new Date().toISOString()
 ): Promise<T> {
+  // In a request from the admin's session, a row made as a customer names the admin (D93).
+  const entry = attributeAuditEntry(given, sessionAccount());
   // Checked before the change runs: an entry that cannot be written must not cost the work.
   parseRow('audit entry', auditEntrySchema, entry);
   // Fail closed: an unsigned row would read as a break, so no change is made without the key.

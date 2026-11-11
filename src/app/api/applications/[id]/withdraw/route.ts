@@ -18,7 +18,7 @@ export const POST = handleRoute(
     const actor = await readActor(db);
     const auth = await authorize(db, actor, 'withdraw_application', { application: id });
     if (!auth.ok) return refusalResponse(auth.reason, notFound);
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
 
     const result = await withdrawApplication(db, { id, actor, today });
     if (result.ok) return ok(result.application);

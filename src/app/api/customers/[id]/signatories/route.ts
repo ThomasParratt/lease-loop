@@ -20,7 +20,7 @@ export const GET = handleRoute(
     const { id } = customerIdParamsSchema.parse(await params);
     const auth = await authorize(db, await readActor(db), 'read_signatories', { customer: id });
     if (!auth.ok) return refusalResponse(auth.reason, notFound);
-    return ok(await listSignatories(db, id, await todayForRequest()));
+    return ok(await listSignatories(db, id, await todayForRequest(db)));
   }
 );
 
@@ -36,7 +36,7 @@ export const POST = handleRoute(
       ...body,
       customerId: id,
       actor,
-      today: await todayForRequest(),
+      today: await todayForRequest(db),
     });
     return result.ok ? ok(result.signatory, { status: 201 }) : signatoryFailure(result);
   }

@@ -72,7 +72,7 @@ npm run db:setup
 npm run dev
 ```
 
-Then open `http://localhost:3000/en/demo`: one **Run** button per scenario card, each landing on the page where the numbers are compared, with the demo clock and "Continue as" set for you (run card 1 before card 8). The 10–12 minute walk through it is [docs/demo.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/demo.md).
+Then open `http://localhost:3000/en/demo`: one **Run** button per scenario card, each landing on the page where the numbers are compared, with the demo clock and the customer you act as set for you (run card 1 before card 8). Since D94 the demo page needs the admin's sign-in: `ADMIN_EMAIL` and `ADMIN_PASSWORD` from your `.env`. The 10–12 minute walk through it is [docs/demo.md](https://github.com/ThomasParratt/northfina-lease-loop/blob/main/docs/demo.md).
 
 ## Engineering
 

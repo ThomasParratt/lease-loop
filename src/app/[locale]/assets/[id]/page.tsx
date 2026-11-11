@@ -63,7 +63,7 @@ export default async function PricePage({
   await connection(); // prices depend on today and the database
 
   const t = getT(locale);
-  const today = await todayForRequest(); // read once here, passed down
+  const today = await todayForRequest(db); // read once here, passed down
   const [assets, listData, actor] = await Promise.all([
     listAssetsWithLives(db),
     loadPricingData(),

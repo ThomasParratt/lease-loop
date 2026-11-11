@@ -67,7 +67,7 @@ export default async function CataloguePage({
   await connection();
 
   const t = getT(locale);
-  const today = await todayForRequest(); // read once here; domain code never reads the clock
+  const today = await todayForRequest(db); // read once here; domain code never reads the clock
   const [assets, data, actor] = await Promise.all([
     listAssetsWithLives(db),
     loadPricingData(),

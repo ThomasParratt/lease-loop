@@ -92,8 +92,16 @@ describe('authorize', () => {
     ).toEqual({ ok: true, ownerId: 'cust-norvi' });
   });
 
-  it('lets every visitor run a demo card (gated by DEMO_TOOLS instead)', async () => {
+  it('D94: only the admin runs a demo card; anonymous is not signed in', async () => {
     expect(await authorize(db, 'anonymous', 'run_demo_card', { none: true })).toEqual({
+      ok: false,
+      reason: refusal('not_signed_in', 'run_demo_card'),
+    });
+    expect(await authorize(db, 'cust-aino', 'run_demo_card', { none: true })).toEqual({
+      ok: false,
+      reason: refusal('admin_only', 'run_demo_card'),
+    });
+    expect(await authorize(db, 'admin', 'run_demo_card', { none: true })).toEqual({
       ok: true,
       ownerId: null,
     });

@@ -40,13 +40,16 @@
       "name": "second-life"
     },
     {
+      "name": "session"
+    },
+    {
       "name": "signatories"
     }
   ],
   "paths": {
     "/api/actor": {
       "post": {
-        "summary": "Act as a customer or admin: sets the actor cookie (no login, D17)",
+        "summary": "Admin only: act as a customer, or `admin` to stop, on the admin's own session (D93); 401 not signed in, 403 FORBIDDEN, 404 UNKNOWN_ACTOR or while the demo tools are off",
         "tags": ["actor"],
         "parameters": [],
         "requestBody": {
@@ -86,9 +89,21 @@
                         "actor": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "account": {
+                          "type": ["string", "null"]
+                        },
+                        "actingAs": {
+                          "type": ["string", "null"]
+                        },
+                        "asOf": {
+                          "type": ["string", "null"]
+                        },
+                        "expiresAt": {
+                          "type": ["string", "null"]
                         }
                       },
-                      "required": ["actor"],
+                      "required": ["actor", "account", "actingAs", "asOf", "expiresAt"],
                       "additionalProperties": false
                     },
                     "meta": {
@@ -157,7 +172,7 @@
         }
       },
       "delete": {
-        "summary": "Stop acting: clears the actor cookie, so the visitor is anonymous",
+        "summary": "Admin only: stop acting as a customer (D93)",
         "tags": ["actor"],
         "parameters": [],
         "responses": {
@@ -178,9 +193,21 @@
                         "actor": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "account": {
+                          "type": ["string", "null"]
+                        },
+                        "actingAs": {
+                          "type": ["string", "null"]
+                        },
+                        "asOf": {
+                          "type": ["string", "null"]
+                        },
+                        "expiresAt": {
+                          "type": ["string", "null"]
                         }
                       },
-                      "required": ["actor"],
+                      "required": ["actor", "account", "actingAs", "asOf", "expiresAt"],
                       "additionalProperties": false
                     },
                     "meta": {
@@ -4247,7 +4274,7 @@
     },
     "/api/demo/cards/{id}/run": {
       "post": {
-        "summary": "Run scenario card 1 to 10 through the real services on the card's days, set the demo clock and actor, answer the steps and the landing page (409 card_already_run links the earlier records); 404 while DEMO_TOOLS is off (D74)",
+        "summary": "Admin only: run scenario card 1 to 10 through the real services on the card's days, set the session's demo clock and the customer it acts as, answer the steps and the landing page (409 card_already_run links the earlier records); 404 while DEMO_TOOLS is off (D74, D94)",
         "tags": ["demo"],
         "parameters": [
           {
@@ -4394,7 +4421,7 @@
     },
     "/api/demo/clock": {
       "post": {
-        "summary": "Set the demo clock to a day, or clear it with null (the one date the browser may send)",
+        "summary": "Admin only: set the demo clock on the admin's session to a day, or clear it with null (D94)",
         "tags": ["demo"],
         "parameters": [],
         "requestBody": {
@@ -5944,6 +5971,344 @@
                         }
                       },
                       "required": ["today", "quote", "refusal", "comparison"],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": ["timestamp"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["success", "data", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error: 400 VALIDATION_ERROR or INVALID_JSON, 404, 409, 500 INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": ["timestamp"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["success", "error", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "summary": "Who is signed in, who the request acts as and the demo clock (D91)",
+        "tags": ["session"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "actor": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account": {
+                          "type": ["string", "null"]
+                        },
+                        "actingAs": {
+                          "type": ["string", "null"]
+                        },
+                        "asOf": {
+                          "type": ["string", "null"]
+                        },
+                        "expiresAt": {
+                          "type": ["string", "null"]
+                        }
+                      },
+                      "required": ["actor", "account", "actingAs", "asOf", "expiresAt"],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": ["timestamp"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["success", "data", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error: 400 VALIDATION_ERROR or INVALID_JSON, 404, 409, 500 INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": ["timestamp"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["success", "error", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Sign in with e-mail and password: sets the session cookie (D91); 401 INVALID_CREDENTIALS for any failure, 429 RATE_LIMITED",
+        "tags": ["session"],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 254
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  }
+                },
+                "required": ["email", "password"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "actor": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account": {
+                          "type": ["string", "null"]
+                        },
+                        "actingAs": {
+                          "type": ["string", "null"]
+                        },
+                        "asOf": {
+                          "type": ["string", "null"]
+                        },
+                        "expiresAt": {
+                          "type": ["string", "null"]
+                        }
+                      },
+                      "required": ["actor", "account", "actingAs", "asOf", "expiresAt"],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": ["timestamp"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["success", "data", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error: 400 VALIDATION_ERROR or INVALID_JSON, 404, 409, 500 INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": ["timestamp"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["success", "error", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Sign out: ends the session and clears the cookie (D91)",
+        "tags": ["session"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "actor": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account": {
+                          "type": ["string", "null"]
+                        },
+                        "actingAs": {
+                          "type": ["string", "null"]
+                        },
+                        "asOf": {
+                          "type": ["string", "null"]
+                        },
+                        "expiresAt": {
+                          "type": ["string", "null"]
+                        }
+                      },
+                      "required": ["actor", "account", "actingAs", "asOf", "expiresAt"],
                       "additionalProperties": false
                     },
                     "meta": {

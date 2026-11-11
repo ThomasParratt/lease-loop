@@ -17,6 +17,7 @@ import {
   type AuditEntry,
 } from './audit';
 import type { PrismaClient } from './prisma-client';
+import { noteSessionAccount, runWithRequestContext } from './request-context';
 import { RowRuleError } from './row-rules';
 import { anchorFileFor } from './audit-anchors';
 import { auditSigner, SIGNING_KEY_ENV } from './audit-signing';
@@ -128,6 +129,18 @@ describe('withAudit', () => {
 
     expect(await currentStatus()).toBe('available');
     expect(await db.auditLog.count()).toBe(0);
+  });
+
+  it("D93: in the admin's session, a row made as a customer names the admin and actingAs", async () => {
+    await runWithRequestContext(async () => {
+      noteSessionAccount('admin');
+      await withAudit(db, { ...entry, actor: 'cust-aino' }, reserve);
+    });
+    expect(await db.auditLog.findFirstOrThrow()).toMatchObject({
+      actor: 'admin',
+      details_json: '{"from":"available","to":"reserved","actingAs":"cust-aino"}',
+    });
+    expect((await verifyAuditChain(db)).ok).toBe(true);
   });
 });
 

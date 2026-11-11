@@ -32,7 +32,7 @@ Steps and refusals are codes with params; a decision reason is one `application_
 - **D70** a second click is refused with `card_already_run` and links the earlier records; a run stopped before signing is picked up and signed; card 8 builds on card 1 and only previews again.
 - **D71** the run sets the demo clock to the card's look day and the actor to the card's customer, on a run and on a refusal.
 - **D72** card 2 signs on the second day and lands on the contract.
-- Uses D17 (the actor cookie), D44 (tests own their `beforeEach`), and the demo clock of `docs/features/catalogue.md`.
+- Uses D17 (the actor, read from the session since D91), D93 and D94 (the run is admin only and sets the admin's session), D44 (tests own their `beforeEach`), and the demo clock of `docs/features/catalogue.md`.
 
 ## Pure functions
 
@@ -40,7 +40,7 @@ None: this slice has no domain logic (it only drives the services). The server f
 
 - `runDemoCard(db, cardId) → { ok: true, run: { cardId, today, actor, steps: [{ code, params, href? }], landing } } | { ok: false, reason: card_already_run | card_step_refused, today, actor, landing | null }`.
 - `afterReturn(db, card, steps) → { alreadyRun }`: cards 9 and 10. Assesses the returned item with `assessAsset` as the card's actor on its clock day (steps `asset_assessed` and `relisted_for_winner` or `relisted_without_match`), then, for a card with a `lease`, quotes, applies and signs it as that customer. An item no longer `returned` with an assessment counts as run: a lease picks up where it stopped, otherwise `card_already_run` (D70).
-- `demoClockCookieHeader(asOf | null) → string`: the one writer of the demo clock cookie, used by `POST /api/demo/clock` and the card route.
+- `setDemoState(db, session, { actingAs?, asOf? })` (`src/server/sessions.ts`): the one writer of the demo clock and the customer acted as, on the admin's session, used by `POST /api/demo/clock`, `POST /api/actor` and the card route (D94; it replaced the cookie headers).
 - Page helpers: `codedMessage(prefix, { code, params }, t, locale)` and `cardInputs(card, names, t, locale)`.
 
 ## Files
@@ -48,7 +48,7 @@ None: this slice has no domain logic (it only drives the services). The server f
 - `src/server/demo-cards-schemas.ts`: the card id, the card table's schema, the step and the run (Zod).
 - `src/server/demo-cards.ts`: the card table and the runner.
 - `src/app/api/demo/cards/[id]/run/route.ts`: `POST /api/demo/cards/{id}/run`; its row is in `src/server/routes.ts` and `docs/openapi.json`.
-- `src/server/demo-clock.ts`: `demoClockCookieHeader`; `src/app/api/demo/clock/route.ts` uses it.
+- `src/server/demo-clock.ts`: `todayForRequest(db)` from the session; `src/app/api/demo/clock/route.ts` sets it through `setDemoState`.
 - `src/app/[locale]/demo/page.tsx`, `card-list.tsx`, `card-run-form.tsx` (client), `card-steps.ts`.
 - `src/components/site-header.tsx`: the audit log link for everyone.
 - `src/i18n/messages/{en,fi,sv,et}.json`: `demo.tools.*`, `demo.run.*`, `demo.step.*`, `demo.input.*`, `demo.audit.*`.
@@ -56,9 +56,9 @@ None: this slice has no domain logic (it only drives the services). The server f
 ## Tests that pin the numbers
 
 - `src/server/demo-cards.test.ts`: one test per card on a test database (the records match the numbers `src/server/scenarios/` pins, and the landing page), card 8 after card 1, the repeat-run refusal writing nothing, card 8 again only previewing, a stopped run signed, another deal on the same item not mistaken for the card, card 8 refused after its contract ended, all ten cards in one database with the audit chain intact, and a refused step.
-- `src/app/api/demo/cards/[id]/run/route.test.ts`: the route sets both cookies, answers 409 `CARD_ALREADY_RUN` with the earlier page, and 400 for a card that does not exist.
+- `src/app/api/demo/cards/[id]/run/route.test.ts`: the route sets the admin's session (no cookie), is admin only, names the admin in every audit row with the card's customer as `actingAs`, answers 409 `CARD_ALREADY_RUN` with the earlier page, and 400 for a card that does not exist.
 - `src/app/[locale]/demo/card-steps.test.ts`: every step and refusal and every card's inputs line written (decision reasons and refused steps with the app's own sentences, never the code) in all four languages with no placeholder left.
-- `src/server/demo-clock.test.ts` and `src/app/api/demo/clock/route.test.ts`: the cookie header, and the clock route setting, clearing and refusing.
+- `src/server/demo-clock.test.ts` and `src/app/api/demo/clock/route.test.ts`: the day from the session, and the clock route setting, clearing and refusing, admin only.
 
 ## Open questions
 

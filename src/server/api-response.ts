@@ -3,6 +3,8 @@
 //   { success: false, error: { code, message, details? }, meta: { timestamp } }
 // Wrap each route handler in `handleRoute` so an unexpected error never leaks to the client.
 import { ZodError, type z } from 'zod';
+import { isCrossSiteWrite } from './cross-site';
+import { runWithRequestContext } from './request-context';
 
 export type ApiMeta = { timestamp: string };
 export type ApiErrorBody = { code: string; message: string; details?: unknown };
@@ -63,20 +65,26 @@ export function errorToResponse(error: unknown): Response {
 }
 
 /**
- * Wraps a route handler so thrown errors become envelope responses.
+ * Wraps a route handler so thrown errors become envelope responses. It also refuses a write
+ * another site made the browser send (403 CROSS_SITE_REQUEST, D91) and gives the request its
+ * own context (the session's account, for withAudit, D93).
  *
  *   export const GET = handleRoute(async (request) => ok(await listThings()));
  */
 export function handleRoute<Context = unknown>(
   handler: (request: Request, context: Context) => Promise<Response>
 ): (request: Request, context: Context) => Promise<Response> {
-  return async (request, context) => {
-    try {
-      return await handler(request, context);
-    } catch (error) {
-      return errorToResponse(error);
-    }
-  };
+  return (request, context) =>
+    runWithRequestContext(async () => {
+      if (isCrossSiteWrite(request)) {
+        return fail(403, 'CROSS_SITE_REQUEST', 'This request came from another site');
+      }
+      try {
+        return await handler(request, context);
+      } catch (error) {
+        return errorToResponse(error);
+      }
+    });
 }
 
 /** Reads a JSON body and validates it. Bad JSON → 400 INVALID_JSON; wrong shape → 400 VALIDATION_ERROR. */

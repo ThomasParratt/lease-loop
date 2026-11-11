@@ -10,7 +10,7 @@ export const GET = handleRoute(async (_request, { params }: RouteContext<'/api/q
   const quote = await getQuote(db, id);
   if (!quote) return fail(404, 'QUOTE_NOT_FOUND', `No quote with id "${id}"`);
 
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
   const { priceLists } = await loadPricingData();
   return ok({ ...quote, statusToday: storedQuoteStatusOn(quote, today, priceLists) });
 });

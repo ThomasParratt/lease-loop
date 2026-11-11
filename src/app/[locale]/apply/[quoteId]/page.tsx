@@ -55,7 +55,7 @@ export default async function ApplyPage({ params }: PageProps<'/[locale]/apply/[
   // The quote the price page stored when the customer pressed "Apply at this price" (D7).
   const [quote, today, priceLists] = await Promise.all([
     getQuote(db, quoteId),
-    todayForRequest(),
+    todayForRequest(db),
     loadPriceLists(),
   ]);
   // Only a quote that is still valid shows "price locked until"; an expired one is refused

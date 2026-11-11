@@ -1,8 +1,8 @@
 // My leases, the customer portal (D75): for the acting customer everything of theirs in one place
 // (the totals, the contracts with their ways out today, the applications not signed yet, every
 // invoice), see portal.tsx. Admin sees every contract and application with the customer's name,
-// and the customers, each opening their portal at /customers/[id]. Nobody chosen: a pointer to
-// "Continue as". Read-only; every read goes through its table owner's function (team rule 3).
+// and the customers, each opening their portal at /customers/[id]. Nobody signed in: a pointer to
+// sign in. Read-only; every read goes through its table owner's function (team rule 3).
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -55,7 +55,7 @@ export default async function LeasesPage({ params }: PageProps<'/[locale]/leases
   }
 
   if (!isAdmin) {
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
     return (
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         <PageHeader title={title} intro={t('leases.intro')} />

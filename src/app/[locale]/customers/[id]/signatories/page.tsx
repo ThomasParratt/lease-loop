@@ -55,7 +55,7 @@ export default async function SignatoriesPage({
   if (!auth.ok && auth.reason.code !== 'not_found') {
     return page(<Notice tone="info">{t('signatories.companyOnly')}</Notice>);
   }
-  const [company, today] = await Promise.all([getCustomer(db, id), todayForRequest()]);
+  const [company, today] = await Promise.all([getCustomer(db, id), todayForRequest(db)]);
   if (!company || company.type !== 'company') {
     return page(<Notice tone="warning">{t('signatories.notCompany')}</Notice>);
   }

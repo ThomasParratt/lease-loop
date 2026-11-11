@@ -37,7 +37,7 @@ export default async function ContractPage({
   if (!isLocale(locale)) notFound();
   await connection();
   const t = getT(locale);
-  const today = await todayForRequest();
+  const today = await todayForRequest(db);
 
   const actor = await readActor(db);
   const auth = await authorize(db, actor, 'read_contract', { contract: id });

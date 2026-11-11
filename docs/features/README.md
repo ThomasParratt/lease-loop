@@ -19,5 +19,6 @@ One page per feature slice, shipped in the same pull request as its code (AGENTS
 - [second-life.md](second-life.md): the assessment of a returned item, the D86 second-life price (the market value) with the refurbish-or-not comparison, the D13 waiting-list match and the third life (wave 3, cards 9 and 10).
 - [demo-cards.md](demo-cards.md): one Run button per scenario card on the demo page, through the real services on the card's days, and the demo tools in one place (wave 3).
 - [authorization.md](authorization.md): one pure rule for who may do what, checked before the action in every route and service, 401 / 403 `FORBIDDEN` (D73, D74).
+- [auth.md](auth.md): sign-in with database sessions, the account lock, and the picker, demo clock and card runs behind the admin's sign-in (D91 to D94).
 
 The team's per-feature state (missing, in progress, done, verified) is [STATUS.md](STATUS.md); the README's "Status" table is the per-card view for the judges.

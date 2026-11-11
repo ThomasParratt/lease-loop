@@ -10,7 +10,7 @@ import { assetIdParamsSchema, passportResponseSchema } from '@/server/routes';
 export const GET = handleRoute(
   async (_request, { params }: RouteContext<'/api/assets/[id]/passport'>) => {
     const { id } = assetIdParamsSchema.parse(await params);
-    const asOf = await todayForRequest();
+    const asOf = await todayForRequest(db);
     const result = await readPassport(db, id, asOf);
     if (!result) return fail(404, 'ASSET_NOT_FOUND', `No asset with id "${id}"`);
 

@@ -45,6 +45,29 @@ describe('fail', () => {
 describe('handleRoute', () => {
   const request = new Request('http://localhost/api/test');
 
+  it('D91: refuses a write from another site before the handler runs', async () => {
+    const handler = vi.fn(async () => ok('written'));
+    const route = handleRoute(handler);
+    const crossSite = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { origin: 'https://evil.example', host: 'localhost' },
+    });
+    const response = await route(crossSite, undefined);
+    expect(response.status).toBe(403);
+    expect(await body(response)).toMatchObject({ error: { code: 'CROSS_SITE_REQUEST' } });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('D93: gives each request its own context for the session account', async () => {
+    const { noteSessionAccount, sessionAccount } = await import('./request-context');
+    const route = handleRoute(async () => {
+      noteSessionAccount('admin');
+      return ok(sessionAccount());
+    });
+    expect(await body(await route(request, undefined))).toMatchObject({ data: 'admin' });
+    expect(sessionAccount()).toBeNull();
+  });
+
   it('passes through the response of a handler that succeeds', async () => {
     const handler = handleRoute(async () => ok('fine'));
     expect(await body(await handler(request, undefined))).toMatchObject({ data: 'fine' });

@@ -20,7 +20,7 @@ export const POST = handleRoute(
     const auth = await authorize(db, actor, 'decide_application', { application: id });
     if (!auth.ok) return refusalResponse(auth.reason, notFound);
     const body = await readJsonBody(request, decideApplicationBodySchema);
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
 
     const result = await decideApplication(db, {
       id,

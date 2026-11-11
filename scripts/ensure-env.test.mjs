@@ -2,7 +2,13 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ensureEnvFile, ensureSigningKey, newSigningKey } from './ensure-env.mjs';
+import {
+  ensureEnvFile,
+  ensureEnvValue,
+  ensureSigningKey,
+  newPassword,
+  newSigningKey,
+} from './ensure-env.mjs';
 
 let root;
 beforeEach(() => {
@@ -53,5 +59,22 @@ describe('ensureSigningKey (D81)', () => {
 
   it('generates a base64 PKCS#8 Ed25519 key by default', () => {
     expect(newSigningKey()).toMatch(/^MC4CAQAwBQYDK2VwBCIEI[A-Za-z0-9+/]{43}$/);
+  });
+});
+
+describe('ensureEnvValue and newPassword (D92)', () => {
+  const env = () => readFileSync(path.join(root, '.env'), 'utf8');
+
+  it('fills an empty password line and keeps one that is set', () => {
+    writeFileSync(path.join(root, '.env'), 'ADMIN_PASSWORD=""\nCUSTOMER_PASSWORD="mine"\n');
+    expect(ensureEnvValue(root, 'ADMIN_PASSWORD', () => 'pw$1')).toBe('added');
+    expect(ensureEnvValue(root, 'CUSTOMER_PASSWORD', () => 'other')).toBe('exists');
+    expect(env()).toBe('ADMIN_PASSWORD="pw$1"\nCUSTOMER_PASSWORD="mine"\n');
+  });
+
+  it('makes a 24-character URL-safe password, different every time', () => {
+    const password = newPassword();
+    expect(password).toMatch(/^[A-Za-z0-9_-]{24}$/);
+    expect(newPassword()).not.toBe(password);
   });
 });

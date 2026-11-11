@@ -35,7 +35,7 @@ export const POST = handleRoute(
       );
     }
     const body = await readJsonBody(request, exitBodySchema);
-    const today = await todayForRequest();
+    const today = await todayForRequest(db);
 
     const { condition, usage, ...choice } = body;
     const result = await exitContract(
