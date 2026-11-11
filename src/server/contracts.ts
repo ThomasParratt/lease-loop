@@ -21,6 +21,7 @@ import { getAsset } from './assets';
 import { getCustomer } from './customers';
 import { withAudit, type TransactionClient } from './audit';
 import { authorize } from './authorize';
+import { IdentificationUsedError, useIdentification } from './identifications';
 import { AssetNotAvailableError, leaseAvailableAsset } from './catalogue-handlers';
 import { emit } from './events';
 import './event-handlers';
@@ -41,11 +42,23 @@ export type ContractDetails = {
   priceLock: PriceLock | null;
 };
 
+/** The person's bank identification the route checked for this signature (D96). */
+export type SigningIdentification = {
+  id: string;
+  method: string;
+  transactionId: string;
+  identifiedAt: string;
+  /** The signing instant: when the identification is marked used. */
+  usedAt: string;
+};
+
 export type SignContractInput = {
   applicationId: string;
   /** The business start day; the signing day when left out. */
   startDate?: string;
   actor: string;
+  /** Used once in the signing transaction and named in the audit row (D96). */
+  identification?: SigningIdentification;
 };
 
 export type SignContractRefusal =
@@ -53,7 +66,8 @@ export type SignContractRefusal =
   | { code: 'application_not_found'; params: { applicationId: string } }
   | AuthzRefusal
   | { code: 'already_signed'; params: { applicationId: string } }
-  | { code: 'quote_reserved_for_another_customer'; params: { quoteId: string } };
+  | { code: 'quote_reserved_for_another_customer'; params: { quoteId: string } }
+  | { code: 'identification_used'; params: Record<string, never> };
 
 /** Thrown inside the signing transaction when the application is no longer approved (D87). */
 class ApplicationMovedOn extends Error {
@@ -214,9 +228,23 @@ export async function signContract(
           startDate: contract.startDate,
           monthlyNetCents: contract.monthlyNetCents,
           priceListVersion: contract.priceListVersion,
+          ...(input.identification
+            ? {
+                identification: {
+                  id: input.identification.id,
+                  method: input.identification.method,
+                  transactionId: input.identification.transactionId,
+                  identifiedAt: input.identification.identifiedAt,
+                },
+              }
+            : {}),
         },
       },
       async (tx) => {
+        // D96: the person's identification signs once; a second use at the same instant loses.
+        if (input.identification) {
+          await useIdentification(tx, input.identification.id, input.identification.usedAt);
+        }
         // D87: the applicant may have withdrawn it since it was read; re-read in this
         // transaction so a withdrawal and a signing at the same instant leave one winner.
         const still = await getApplication(tx, applicationId);
@@ -252,6 +280,9 @@ export async function signContract(
       };
     }
     if (isUniqueViolation(error)) return alreadySigned;
+    if (error instanceof IdentificationUsedError) {
+      return { ok: false, reason: { code: 'identification_used', params: {} } };
+    }
     if (error instanceof ApplicationMovedOn) {
       return {
         ok: false,

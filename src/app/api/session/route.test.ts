@@ -40,8 +40,8 @@ afterAll(async () => {
 beforeEach(async () => {
   await resetDb(holder.db);
   await seedPack(holder.db);
-  const aino = (await loadCustomers()).filter((c) => c.id === 'cust-aino');
-  await seedAccounts(holder.db, aino, {
+  const kettu = (await loadCustomers()).filter((c) => c.id === 'cust-kettukoodi');
+  await seedAccounts(holder.db, kettu, {
     adminEmail: 'admin@lease-loop.test',
     adminPassword: 'admin-password-for-tests',
     customerPassword: PASSWORD,
@@ -78,13 +78,17 @@ function keep(setCookie: string) {
 }
 
 describe('POST /api/session', { timeout: 30_000 }, () => {
-  it('signs Aino in: an HttpOnly cookie, and the body says who acts', async () => {
+  it('signs Kettu Koodi in: an HttpOnly cookie, and the body says who acts', async () => {
     const { status, cookies, body } = await signIn({
-      email: 'aino.virtanen@example.com',
+      email: 'it@kettukoodi.example.com',
       password: PASSWORD,
     });
     expect(status).toBe(200);
-    expect(body.data).toMatchObject({ actor: 'cust-aino', account: 'cust-aino', actingAs: null });
+    expect(body.data).toMatchObject({
+      actor: 'cust-kettukoodi',
+      account: 'cust-kettukoodi',
+      actingAs: null,
+    });
     expect(cookies).toHaveLength(1);
     expect(cookies[0]).toMatch(
       new RegExp(
@@ -96,7 +100,7 @@ describe('POST /api/session', { timeout: 30_000 }, () => {
 
   it('answers every failure with the same 401 INVALID_CREDENTIALS and no cookie', async () => {
     for (const body of [
-      { email: 'aino.virtanen@example.com', password: 'wrong password' },
+      { email: 'it@kettukoodi.example.com', password: 'wrong password' },
       { email: 'nobody@example.com', password: PASSWORD },
     ]) {
       const answer = await signIn(body);
@@ -111,7 +115,7 @@ describe('POST /api/session', { timeout: 30_000 }, () => {
 
   it('does not take the customer type, or anything else, from the form (D92)', async () => {
     const answer = await signIn({
-      email: 'aino.virtanen@example.com',
+      email: 'it@kettukoodi.example.com',
       password: PASSWORD,
       type: 'company',
     });
@@ -122,16 +126,16 @@ describe('POST /api/session', { timeout: 30_000 }, () => {
     // A try counts before its body is read, so malformed ones count too (and cost no scrypt).
     const from = { 'x-forwarded-for': '198.51.100.99' };
     for (let i = 0; i < 20; i++) expect((await signIn({}, from)).status).toBe(400);
-    const limited = await signIn({ email: 'aino.virtanen@example.com', password: PASSWORD }, from);
+    const limited = await signIn({ email: 'it@kettukoodi.example.com', password: PASSWORD }, from);
     expect(limited.status).toBe(429);
     expect(limited.body.error.code).toBe('RATE_LIMITED');
-    const elsewhere = await signIn({ email: 'aino.virtanen@example.com', password: PASSWORD });
+    const elsewhere = await signIn({ email: 'it@kettukoodi.example.com', password: PASSWORD });
     expect(elsewhere.status).toBe(200);
   });
 
   it('refuses a sign-in posted from another site (CSRF)', async () => {
     const answer = await signIn(
-      { email: 'aino.virtanen@example.com', password: PASSWORD },
+      { email: 'it@kettukoodi.example.com', password: PASSWORD },
       { origin: 'https://evil.example', host: 'localhost:3000' }
     );
     expect(answer.status).toBe(403);
@@ -141,10 +145,10 @@ describe('POST /api/session', { timeout: 30_000 }, () => {
 
 describe('GET and DELETE /api/session', { timeout: 30_000 }, () => {
   it('reads the session, then signs out: the row is gone and the cookie cleared', async () => {
-    const signedIn = await signIn({ email: 'aino.virtanen@example.com', password: PASSWORD });
+    const signedIn = await signIn({ email: 'it@kettukoodi.example.com', password: PASSWORD });
     keep(signedIn.cookies[0]!);
     const read = await route.GET(new Request('http://localhost:3000/api/session'), undefined);
-    expect((await read.json()).data).toMatchObject({ actor: 'cust-aino' });
+    expect((await read.json()).data).toMatchObject({ actor: 'cust-kettukoodi' });
 
     const out = await route.DELETE(
       new Request('http://localhost:3000/api/session', { method: 'DELETE' }),

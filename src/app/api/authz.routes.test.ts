@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { seedPack } from '../../../tests/helpers/invoice-fixture';
 import { quoteAndApply, signedContract } from '../../../tests/helpers/journey';
 import { resetDb } from '../../../tests/helpers/reset-db';
+import { identifiedToSign } from '../../../tests/helpers/identification';
 import { cookiesFor } from '../../../tests/helpers/sessions';
 import { createTestDb } from '../../../tests/helpers/test-db';
 import { loadCustomers } from '@/data/load';
@@ -140,7 +141,23 @@ const ROUTES: WriteRoute[] = [
     name: 'POST /api/contracts',
     owner: 'cust-aino',
     adminRefusal: 'customer_signs',
-    call: () => contracts.POST(post({ applicationId: records.applicationId }), undefined),
+    // D96: Aino signs with a fresh bank identification of herself; anyone else brings none.
+    call: async () =>
+      contracts.POST(
+        post({
+          applicationId: records.applicationId,
+          ...(holder.actor === 'cust-aino'
+            ? {
+                identificationId: await identifiedToSign(
+                  holder.db,
+                  'cust-aino',
+                  records.applicationId
+                ),
+              }
+            : {}),
+        }),
+        undefined
+      ),
   },
   {
     name: 'POST /api/contracts/[id]/exit',

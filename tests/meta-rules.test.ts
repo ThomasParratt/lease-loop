@@ -219,6 +219,9 @@ describe('meta rules', () => {
       'src/app/api/audit-log/route.ts': 'the audit page is public',
       'src/app/api/audit-log/verify/route.ts': 'the audit chain check is public',
       'src/app/api/session/route.ts': 'signing in and out (D91)',
+      'src/app/api/identifications/callback/route.ts':
+        'the broker returns; the state cookie is the authority (D95)',
+      'src/app/api/test-bank/authorize/route.ts': 'the mock broker itself (D97)',
       'src/app/api/quotes/route.ts': 'a price snapshot, owned by no customer until applied',
       'src/app/api/quotes/[id]/route.ts': 'a price snapshot',
       'src/app/api/quotes/preview/route.ts': 'the live price',

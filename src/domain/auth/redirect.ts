@@ -15,3 +15,17 @@ export function safeNextPath(next: string | undefined, locale: string): string {
   if (path === `/${locale}/login` || path.startsWith(`/${locale}/login/`)) return fallback;
   return next;
 }
+
+/** `path` with `key=value` added to its query, before any `#hash`. */
+export function withQueryParam(path: string, key: string, value: string): string {
+  const [beforeHash, ...hash] = path.split('#');
+  const separator = beforeHash!.includes('?') ? '&' : '?';
+  const pair = `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+  return `${beforeHash}${separator}${pair}${hash.length > 0 ? `#${hash.join('#')}` : ''}`;
+}
+
+/** The locale a safe path starts with (`/fi/…` → `fi`), or `fallback`. */
+export function localeOfPath(path: string, locales: readonly string[], fallback: string): string {
+  const first = path.split(/[/?#]/)[1] ?? '';
+  return locales.includes(first) ? first : fallback;
+}

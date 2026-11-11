@@ -13,6 +13,8 @@ import { contractStatusSchema } from '@/domain/statuses';
 export const signContractBodySchema = z.strictObject({
   applicationId: z.string().min(1).max(100),
   startDate: isoDateSchema.optional(),
+  /** A person's bank identification for this application, from the identification flow (D96). */
+  identificationId: z.string().min(1).max(100).optional(),
 });
 
 export const contractIdParamsSchema = z.object({ id: z.string().min(1) });

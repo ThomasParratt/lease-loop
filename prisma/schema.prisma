@@ -313,7 +313,10 @@ model SignatureRequest {
 model Account {
   id              String   @id @default(cuid())
   email           String   @unique // trimmed and lower case (normaliseEmail)
-  password_hash   String // scrypt$N$r$p$salt$hash, src/server/passwords.ts
+  // scrypt$N$r$p$salt$hash (src/server/passwords.ts); null for a person, who identifies (D95).
+  password_hash   String?
+  // HMAC of the person's identity code (src/server/identity-hash.ts), never the code (D95).
+  identity_hash   String?  @unique
   role            String // customer | admin
   customer_id     String?  @unique
   // The lock after wrong passwords (src/domain/auth/lockout.ts).
@@ -341,4 +344,25 @@ model Session {
   account Account @relation(fields: [account_id], references: [id], onDelete: Cascade)
 
   @@index([account_id])
+}
+
+// One strong identification (D95, D96): started by our app, completed once by the broker's
+// answer in the browser that started it. A signing identification is used once, in the signing
+// transaction. The person's code is never stored: only its HMAC and the name the broker gave.
+model Identification {
+  id             String   @id @default(cuid())
+  state_hash     String   @unique // SHA-256 of the state in the browser's cookie
+  nonce          String
+  purpose        String // sign_in | sign_contract
+  subject        String? // the application id, for sign_contract
+  next           String // where the browser goes afterwards, a path of this site
+  started_by     String // the actor who started it (anonymous for a sign-in)
+  expires_at     String // ISO instant
+  completed_at   String? // ISO instant
+  identity_hash  String?
+  person_name    String?
+  method         String? // the broker's method, e.g. test_bank
+  transaction_id String? // the broker's reference for this identification
+  used_at        String? // ISO instant, when a contract was signed with it
+  created_at     DateTime @default(now())
 }

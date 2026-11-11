@@ -22,6 +22,7 @@ afterAll(async () => {
 });
 
 const countAll = async () => ({
+  identification: await db.identification.count(),
   session: await db.session.count(),
   account: await db.account.count(),
   signatureRequest: await db.signatureRequest.count(),

@@ -1,4 +1,4 @@
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { configDefaults, defineConfig } from 'vitest/config';
 
@@ -19,7 +19,12 @@ export default defineConfig({
     environment: 'node',
     // AUDIT_ANCHOR_FILE emptied (review of #69, finding 6): set in the shell, every test database
     // would append to that one file and every reset would delete it.
-    env: { AUDIT_SIGNING_KEY: testSigningKey, AUDIT_ANCHOR_FILE: '' },
+    env: {
+      AUDIT_SIGNING_KEY: testSigningKey,
+      AUDIT_ANCHOR_FILE: '',
+      // D95: the key of the identity HMAC, fresh every run like the signing key.
+      IDENTITY_HASH_KEY: randomBytes(32).toString('base64url'),
+    },
     globalSetup: ['./tests/global-setup.ts'],
     // Files run in parallel: each DB test file copies its own SQLite file (tests/helpers/test-db.ts)
     // and `isolate` gives each file its own module graph, so its own event-handler registry.
