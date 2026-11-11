@@ -6,6 +6,7 @@ import {
   ensureEnvFile,
   ensureEnvValue,
   ensureSigningKey,
+  newIdentityKey,
   newPassword,
   newSigningKey,
 } from './ensure-env.mjs';
@@ -76,5 +77,13 @@ describe('ensureEnvValue and newPassword (D92)', () => {
     const password = newPassword();
     expect(password).toMatch(/^[A-Za-z0-9_-]{24}$/);
     expect(newPassword()).not.toBe(password);
+  });
+});
+
+describe('newIdentityKey (D95)', () => {
+  it('makes a 32-byte key, different every time', () => {
+    const key = newIdentityKey();
+    expect(Buffer.from(key, 'base64url')).toHaveLength(32);
+    expect(newIdentityKey()).not.toBe(key);
   });
 });

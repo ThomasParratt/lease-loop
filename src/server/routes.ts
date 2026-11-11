@@ -21,6 +21,12 @@ import {
 } from '@/domain/statuses';
 import { auditChainVerdictSchema } from './audit-schemas';
 import { demoCardParamsSchema, demoCardRunSchema } from './demo-cards-schemas';
+import {
+  identificationCallbackQuerySchema,
+  redirectResponseSchema,
+  startIdentificationBodySchema,
+  testBankAuthorizeBodySchema,
+} from './identification-schemas';
 import { actorBodySchema, logInBodySchema, sessionStateSchema } from './session-schemas';
 import {
   addSignatoryBodySchema,
@@ -240,6 +246,34 @@ export const ROUTES: readonly RouteDefinition[] = [
     response: sessionStateSchema,
   },
   {
+    method: 'POST',
+    path: '/api/identifications',
+    summary:
+      "Start a bank identification to sign in or to sign a contract (D95, D96): sets this browser's state cookie and answers the broker's page; 404 while no broker is set up, 429 RATE_LIMITED",
+    tag: 'identification',
+    body: startIdentificationBodySchema,
+    response: redirectResponseSchema,
+  },
+  {
+    method: 'GET',
+    path: '/api/identifications/callback',
+    summary:
+      "The broker's return: completes the identification for the browser that started it, then signs the person in or goes back to the application; always a 303 redirect to a page of this site, no JSON body",
+    tag: 'identification',
+    query: identificationCallbackQuerySchema,
+    response: z.null(),
+    status: 303,
+  },
+  {
+    method: 'POST',
+    path: '/api/test-bank/authorize',
+    summary:
+      'The Test Bank, a mock broker (D97): grants a single-use code for the chosen test person and answers our callback address; only while the demo tools are on',
+    tag: 'identification',
+    body: testBankAuthorizeBodySchema,
+    response: redirectResponseSchema,
+  },
+  {
     method: 'GET',
     path: '/api/session',
     summary: 'Who is signed in, who the request acts as and the demo clock (D91)',
@@ -454,7 +488,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     method: 'POST',
     path: '/api/contracts',
     summary:
-      "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin); 401 not signed in, 403 FORBIDDEN (D73, D74)",
+      "Sign an approved application on the request's day: copies the quote, emits CONTRACT_SIGNED (the applicant or admin); a person also needs a fresh bank identification of themself, 403 IDENTIFICATION_REQUIRED (D96); 401 not signed in, 403 FORBIDDEN (D73, D74)",
     tag: 'contracts',
     body: signContractBodySchema,
     response: contractResponseSchema,

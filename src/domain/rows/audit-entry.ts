@@ -15,6 +15,7 @@ export const auditEntityTypes = [
   'company_signatory',
   'account',
   'session',
+  'identification',
 ] as const;
 
 export const auditEntrySchema = z.strictObject({

@@ -3,6 +3,8 @@
 // that are missing, and never overwrites your changes. The signatories are valid from the seed day (D46).
 import { loadAssets, loadCustomers } from '@/data/load';
 import { seedAccounts } from '@/server/accounts';
+import { identityHash } from '@/server/identity-hash';
+import { testPeople } from '@/server/test-bank';
 import { seedAssets } from '@/server/assets';
 import { seedCustomers } from '@/server/customers';
 import { createPrismaClient } from '@/server/prisma-client';
@@ -23,13 +25,23 @@ try {
     `🌱 Seeded ${signatories.created} new company signatories (${signatories.skipped} companies had theirs).`
   );
   // D92: the passwords come from .env (scripts/ensure-env.mjs fills them), never from the repo.
+  // D95, D97: each person is linked to the Test Bank's artificial identity code, by its HMAC.
+  const codes = new Map(testPeople(pack).map((person) => [person.customerId, person.personalCode]));
   const accounts = await seedAccounts(db, pack, {
     adminEmail: process.env.ADMIN_EMAIL,
     adminPassword: process.env.ADMIN_PASSWORD,
     customerPassword: process.env.CUSTOMER_PASSWORD,
+    identityOf: (customerId) => {
+      const code = codes.get(customerId);
+      try {
+        return code === undefined ? null : identityHash(code);
+      } catch {
+        return null;
+      }
+    },
   });
   console.log(
-    `🌱 Seeded ${accounts.created} new sign-in accounts (${accounts.skipped} were already there).`
+    `🌱 Seeded ${accounts.created} new sign-in accounts (${accounts.skipped} were already there, ${accounts.linked} linked to an identity).`
   );
   for (const problem of accounts.problems) console.warn(`⚠ No account added: ${problem}`);
 } finally {

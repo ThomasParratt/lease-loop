@@ -9,6 +9,7 @@ import type { PrismaClient } from '@/server/prisma-client';
 
 /** Every model, children first, so no foreign key is ever left pointing at a deleted row. */
 export const RESET_ORDER = [
+  'identification',
   'session',
   'account',
   'signatureRequest',
@@ -52,6 +53,8 @@ function deleteAll(db: PrismaClient, table: ResetTable) {
       return db.application.deleteMany();
     case 'quote':
       return db.quote.deleteMany();
+    case 'identification':
+      return db.identification.deleteMany();
     case 'session':
       return db.session.deleteMany();
     case 'account':

@@ -29,6 +29,8 @@ Lease Loop began as a hackathon entry: the challenge is in `CHALLENGE.md`, the o
   - A feature has a page in `docs/features/<feature>.md`: what it does, the rule with a worked example, the files, the tests that pin it, and the open questions. Keep it current in the same commit as the code; the README's "Features" list links every page.
   - The README's quick start and feature list stay current. No time logs.
 
+<!-- BEGIN:nextjs-agent-rules -->
+
 ## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
