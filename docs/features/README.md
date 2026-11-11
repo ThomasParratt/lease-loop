@@ -1,6 +1,6 @@
 # Features
 
-One page per feature slice, shipped in the same pull request as its code (AGENTS.md rule 8) and linked from the README's "Features" list and from the PR body's "Docs" line (rule 10); a stale page is a review finding. Every page has these sections, in this order: **What it does** (two sentences); **The rule** (the formula or rule, with a worked example on the scenario-card numbers); **Decisions** (the D numbers in `docs/decisions.md` it implements); **Pure functions** (inputs and outputs of each domain function); **Files**; **Tests that pin the numbers**; **Open questions**.
+One page per feature, kept current in the same commit as its code and linked from the README's "Features" list (AGENTS.md, working rules). A page says what the feature does, the rule with a worked example, the files, the tests that pin it, and the open questions. The pages written during the hackathon also list their decisions and pure functions, in that older seven-section shape.
 
 - [catalogue.md](catalogue.md): the catalogue with today's price, the asset statuses and their transitions, the demo clock, the actor and the audit trail (wave 0).
 - [pricing.md](pricing.md): the price breakdown, the term comparison, the fleet quantity and the stored quote (wave 1).
@@ -21,4 +21,4 @@ One page per feature slice, shipped in the same pull request as its code (AGENTS
 - [authorization.md](authorization.md): one pure rule for who may do what, checked before the action in every route and service, 401 / 403 `FORBIDDEN` (D73, D74).
 - [auth.md](auth.md): sign-in with database sessions, the account lock, and the picker, demo clock and card runs behind the admin's sign-in (D91 to D94).
 
-The team's per-feature state (missing, in progress, done, verified) is [STATUS.md](STATUS.md); the README's "Status" table is the per-card view for the judges.
+[STATUS.md](STATUS.md) and the README's "Status" table are the hackathon's record and are no longer updated.

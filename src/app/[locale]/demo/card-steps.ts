@@ -1,4 +1,4 @@
-// Writes the card runner's codes in the visitor's language (AGENTS.md rule 6): a step's code is
+// Writes the card runner's codes in the visitor's language (AGENTS.md code rule 5): a step's code is
 // `demo.step.<code>`, a refusal's `demo.run.<code>`; params named `…Cents` are money, `date` and
 // `…Date` / `…On` are days, `decision`, `status` and `condition` are the app's own words.
 // Shared by the server page (the inputs line) and the client run button (the steps).

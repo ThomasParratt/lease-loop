@@ -3,7 +3,7 @@
 // from here, `src/server/openapi.ts` turns the table into docs/openapi.json
 // (`npm run openapi`), and routes.test.ts fails when a route.ts has no row or a row no file.
 //
-// Contract first (AGENTS.md, team rule 2): a slice's first commit adds its row here.
+// Every route has its row here (AGENTS.md code rule 7).
 import { z } from 'zod';
 import { answerSchema, answersSchema } from '@/domain/rows/application';
 import {

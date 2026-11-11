@@ -3,7 +3,7 @@
 // days and exit), run through the same services the routes call, each with the card's day as
 // `today` and the card's customer as the actor, so every write goes through withAudit and the
 // audit page shows the run. The outputs are whatever those services return: nothing below knows
-// a card's numbers (AGENTS.md rule 7). A card that already ran is refused and linked (D70).
+// a card's numbers (AGENTS.md code rule 6). A card that already ran is refused and linked (D70).
 import { loadCustomers } from '@/data/load';
 import { answersFromCustomer } from '@/domain/question-flow/answers';
 import type { MatchResult } from '@/domain/second-life/match';

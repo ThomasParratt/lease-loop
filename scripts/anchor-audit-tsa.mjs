@@ -21,7 +21,7 @@ const USAGE = 'usage: npm run audit:anchor [-- --verify <head-n.txt>]';
 const DEFAULT_TSA = 'https://freetsa.org/tsr';
 const FREETSA_CA = 'https://freetsa.org/files/cacert.pem';
 const FREETSA_CERT = 'https://freetsa.org/files/tsa.crt';
-/** Each openssl or curl call ends by then (AGENTS.md rule 11). */
+/** Each openssl or curl call ends by then (AGENTS.md code rule 11). */
 const CALL_TIMEOUT_MS = 45_000;
 const CURL_MAX_SECONDS = '30';
 
