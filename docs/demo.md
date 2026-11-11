@@ -40,7 +40,7 @@ Click **Run** on each card, in card order; the page lands where the judges compa
 **Cards 9 and 10.** The Run buttons do all of it (#57): card 9 assesses `ebike-007` and lands on `/en/assets/ebike-007/second-life` (the options, the waiting list with each verdict, `wait-02` first and `wait-13` second because it needs 12 000 more work), card 10 assesses `ebike-008`, leases it a third time and lands on its passport. To show them by hand instead:
 
 - Card 9: choose "Myself (admin)" in "Act as", open `/en/assets/ebike-007/second-life` and click "Assess and relist".
-- Card 10: as yourself (admin), open `/en/assets/ebike-008/second-life` and click "Assess and relist"; act as Olavi Niemi, quote `ebike-008` for 24 months, apply and sign; open `/en/assets/ebike-008/passport`.
+- Card 10: as yourself (admin), open `/en/assets/ebike-008/second-life` and click "Assess and relist"; act as Olavi Niemi, quote `ebike-008` for 24 months, apply, identify as Olavi at the Test Bank and sign (D96); open `/en/assets/ebike-008/passport`.
 
 **The money saved is estimated and moves with the clock.** Life 2 of `ebike-008` is from before our records, so it counts only the 45 € inspection we know every relisting pays, and the passport says estimated. It uses today's price list (D80), so 314,80 € on 5 Nov becomes 332,80 € on 6 Nov, when v2 raises e-bikes by 5 %.
 

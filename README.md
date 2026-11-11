@@ -25,7 +25,7 @@ npm run dev          # http://localhost:3000
 
 You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
 
-Sign in at `/en/login` (D91). `npm run db:setup` gives every test customer an account on its e-mail in `data/customers.json` and the admin one on `ADMIN_EMAIL`; the passwords are random, in your `.env` (`CUSTOMER_PASSWORD`, `ADMIN_PASSWORD`), never in the repo. The admin's teal strip has the demo page and "Act as" a customer (D93).
+Sign in at `/en/login` (D91, D95). People (consumers and sole traders) identify with the mock Test Bank, no password; the admin and companies use the passwords in your `.env` (`ADMIN_PASSWORD` for `ADMIN_EMAIL`, `CUSTOMER_PASSWORD` for each company's e-mail in `data/customers.json`), never in the repo. The admin's teal strip has the demo page and "Act as" a customer (D93).
 
 | Command                 | What it does                                                   |
 | ----------------------- | -------------------------------------------------------------- |
@@ -119,6 +119,7 @@ One page per feature under `docs/features/` ([what a page holds](docs/features/R
 - [Demo cards: one button per scenario card](docs/features/demo-cards.md)
 - [Authorization: who may do what, checked before the action](docs/features/authorization.md)
 - [Sign-in and sessions, and the admin's demo tools behind them](docs/features/auth.md)
+- [Bank identification: sign-in and signing for people, the Test Bank](docs/features/bank-id.md)
 
 ## Team notes
 

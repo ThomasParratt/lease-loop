@@ -24,6 +24,7 @@ import { getApplication, type StoredReason } from '@/server/applications';
 import { authorize } from '@/server/authorize';
 import { contractIdOfApplication } from '@/server/contracts';
 import { db } from '@/server/db';
+import { signingIdentification } from '@/server/signing-identification';
 import { todayForRequest } from '@/server/demo-clock';
 import { latestSigningLink } from '@/server/signatories';
 import { DecisionForm } from './decision-form';
@@ -92,7 +93,8 @@ export default async function ApplicationPage({
 }: PageProps<'/[locale]/applications/[id]'>) {
   const { locale, id } = await params;
   // `?from=leases`: opened from My leases (rows.tsx), so the way back leads there first.
-  const fromLeases = (await searchParams).from === 'leases';
+  const query = await searchParams;
+  const fromLeases = query.from === 'leases';
   if (!isLocale(locale)) notFound();
   await connection();
   const t = getT(locale);
@@ -125,6 +127,10 @@ export default async function ApplicationPage({
   // Read once here and passed down (team rule 4); the server signs on its own today anyway.
   const today = await todayForRequest(db);
   const contractId = decision === 'approved' ? await contractIdOfApplication(db, id) : null;
+  // D96: a person signs with a fresh bank identification, brought back as `?identification=`.
+  const signing = await signingIdentification(db, application.customerId, id, query.identification);
+  const identificationError =
+    typeof query.identificationError === 'string' ? query.identificationError : null;
   // D87: the applicant (or the admin for them) may step back while it is not a lease yet.
   const mayWithdraw =
     (actor === application.customerId || actor === ADMIN_ACTOR) &&
@@ -188,12 +194,23 @@ export default async function ApplicationPage({
           ) : actor === application.customerId ? (
             <div className="space-y-4">
               <p>{t('contract.sign.intro')}</p>
+              {identificationError ? (
+                <Notice tone="error">
+                  {t(
+                    (`identification.error.${identificationError}` in messages.en
+                      ? `identification.error.${identificationError}`
+                      : 'identification.error.identification_failed') as MessageKey
+                  )}
+                </Notice>
+              ) : null}
               <SignContractForm
                 applicationId={application.id}
                 locale={locale}
                 today={today}
                 maxStartDate={addMonthsClamped(today, START_MONTHS_MAX)}
                 maxMonths={START_MONTHS_MAX}
+                needsIdentification={signing.needsIdentification}
+                identification={signing.identification}
               />
             </div>
           ) : actor === ADMIN_ACTOR ? (

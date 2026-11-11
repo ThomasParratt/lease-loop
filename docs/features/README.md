@@ -19,6 +19,7 @@ One page per feature, kept current in the same commit as its code and linked fro
 - [second-life.md](second-life.md): the assessment of a returned item, the D86 second-life price (the market value) with the refurbish-or-not comparison, the D13 waiting-list match and the third life (wave 3, cards 9 and 10).
 - [demo-cards.md](demo-cards.md): one Run button per scenario card on the demo page, through the real services on the card's days, and the demo tools in one place (wave 3).
 - [authorization.md](authorization.md): one pure rule for who may do what, checked before the action in every route and service, 401 / 403 `FORBIDDEN` (D73, D74).
+- [bank-id.md](bank-id.md): people sign in and sign leases with bank identification, through the mock Test Bank for now (D95 to D97).
 - [auth.md](auth.md): sign-in with database sessions, the account lock, and the picker, demo clock and card runs behind the admin's sign-in (D91 to D94).
 
 [STATUS.md](STATUS.md) and the README's "Status" table are the hackathon's record and are no longer updated.
